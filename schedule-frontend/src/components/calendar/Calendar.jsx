@@ -146,31 +146,6 @@ export default function Calendar() {
       color: textColor,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif'
     }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '32px'
-      }}>
-        <div>
-          <div style={{ 
-            fontSize: isMobile ? '14px' : '16px',
-            color: secondaryTextColor,
-            marginBottom: '8px'
-          }}>
-            {user?.division} {user?.office}
-          </div>
-          <div style={{ 
-            fontSize: isMobile ? '16px' : '18px',
-            color: textColor,
-            fontWeight: '500'
-          }}>
-            {user?.department} {user?.name}님
-          </div>
-        </div>
-      </div>
-
       {/* Calendar Navigation */}
       <div style={{
         display: 'flex',
