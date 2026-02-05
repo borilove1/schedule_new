@@ -187,8 +187,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
     }
   };
 
-  const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: bgColor, color: textColor, fontSize: '14px', outline: 'none' };
-  const labelStyle = { display: 'block', fontSize: '14px', fontWeight: '500', color: textColor, marginBottom: '8px' };
+  const fontFamily = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
+  const inputStyle = { width: '100%', padding: '12px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: bgColor, color: textColor, fontSize: '14px', outline: 'none', fontFamily };
+  const labelStyle = { display: 'block', fontSize: '14px', fontWeight: '500', color: textColor, marginBottom: '8px', fontFamily };
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
@@ -220,9 +221,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
                 {error && <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#7f1d1d', color: '#fca5a5', fontSize: '14px', marginBottom: '16px' }}>{error}</div>}
                 {actionInProgress && <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#1e40af', color: '#93c5fd', fontSize: '14px', marginBottom: '16px', textAlign: 'center' }}>처리 중...</div>}
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <button onClick={handleComplete} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#64748b' : (event.status === 'DONE' ? '#64748b' : '#10B981'), color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1 }}><Check size={18} />{event.status === 'DONE' ? '완료 취소' : '완료 처리'}</button>
-                  <button onClick={() => setIsEditing(true)} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: 'transparent', color: textColor, cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1 }}><Edit2 size={18} />수정</button>
-                  <button onClick={handleDelete} disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#991b1b' : '#ef4444', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1 }}><Trash2 size={18} />삭제</button>
+                  <button onClick={handleComplete} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#64748b' : (event.status === 'DONE' ? '#64748b' : '#10B981'), color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Check size={18} />{event.status === 'DONE' ? '완료 취소' : '완료 처리'}</button>
+                  <button onClick={() => setIsEditing(true)} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: 'transparent', color: textColor, cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Edit2 size={18} />수정</button>
+                  <button onClick={handleDelete} disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#991b1b' : '#ef4444', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Trash2 size={18} />삭제</button>
                 </div>
               </>
             ) : (
@@ -239,8 +240,8 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
                 </div>
                 {error && <div style={{ padding: '12px', borderRadius: '8px', backgroundColor: '#7f1d1d', color: '#fca5a5', fontSize: '14px', marginBottom: '20px' }}>{error}</div>}
                 <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                  <button type="button" onClick={() => setIsEditing(false)} style={{ padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: 'transparent', color: textColor, cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}>취소</button>
-                  <button type="submit" disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#1e40af' : '#3B82F6', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500' }}>{(loading || actionInProgress) ? '저장 중...' : '저장'}</button>
+                  <button type="button" onClick={() => setIsEditing(false)} style={{ padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: 'transparent', color: textColor, cursor: 'pointer', fontSize: '14px', fontWeight: '500', fontFamily }}>취소</button>
+                  <button type="submit" disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#1e40af' : '#3B82F6', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', fontFamily }}>{(loading || actionInProgress) ? '저장 중...' : '저장'}</button>
                 </div>
               </form>
             )}

@@ -75,6 +75,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
     }
   };
 
+  const fontFamily = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
+
   const inputStyle = {
     width: '100%',
     padding: '12px',
@@ -84,7 +86,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
     color: textColor,
     fontSize: '14px',
     outline: 'none',
-    boxSizing: 'border-box'
+    boxSizing: 'border-box',
+    fontFamily
   };
 
   const labelStyle = {
@@ -92,7 +95,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
     fontSize: '14px',
     fontWeight: '500',
     color: textColor,
-    marginBottom: '8px'
+    marginBottom: '8px',
+    fontFamily
   };
 
   return (
@@ -296,7 +300,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
                 color: textColor,
                 cursor: 'pointer',
                 fontSize: '14px',
-                fontWeight: '500'
+                fontWeight: '500',
+                fontFamily
               }}
             >
               취소
@@ -312,7 +317,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
                 color: '#fff',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
-                fontWeight: '500'
+                fontWeight: '500',
+                fontFamily
               }}
             >
               {loading ? '생성 중...' : '일정 만들기'}
