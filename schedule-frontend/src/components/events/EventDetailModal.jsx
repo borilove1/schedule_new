@@ -56,35 +56,24 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
 
       const data = await api.getEvent(eventId);
 
-      // 디버깅: 받은 데이터 alert로 표시
-      alert('받은 데이터: ' + JSON.stringify(data, null, 2));
-
-      // 데이터 검증
-      if (!data) {
-        setError('일정 데이터를 받지 못했습니다.');
-        return;
+      // 데이터 검증 및 설정
+      if (data && data.id) {
+        setEvent(data);
+        const start = formatDateTimeForInput(data.startAt);
+        const end = formatDateTimeForInput(data.endAt);
+        setFormData({
+          title: data.title || '',
+          content: data.content || '',
+          startDate: start.date,
+          startTime: start.time,
+          endDate: end.date,
+          endTime: end.time
+        });
+      } else {
+        setError('일정 데이터를 불러올 수 없습니다.');
       }
-
-      // 데이터 구조 확인 - 디버깅용
-      if (!data.title || !data.startAt) {
-        setError(`데이터 구조 오류: ${JSON.stringify(Object.keys(data))}`);
-        return;
-      }
-
-      setEvent(data);
-      const start = formatDateTimeForInput(data.startAt);
-      const end = formatDateTimeForInput(data.endAt);
-      setFormData({
-        title: data.title || '',
-        content: data.content || '',
-        startDate: start.date,
-        startTime: start.time,
-        endDate: end.date,
-        endTime: end.time
-      });
     } catch (err) {
-      alert('에러 발생: ' + err.message);
-      setError(`일정 로드 실패: ${err.message}`);
+      setError(`오류: ${err.message}`);
     } finally {
       setLoading(false);
     }

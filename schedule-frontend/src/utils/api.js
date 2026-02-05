@@ -82,20 +82,9 @@ class ApiClient {
 
   async getEvent(id) {
     const response = await this.request(`/events/${id}`);
-    // 백엔드가 { event: {...} } 형태로 반환하면 event 추출
-    // 아니면 response 자체가 event 객체
-    if (response && typeof response === 'object') {
-      // response.event이 있으면 그것을 반환
-      if (response.event) {
-        return response.event;
-      }
-      // response 자체에 id나 title이 있으면 그것을 반환
-      if (response.id || response.title) {
-        return response;
-      }
-    }
-    // 그 외의 경우 response 그대로 반환
-    return response;
+    // response는 { event: {...} } 형태
+    // event 객체를 반환
+    return response?.event || response;
   }
 
   async createEvent(eventData) {
