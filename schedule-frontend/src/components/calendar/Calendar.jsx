@@ -254,11 +254,7 @@ export default function Calendar() {
       </div>
 
       {/* Calendar Grid */}
-      <div style={{
-        marginBottom: '40px',
-        transform: 'scale(0.85)',
-        transformOrigin: 'top center'
-      }}>
+      <div style={{ marginBottom: '40px' }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
@@ -293,7 +289,7 @@ export default function Calendar() {
                 key={index}
                 onClick={() => day && handleDayClick(day)}
                 style={{
-                  minHeight: isMobile ? '60px' : '100px',
+                  minHeight: isMobile ? '50px' : '85px',
                   padding: '12px',
                   borderRadius: '12px',
                   backgroundColor: isSelected ? cardBg : 'transparent',
