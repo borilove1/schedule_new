@@ -60,11 +60,11 @@ export default function Calendar() {
   };
 
   const handleNewEvent = (date = null) => {
-    if (date) {
-      setSelectedDate(date.toISOString().split('T')[0]);
-    } else {
-      setSelectedDate(new Date().toISOString().split('T')[0]);
-    }
+    const targetDate = date || new Date();
+    const year = targetDate.getFullYear();
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0');
+    const day = String(targetDate.getDate()).padStart(2, '0');
+    setSelectedDate(`${year}-${month}-${day}`);
     setShowModal(true);
   };
 
