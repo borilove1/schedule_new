@@ -254,7 +254,11 @@ export default function Calendar() {
       </div>
 
       {/* Calendar Grid */}
-      <div style={{ marginBottom: '40px' }}>
+      <div style={{
+        marginBottom: '40px',
+        transform: 'scale(0.85)',
+        transformOrigin: 'top center'
+      }}>
         <div style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(7, 1fr)',
