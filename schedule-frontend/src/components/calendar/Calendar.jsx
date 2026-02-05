@@ -289,7 +289,7 @@ export default function Calendar() {
                 key={index}
                 onClick={() => day && handleDayClick(day)}
                 style={{
-                  minHeight: isMobile ? '50px' : '85px',
+                  minHeight: isMobile ? '60px' : '100px',
                   padding: '12px',
                   borderRadius: '12px',
                   backgroundColor: isSelected ? cardBg : 'transparent',
