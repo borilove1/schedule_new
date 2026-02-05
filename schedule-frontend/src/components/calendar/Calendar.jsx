@@ -143,11 +143,8 @@ export default function Calendar() {
 
   return (
     <div style={{
-      minHeight: '100vh',
-      backgroundColor: bgColor,
       color: textColor,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif',
-      padding: isMobile ? '16px' : '24px'
+      fontFamily: '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif'
     }}>
       {/* Header */}
       <div style={{
