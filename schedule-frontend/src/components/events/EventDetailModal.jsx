@@ -143,17 +143,13 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
     actionInProgressRef.current = true;
 
     try {
-      if (deleteType === 'series') {
-        // 전체 시리즈 삭제
-        await api.deleteEvent(event.seriesId, { deleteType: 'series' });
-      } else {
-        // 이번만 삭제 (단일 일정 또는 반복 일정의 한 인스턴스)
-        await api.deleteEvent(eventId, { deleteType: 'single' });
-      }
+      // 두 경우 모두 eventId를 사용하되 deleteType만 다르게 전달
+      await api.deleteEvent(eventId, { deleteType });
       onSuccess();
       onClose();
     } catch (err) {
-      setError('일정 삭제에 실패했습니다.');
+      console.error('Delete error:', err);
+      setError(err.message || '일정 삭제에 실패했습니다.');
     } finally {
       setLoading(false);
       setActionInProgress(false);
@@ -325,7 +321,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
                   fontFamily
                 }}
               >
-                이번만 삭제
+                이 일정만 삭제
               </button>
               <button
                 onClick={() => handleDelete('series')}
@@ -341,7 +337,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
                   fontFamily
                 }}
               >
-                전체 시리즈 삭제
+                반복일정 전체 삭제
               </button>
               <button
                 onClick={() => setShowDeleteDialog(false)}
