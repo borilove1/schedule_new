@@ -5,6 +5,11 @@ import api from '../../utils/api';
 
 const getInitialFormData = (selectedDate) => {
   const dateStr = selectedDate || new Date().toISOString().split('T')[0];
+  // 기본 반복 종료일: 3개월 후
+  const threeMonthsLater = new Date();
+  threeMonthsLater.setMonth(threeMonthsLater.getMonth() + 3);
+  const endDateStr = `${threeMonthsLater.getFullYear()}-${String(threeMonthsLater.getMonth() + 1).padStart(2, '0')}-${String(threeMonthsLater.getDate()).padStart(2, '0')}`;
+
   return {
     title: '',
     content: '',
@@ -12,7 +17,11 @@ const getInitialFormData = (selectedDate) => {
     startTime: '09:00',
     endDate: dateStr,
     endTime: '18:00',
-    priority: 'NORMAL'
+    priority: 'NORMAL',
+    isRecurring: false,
+    recurrenceType: 'week',
+    recurrenceInterval: 1,
+    recurrenceEndDate: endDateStr
   };
 };
 
@@ -56,13 +65,23 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
       const startAt = `${formData.startDate}T${formData.startTime}:00`;
       const endAt = `${formData.endDate}T${formData.endTime}:00`;
 
-      await api.createEvent({
+      const eventData = {
         title: formData.title,
         content: formData.content,
         startAt,
         endAt,
         priority: formData.priority
-      });
+      };
+
+      // 반복 일정인 경우 추가 데이터
+      if (formData.isRecurring) {
+        eventData.isRecurring = true;
+        eventData.recurrenceType = formData.recurrenceType;
+        eventData.recurrenceInterval = parseInt(formData.recurrenceInterval, 10);
+        eventData.recurrenceEndDate = formData.recurrenceEndDate;
+      }
+
+      await api.createEvent(eventData);
 
       // 성공 후 폼 리셋
       setFormData(getInitialFormData(selectedDate));
@@ -255,7 +274,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
           </div>
 
           {/* 우선순위 */}
-          <div style={{ marginBottom: '24px' }}>
+          <div style={{ marginBottom: '20px' }}>
             <label style={labelStyle}>우선순위</label>
             <select
               name="priority"
@@ -268,6 +287,110 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
               <option value="HIGH">높음</option>
             </select>
           </div>
+
+          {/* 반복 일정 토글 */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              cursor: 'pointer',
+              fontFamily
+            }}>
+              <input
+                type="checkbox"
+                name="isRecurring"
+                checked={formData.isRecurring}
+                onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+                style={{
+                  width: '20px',
+                  height: '20px',
+                  cursor: 'pointer',
+                  accentColor: '#3B82F6'
+                }}
+              />
+              <span style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>
+                반복 일정으로 등록
+              </span>
+            </label>
+          </div>
+
+          {/* 반복 일정 설정 (토글 시 표시) */}
+          {formData.isRecurring && (
+            <div style={{
+              padding: '20px',
+              borderRadius: '12px',
+              backgroundColor: bgColor,
+              marginBottom: '24px',
+              border: `1px solid ${borderColor}`
+            }}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={labelStyle}>반복 주기</label>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                  <input
+                    type="number"
+                    name="recurrenceInterval"
+                    value={formData.recurrenceInterval}
+                    onChange={handleChange}
+                    min="1"
+                    max="99"
+                    style={{
+                      ...inputStyle,
+                      width: '80px',
+                      textAlign: 'center'
+                    }}
+                  />
+                  <select
+                    name="recurrenceType"
+                    value={formData.recurrenceType}
+                    onChange={handleChange}
+                    style={{
+                      ...inputStyle,
+                      width: 'auto',
+                      flex: 1
+                    }}
+                  >
+                    <option value="day">일마다</option>
+                    <option value="week">주마다</option>
+                    <option value="month">개월마다</option>
+                    <option value="year">년마다</option>
+                  </select>
+                </div>
+                <p style={{
+                  marginTop: '8px',
+                  fontSize: '13px',
+                  color: '#94a3b8',
+                  fontFamily
+                }}>
+                  {formData.recurrenceInterval === '1' || formData.recurrenceInterval === 1
+                    ? `매${formData.recurrenceType === 'day' ? '일' : formData.recurrenceType === 'week' ? '주' : formData.recurrenceType === 'month' ? '월' : '년'} 반복`
+                    : `${formData.recurrenceInterval}${formData.recurrenceType === 'day' ? '일' : formData.recurrenceType === 'week' ? '주' : formData.recurrenceType === 'month' ? '개월' : '년'}마다 반복`
+                  }
+                </p>
+              </div>
+
+              <div>
+                <label style={labelStyle}>반복 종료일 *</label>
+                <input
+                  type="date"
+                  name="recurrenceEndDate"
+                  value={formData.recurrenceEndDate}
+                  onChange={handleChange}
+                  required={formData.isRecurring}
+                  min={formData.startDate}
+                  style={inputStyle}
+                />
+                <p style={{
+                  marginTop: '8px',
+                  fontSize: '13px',
+                  color: '#94a3b8',
+                  fontFamily
+                }}>
+                  이 날짜까지 반복됩니다
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* 에러 메시지 */}
           {error && (
