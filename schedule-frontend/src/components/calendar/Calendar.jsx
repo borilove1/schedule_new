@@ -235,7 +235,7 @@ export default function Calendar() {
             오늘
           </button>
           <button
-            onClick={() => handleNewEvent()}
+            onClick={() => handleNewEvent(selectedDay)}
             style={{
               padding: '10px 20px',
               borderRadius: '8px',
