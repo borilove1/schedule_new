@@ -52,7 +52,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
     try {
       setLoading(true);
       setError('');
+      console.log('[EventDetailModal] Loading event with ID:', eventId);
       const data = await api.getEvent(eventId);
+      console.log('[EventDetailModal] Received event data:', data);
       setEvent(data);
       const start = formatDateTimeForInput(data.startAt);
       const end = formatDateTimeForInput(data.endAt);
@@ -65,6 +67,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
         endTime: end.time
       });
     } catch (err) {
+      console.error('[EventDetailModal] Error loading event:', err);
       setError('일정을 불러오는데 실패했습니다.');
     } finally {
       setLoading(false);

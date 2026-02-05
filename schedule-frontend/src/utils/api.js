@@ -81,8 +81,12 @@ class ApiClient {
   }
 
   async getEvent(id) {
+    console.log('[API] getEvent called with ID:', id);
     const response = await this.request(`/events/${id}`);
-    return response.event || response;  // event 객체만 반환
+    console.log('[API] getEvent response:', response);
+    const result = response.event || response;
+    console.log('[API] getEvent returning:', result);
+    return result;  // event 객체만 반환
   }
 
   async createEvent(eventData) {
