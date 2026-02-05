@@ -192,7 +192,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
 
   return (
     <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-      <div style={{ backgroundColor: cardBg, borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto' }}>
+      <div style={{ backgroundColor: cardBg, borderRadius: '16px', width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto', fontFamily: '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif' }}>
         <div style={{ padding: '24px', borderBottom: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0, color: textColor }}>{isEditing ? '일정 수정' : '일정 상세'}</h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer' }}><X size={24} /></button>

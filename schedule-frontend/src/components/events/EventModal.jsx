@@ -116,7 +116,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
         maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif'
       }}>
         {/* Header */}
         <div style={{
