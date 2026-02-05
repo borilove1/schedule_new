@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
-const rateLimit = require('express-rate-limit');
+// const rateLimit = require('express-rate-limit'); // 임시 비활성화
 
 // 라우터 임포트
 const authRoutes = require('./routes/auth');
@@ -45,25 +45,25 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Rate Limiting
+// Rate Limiting - 임시 비활성화 (중복 클릭 문제 해결 후 재활성화 필요)
+// TODO: 프론트엔드 중복 클릭 방지 확인 후 다시 활성화
+/*
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15분
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
   message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.'
 });
-
-// 일반 API에 적용 (인증 제외)
 app.use('/api/v1/auth', limiter);
 
-// 이벤트 API는 더 관대한 제한 적용
 const eventsLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1분
-  max: 100, // 1분에 100번
+  windowMs: 1 * 60 * 1000,
+  max: 100,
   message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
   standardHeaders: true,
   legacyHeaders: false,
 });
 app.use('/api/v1/events', eventsLimiter);
+*/
 
 // ========== 라우트 설정 ==========
 
