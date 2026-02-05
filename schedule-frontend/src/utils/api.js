@@ -101,9 +101,10 @@ class ApiClient {
     });
   }
 
-  async deleteEvent(id) {
+  async deleteEvent(id, options = {}) {
     return this.request(`/events/${id}`, {
       method: 'DELETE',
+      body: JSON.stringify(options),
     });
   }
 

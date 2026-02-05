@@ -9,6 +9,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
   const [error, setError] = useState('');
   const [actionInProgress, setActionInProgress] = useState(false); // UI용
   const actionInProgressRef = useRef(false); // 중복 클릭 방지용 ref
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false); // 삭제 확인 다이얼로그
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -119,17 +120,36 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
     }
   };
 
-  const handleDelete = async () => {
-    if (actionInProgressRef.current) return; // 중복 방지
+  const handleDeleteClick = () => {
+    if (actionInProgressRef.current) return;
 
-    if (!window.confirm('정말 이 일정을 삭제하시겠습니까?')) return;
+    // 반복 일정인 경우 다이얼로그 표시
+    if (event?.seriesId) {
+      setShowDeleteDialog(true);
+    } else {
+      // 일반 일정은 바로 삭제 확인
+      if (window.confirm('정말 이 일정을 삭제하시겠습니까?')) {
+        handleDelete('single');
+      }
+    }
+  };
 
+  const handleDelete = async (deleteType) => {
+    if (actionInProgressRef.current) return;
+
+    setShowDeleteDialog(false);
     setLoading(true);
     setActionInProgress(true);
     actionInProgressRef.current = true;
 
     try {
-      await api.deleteEvent(eventId);
+      if (deleteType === 'series') {
+        // 전체 시리즈 삭제
+        await api.deleteEvent(event.seriesId, { deleteType: 'series' });
+      } else {
+        // 이번만 삭제 (단일 일정 또는 반복 일정의 한 인스턴스)
+        await api.deleteEvent(eventId, { deleteType: 'single' });
+      }
       onSuccess();
       onClose();
     } catch (err) {
@@ -223,7 +243,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
                 <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
                   <button onClick={handleComplete} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#64748b' : (event.status === 'DONE' ? '#64748b' : '#10B981'), color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Check size={18} />{event.status === 'DONE' ? '완료 취소' : '완료 처리'}</button>
                   <button onClick={() => setIsEditing(true)} disabled={loading || actionInProgress} style={{ flex: 1, padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`, backgroundColor: 'transparent', color: textColor, cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Edit2 size={18} />수정</button>
-                  <button onClick={handleDelete} disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#991b1b' : '#ef4444', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Trash2 size={18} />삭제</button>
+                  <button onClick={handleDeleteClick} disabled={loading || actionInProgress} style={{ padding: '12px 24px', borderRadius: '8px', border: 'none', backgroundColor: (loading || actionInProgress) ? '#991b1b' : '#ef4444', color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily }}><Trash2 size={18} />삭제</button>
                 </div>
               </>
             ) : (
@@ -250,6 +270,99 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
           <div style={{ padding: '40px', textAlign: 'center', color: secondaryTextColor }}>일정을 찾을 수 없습니다.</div>
         )}
       </div>
+
+      {/* 반복 일정 삭제 확인 다이얼로그 */}
+      {showDeleteDialog && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '20px'
+        }}>
+          <div style={{
+            backgroundColor: cardBg,
+            borderRadius: '16px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '100%',
+            fontFamily
+          }}>
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '600',
+              marginBottom: '16px',
+              color: textColor
+            }}>
+              반복 일정 삭제
+            </h3>
+            <p style={{
+              fontSize: '14px',
+              color: secondaryTextColor,
+              marginBottom: '24px',
+              lineHeight: '1.5'
+            }}>
+              이 일정은 반복 일정입니다. 어떻게 삭제하시겠습니까?
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button
+                onClick={() => handleDelete('single')}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: `1px solid ${borderColor}`,
+                  backgroundColor: 'transparent',
+                  color: textColor,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily
+                }}
+              >
+                이번만 삭제
+              </button>
+              <button
+                onClick={() => handleDelete('series')}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#ef4444',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily
+                }}
+              >
+                전체 시리즈 삭제
+              </button>
+              <button
+                onClick={() => setShowDeleteDialog(false)}
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '8px',
+                  border: `1px solid ${borderColor}`,
+                  backgroundColor: 'transparent',
+                  color: textColor,
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  fontFamily
+                }}
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
