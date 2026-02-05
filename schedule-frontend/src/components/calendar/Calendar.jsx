@@ -289,9 +289,9 @@ export default function Calendar() {
                 key={index}
                 onClick={() => day && handleDayClick(day)}
                 style={{
-                  minHeight: isMobile ? '60px' : '100px',
-                  padding: '12px',
-                  borderRadius: '12px',
+                  minHeight: isMobile ? '50px' : '80px',
+                  padding: '10px',
+                  borderRadius: '10px',
                   backgroundColor: isSelected ? cardBg : 'transparent',
                   border: `1px solid ${isSelected ? '#3B82F6' : isToday ? '#3B82F6' : borderColor}`,
                   cursor: day ? 'pointer' : 'default',
