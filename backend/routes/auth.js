@@ -110,7 +110,7 @@ router.post('/register',
 
       // 사용자 생성
       const result = await query(
-        `INSERT INTO users (email, password, name, position, division_id, office_id, department_id, role, created_at, updated_at)
+        `INSERT INTO users (email, password_hash, name, position, division_id, office_id, department_id, role, created_at, updated_at)
          VALUES ($1, $2, $3, $4, $5, $6, $7, 'USER', NOW(), NOW())
          RETURNING id, email, name, position, role`,
         [email, hashedPassword, name, position, division_id, office_id, department_id]
@@ -166,8 +166,8 @@ router.post('/login',
 
       // 사용자 조회 (JOIN으로 이름까지 가져오기)
       const result = await query(
-        `SELECT 
-          u.id, u.email, u.password, u.name, u.position, u.role,
+        `SELECT
+          u.id, u.email, u.password_hash, u.name, u.position, u.role,
           d.name as division,
           o.name as office,
           dept.name as department
@@ -192,7 +192,7 @@ router.post('/login',
       const user = result.rows[0];
 
       // 비밀번호 확인
-      const isValidPassword = await bcrypt.compare(password, user.password);
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
 
       if (!isValidPassword) {
         return res.status(401).json({
