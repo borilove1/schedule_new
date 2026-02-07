@@ -1,0 +1,50 @@
+# 시나리오 2: 반복 일정 조회 부하테스트
+# generateOccurrencesFromSeries()가 매 요청마다 실행되는 부하 확인
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: "Warm up (5 req/s)"
+    - duration: 20
+      arrivalRate: 15
+      name: "Sustained load (15 req/s)"
+    - duration: 10
+      arrivalRate: 30
+      name: "Peak load (30 req/s)"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Login then query events for multiple months"
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@test.com"
+            password: "test1234"
+          capture:
+            - json: "$.token"
+              as: "token"
+      # 현재 월 조회
+      - get:
+          url: "/api/v1/events?startDate=2026-02-01&endDate=2026-02-28"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      # 이전 월 조회
+      - get:
+          url: "/api/v1/events?startDate=2026-01-01&endDate=2026-01-31"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      # 넓은 범위 조회 (3개월)
+      - get:
+          url: "/api/v1/events?startDate=2026-01-01&endDate=2026-03-31"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200

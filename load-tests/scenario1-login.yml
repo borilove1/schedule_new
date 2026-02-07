@@ -1,0 +1,31 @@
+# 시나리오 1: 로그인 집중 부하테스트
+# bcrypt 해싱이 CPU 집약적이므로 동시 로그인 요청 부하 확인
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 10
+      arrivalRate: 5
+      name: "Warm up (5 req/s)"
+    - duration: 20
+      arrivalRate: 20
+      name: "Ramp up (20 req/s)"
+    - duration: 10
+      arrivalRate: 50
+      name: "Peak load (50 req/s)"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Login flood"
+    flow:
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@test.com"
+            password: "test1234"
+          capture:
+            - json: "$.token"
+              as: "token"
+          expect:
+            - statusCode: 200

@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const cron = require('node-cron');
-// const rateLimit = require('express-rate-limit'); // 임시 비활성화
+const rateLimit = require('express-rate-limit');
 
 // 라우터 임포트
 const authRoutes = require('./routes/auth');
@@ -50,25 +50,33 @@ if (process.env.NODE_ENV === 'development') {
   app.use(morgan('combined'));
 }
 
-// Rate Limiting - 임시 비활성화 (중복 클릭 문제 해결 후 재활성화 필요)
-// TODO: 프론트엔드 중복 클릭 방지 확인 후 다시 활성화
-/*
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.'
+// Rate Limiting
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요.' } }
 });
-app.use('/api/v1/auth', limiter);
+app.use('/api/v1/auth/login', loginLimiter);
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' } }
+});
+app.use('/api/v1/auth', authLimiter);
 
 const eventsLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 100,
-  message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.',
   standardHeaders: true,
   legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' } }
 });
 app.use('/api/v1/events', eventsLimiter);
-*/
 
 // ========== 라우트 설정 ==========
 

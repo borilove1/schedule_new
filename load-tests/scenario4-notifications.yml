@@ -1,0 +1,52 @@
+# 시나리오 4: 알림 폴링 부하테스트
+# 60초 폴링 x 동시 사용자 수 시뮬레이션
+config:
+  target: "http://localhost:8080"
+  phases:
+    - duration: 10
+      arrivalRate: 10
+      name: "Warm up (10 req/s)"
+    - duration: 20
+      arrivalRate: 30
+      name: "Sustained load (30 req/s)"
+    - duration: 10
+      arrivalRate: 60
+      name: "Peak - 60 concurrent users polling"
+  defaults:
+    headers:
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Notification polling simulation"
+    flow:
+      # 로그인
+      - post:
+          url: "/api/v1/auth/login"
+          json:
+            email: "test@test.com"
+            password: "test1234"
+          capture:
+            - json: "$.token"
+              as: "token"
+      # 읽지 않은 알림 수 (폴링 핵심 API)
+      - get:
+          url: "/api/v1/notifications/unread-count"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      # 알림 목록 조회
+      - get:
+          url: "/api/v1/notifications?limit=20"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
+      # 다시 폴링 (실제 사용 패턴 시뮬레이션)
+      - think: 1
+      - get:
+          url: "/api/v1/notifications/unread-count"
+          headers:
+            Authorization: "Bearer {{ token }}"
+          expect:
+            - statusCode: 200
