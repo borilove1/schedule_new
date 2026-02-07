@@ -175,7 +175,7 @@ const EventList = React.memo(function EventList({
                     {getStatusText(event.status)}
                   </div>
                 </div>
-                <div style={{ fontSize: '13px', color: secondaryTextColor }}>
+                <div style={{ fontSize: '14px', color: secondaryTextColor }}>
                   {isMultiDayEvent ? (
                     <>
                       {startDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
@@ -193,7 +193,7 @@ const EventList = React.memo(function EventList({
                 </div>
                 {event.content && (
                   <div style={{
-                    fontSize: '13px',
+                    fontSize: '14px',
                     color: isDarkMode ? secondaryTextColor : '#94a3b8',
                     marginTop: '4px',
                     overflow: 'hidden',

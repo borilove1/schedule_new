@@ -24,7 +24,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
           <div key={name} style={{
             textAlign: 'center',
             padding: '8px 0',
-            fontSize: '12px',
+            fontSize: '14px',
             fontWeight: '600',
             color: i === 5 ? (isDarkMode ? '#60A5FA' : '#3B82F6') : i === 6 ? (isDarkMode ? '#F87171' : '#ef4444') : '#94a3b8',
             letterSpacing: '0.05em'
@@ -42,10 +42,10 @@ const CalendarGrid = React.memo(function CalendarGrid({
           const maxMultiLanes = 4;
           const visibleLanes = lanes.slice(0, maxMultiLanes);
           const hiddenLanes = lanes.slice(maxMultiLanes);
-          const laneHeight = 19;
+          const laneHeight = 21;
 
           return (
-            <div key={weekIdx} style={{ position: 'relative', minHeight: '130px' }}>
+            <div key={weekIdx} style={{ position: 'relative', minHeight: '155px' }}>
               {/* Background layer */}
               <div style={{
                 display: 'grid',
@@ -108,7 +108,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                     return (
                       <div key={col} style={{ padding: '8px 0 2px 8px', textAlign: 'left' }}>
                         <span style={{
-                          fontSize: '14px',
+                          fontSize: '16px',
                           fontWeight: dayIsToday ? '700' : '400',
                           color: dayIsToday ? '#3B82F6' : numColor
                         }}>
@@ -138,8 +138,8 @@ const CalendarGrid = React.memo(function CalendarGrid({
                               top: `${laneIdx * laneHeight}px`,
                               left: `calc(${left}% + ${bar.isStartInWeek ? 3 : 0}px)`,
                               width: `calc(${width}% - ${(bar.isStartInWeek ? 3 : 0) + (bar.isEndInWeek ? 3 : 0)}px)`,
-                              height: '18px',
-                              fontSize: '10px',
+                              height: '20px',
+                              fontSize: '11px',
                               padding: '2px 6px',
                               backgroundColor: barColor + (isDarkMode ? '45' : '30'),
                               color: isOwn ? barColor : (isDarkMode ? '#cbd5e1' : '#64748b'),
@@ -149,7 +149,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                               whiteSpace: 'nowrap',
                               textOverflow: 'ellipsis',
                               fontWeight: '600',
-                              lineHeight: '14px',
+                              lineHeight: '16px',
                               boxSizing: 'border-box'
                             }}
                           >
@@ -204,7 +204,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                               key={ev.id}
                               title={ev.title}
                               style={{
-                                fontSize: '10px',
+                                fontSize: '11px',
                                 padding: '2px 4px',
                                 borderRadius: '3px',
                                 backgroundColor: barColor + (isDarkMode ? '35' : '28'),
@@ -215,7 +215,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                                 whiteSpace: 'nowrap',
                                 textOverflow: 'ellipsis',
                                 fontWeight: '500',
-                                lineHeight: '14px',
+                                lineHeight: '16px',
                                 boxSizing: 'border-box',
                                 maxWidth: '100%'
                               }}
@@ -225,7 +225,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                           );
                         })}
                         {hiddenCount > 0 && (
-                          <div style={{ fontSize: '10px', color: secondaryTextColor, textAlign: 'center' }}>
+                          <div style={{ fontSize: '11px', color: secondaryTextColor, textAlign: 'center' }}>
                             +{hiddenCount}
                           </div>
                         )}

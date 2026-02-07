@@ -13,18 +13,16 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
   const isMobile = useIsMobile();
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor }}>
+    <div style={{ height: '100vh', backgroundColor: bgColor, color: textColor, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <header style={{
-        padding: isMobile ? '12px 16px' : '16px 24px',
+        padding: isMobile ? '6px 16px' : '8px 24px',
         borderBottom: `1px solid ${borderColor}`,
         backgroundColor: cardBg,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
           <Calendar size={isMobile ? 20 : 28} color="#3B82F6" />
@@ -135,7 +133,7 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
       {/* Mobile User Info */}
       {isMobile && user && (
         <div style={{
-          padding: '12px 16px',
+          padding: '6px 16px',
           backgroundColor: cardBg,
           borderBottom: `1px solid ${borderColor}`,
           fontSize: '13px'
@@ -150,8 +148,10 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
       )}
 
       {/* Main Content */}
-      <main style={{ padding: isMobile ? '16px' : '24px', maxWidth: '1200px', margin: '0 auto' }}>
-        {children}
+      <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          {children}
+        </div>
       </main>
     </div>
   );
