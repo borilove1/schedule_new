@@ -9,6 +9,7 @@ import SignupPage from './components/auth/SignupPage';
 import MainLayout from './components/layout/MainLayout';
 import Calendar from './components/calendar/Calendar';
 import AdminPage from './components/admin/AdminPage';
+import ProfilePage from './components/profile/ProfilePage';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -54,6 +55,8 @@ function AppContent() {
       <MainLayout currentPage={currentPage} onNavigate={setCurrentPage}>
         {currentPage === 'admin' && user.role === 'ADMIN' ? (
           <AdminPage />
+        ) : currentPage === 'profile' ? (
+          <ProfilePage onBack={() => setCurrentPage('calendar')} />
         ) : (
           <Calendar />
         )}

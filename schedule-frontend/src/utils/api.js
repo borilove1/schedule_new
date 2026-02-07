@@ -74,6 +74,20 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  async updateMyProfile(data) {
+    return this.request('/auth/me', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    return this.request('/auth/change-password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+  }
+
   // 일정
   async getEvents(params = {}) {
     const query = new URLSearchParams(params).toString();

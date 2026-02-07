@@ -324,4 +324,147 @@ router.get('/me', authenticate, async (req, res, next) => {
   }
 });
 
+// ========== 비밀번호 변경 ==========
+router.put('/change-password', authenticate,
+  [
+    body('currentPassword').notEmpty().withMessage('현재 비밀번호를 입력하세요'),
+    body('newPassword')
+      .isLength({ min: 8 }).withMessage('새 비밀번호는 최소 8자 이상이어야 합니다.')
+      .matches(/(?=.*[a-zA-Z])(?=.*\d)/).withMessage('새 비밀번호는 영문과 숫자를 모두 포함해야 합니다.')
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: errors.array()[0].msg
+          }
+        });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      // 현재 비밀번호 확인
+      const userResult = await query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+      const isValid = await bcrypt.compare(currentPassword, userResult.rows[0].password_hash);
+
+      if (!isValid) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'INVALID_PASSWORD',
+            message: '현재 비밀번호가 올바르지 않습니다.'
+          }
+        });
+      }
+
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hashedPassword, req.user.id]);
+
+      res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// ========== 내 정보 수정 ==========
+router.put('/me', authenticate,
+  [
+    body('name').notEmpty().withMessage('이름을 입력하세요'),
+    body('position').notEmpty().withMessage('직급을 선택하세요'),
+    body('division').notEmpty().withMessage('본부를 선택하세요'),
+    body('office').notEmpty().withMessage('처를 선택하세요')
+  ],
+  async (req, res, next) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: errors.array()[0].msg
+          }
+        });
+      }
+
+      const { name, position, division, office, department } = req.body;
+
+      // 조직 ID 조회
+      const divisionResult = await query('SELECT id FROM divisions WHERE name = $1', [division]);
+      if (divisionResult.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_DIVISION', message: '유효하지 않은 본부입니다.' }
+        });
+      }
+      const division_id = divisionResult.rows[0].id;
+
+      const officeResult = await query('SELECT id FROM offices WHERE name = $1 AND division_id = $2', [office, division_id]);
+      if (officeResult.rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_OFFICE', message: '유효하지 않은 처입니다.' }
+        });
+      }
+      const office_id = officeResult.rows[0].id;
+
+      let department_id = null;
+      if (department) {
+        const deptResult = await query('SELECT id FROM departments WHERE name = $1 AND office_id = $2', [department, office_id]);
+        if (deptResult.rows.length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_DEPARTMENT', message: '유효하지 않은 부서입니다.' }
+          });
+        }
+        department_id = deptResult.rows[0].id;
+      }
+
+      await query(
+        `UPDATE users SET name = $1, position = $2, division_id = $3, office_id = $4, department_id = $5, updated_at = NOW()
+         WHERE id = $6`,
+        [name, position, division_id, office_id, department_id, req.user.id]
+      );
+
+      // 업데이트된 정보 반환
+      const result = await query(
+        `SELECT u.id, u.email, u.name, u.position, u.role,
+          u.division_id, u.office_id, u.department_id,
+          d.name as division, o.name as office, dept.name as department
+         FROM users u
+         LEFT JOIN divisions d ON u.division_id = d.id
+         LEFT JOIN offices o ON u.office_id = o.id
+         LEFT JOIN departments dept ON u.department_id = dept.id
+         WHERE u.id = $1`,
+        [req.user.id]
+      );
+
+      const user = result.rows[0];
+      res.json({
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          position: user.position,
+          division: user.division,
+          office: user.office,
+          department: user.department,
+          divisionId: user.division_id,
+          officeId: user.office_id,
+          departmentId: user.department_id,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 module.exports = router;

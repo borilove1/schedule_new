@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { Calendar, Sun, Moon, LogOut, Menu, X, Shield } from 'lucide-react';
+import { Calendar, Sun, Moon, LogOut, Menu, X, Shield, User } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 
 export default function MainLayout({ children, currentPage, onNavigate }) {
@@ -50,14 +50,47 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
 
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
           {!isMobile && user && (
-            <div style={{ textAlign: 'right', marginRight: '8px' }}>
-              <div style={{ fontSize: '14px', fontWeight: '500' }}>
+            <button
+              onClick={() => onNavigate('profile')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                textAlign: 'right',
+                marginRight: '8px',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6'}
+              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              title="내 정보 수정"
+            >
+              <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>
                 {user.division} {user.office}
               </div>
               <div style={{ fontSize: '13px', color: secondaryTextColor }}>
                 {user.department} {user.position} {user.name}님
               </div>
-            </div>
+            </button>
+          )}
+
+          {isMobile && (
+            <button
+              onClick={() => onNavigate('profile')}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: currentPage === 'profile' ? '#3B82F6' : textColor,
+                cursor: 'pointer',
+                padding: '8px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="내 정보"
+            >
+              <User size={20} />
+            </button>
           )}
 
           <button
