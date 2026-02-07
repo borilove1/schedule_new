@@ -413,6 +413,10 @@ INSERT INTO departments (name, office_id) VALUES
 
 -- 안전재난부, 각 지사는 하위 부서 없음
 
+-- 기본 관리자 계정 (비밀번호: admin1234)
+INSERT INTO users (email, password_hash, name, position, department_id, office_id, division_id, role)
+VALUES ('admin@admin.com', '$2b$10$KhDtW2rngfY.kTP84M6JoOyP2Pap.HHPIpfALbXjMei4wOrYftjC.', '관리자', '관리자', 1, 1, 1, 'ADMIN');
+
 -- ========================================
 -- 10. 유용한 뷰 (View)
 -- ========================================
