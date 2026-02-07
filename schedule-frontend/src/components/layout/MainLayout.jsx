@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { Calendar, Sun, Moon, LogOut, Menu, X, Shield, User } from 'lucide-react';
+import { Calendar, Sun, Moon, LogOut, Shield, User } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 
 export default function MainLayout({ children, currentPage, onNavigate }) {
@@ -11,7 +11,6 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
   const { toggleDarkMode } = useTheme();
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
   const isMobile = useIsMobile();
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: bgColor, color: textColor }}>
@@ -28,21 +27,7 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
         zIndex: 100
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
-          {isMobile && (
-            <button
-              onClick={() => setShowMobileMenu(!showMobileMenu)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: textColor,
-                cursor: 'pointer',
-                padding: '4px'
-              }}
-            >
-              {showMobileMenu ? <X size={24} /> : <Menu size={24} />}
-            </button>
-          )}
-          <Calendar size={isMobile ? 24 : 28} color="#3B82F6" />
+          <Calendar size={isMobile ? 20 : 28} color="#3B82F6" />
           <h1 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: '600', margin: 0 }}>
             업무일정 관리
           </h1>

@@ -166,7 +166,8 @@ const CalendarGrid = React.memo(function CalendarGrid({
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
                   paddingBottom: '8px',
-                  minHeight: '4px'
+                  minHeight: '4px',
+                  gap: '0 2px'
                 }}>
                   {week.map((day, col) => {
                     const visibleMultiInCell = visibleLanes.reduce((count, lane) =>
@@ -184,7 +185,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                     if (showSingles === 0 && hiddenCount === 0) return <div key={col} />;
 
                     return (
-                      <div key={col} style={{ padding: '0 3px' }}>
+                      <div key={col} style={{ padding: '0 3px', overflow: 'hidden' }}>
                         {singles.slice(0, showSingles).map(ev => {
                           const isOwn = ev.creator?.id === userId;
                           const barColor = isOwn ? getStatusColor(ev.status) : '#94a3b8';
@@ -203,7 +204,9 @@ const CalendarGrid = React.memo(function CalendarGrid({
                                 whiteSpace: 'nowrap',
                                 textOverflow: 'ellipsis',
                                 fontWeight: '500',
-                                lineHeight: '14px'
+                                lineHeight: '14px',
+                                boxSizing: 'border-box',
+                                maxWidth: '100%'
                               }}
                             >
                               {ev.title}
