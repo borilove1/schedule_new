@@ -1,12 +1,14 @@
 import React from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { getStatusColor } from '../../utils/eventHelpers';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { getMultiDayEventsForWeek, getSingleDayEventsForDate, assignLanes } from './calendarHelpers';
 
 const CalendarGrid = React.memo(function CalendarGrid({
   weeks, events, currentDate, selectedDay, onDayClick, onDayDoubleClick, onEventClick, userId
 }) {
   const { isDarkMode, textColor, secondaryTextColor, borderColor } = useThemeColors();
+  const isMobile = useIsMobile();
 
   const today = new Date();
   const curMonth = currentDate.getMonth();
@@ -41,13 +43,13 @@ const CalendarGrid = React.memo(function CalendarGrid({
         {weeks.map((week, weekIdx) => {
           const weekMultiDay = getMultiDayEventsForWeek(week, events);
           const lanes = assignLanes(weekMultiDay);
-          const maxMultiLanes = 4;
+          const maxMultiLanes = isMobile ? 3 : 5;
           const visibleLanes = lanes.slice(0, maxMultiLanes);
           const hiddenLanes = lanes.slice(maxMultiLanes);
           const laneHeight = 21;
 
           return (
-            <div key={weekIdx} style={{ position: 'relative', minHeight: '155px' }}>
+            <div key={weekIdx} style={{ position: 'relative', minHeight: isMobile ? '100px' : '155px' }}>
               {/* Background layer */}
               <div style={{
                 display: 'grid',
@@ -121,50 +123,93 @@ const CalendarGrid = React.memo(function CalendarGrid({
                   })}
                 </div>
 
-                {/* Multi-day spanning bars */}
-                {visibleLanes.length > 0 && (
-                  <div style={{ position: 'relative', height: 0, overflow: 'visible', zIndex: 2 }}>
-                    {visibleLanes.map((lane, laneIdx) =>
-                      lane.map(bar => {
-                        const isOwn = bar.event.creator?.id === userId;
-                        const barColor = isOwn ? getStatusColor(bar.event.status) : '#94a3b8';
-                        const colWidth = 100 / 7;
-                        const left = (bar.startCol - 1) * colWidth;
-                        const width = (bar.endCol - bar.startCol + 1) * colWidth;
-                        return (
-                          <div
-                            key={bar.event.id}
-                            title={bar.event.title}
-                            style={{
-                              position: 'absolute',
-                              top: `${laneIdx * laneHeight}px`,
-                              left: `calc(${left}% + ${bar.isStartInWeek ? 3 : 0}px)`,
-                              width: `calc(${width}% - ${(bar.isStartInWeek ? 3 : 0) + (bar.isEndInWeek ? 3 : 0)}px)`,
-                              height: '20px',
-                              fontSize: '11px',
-                              padding: '2px 6px',
-                              backgroundColor: barColor + (isDarkMode ? '45' : '30'),
-                              color: isOwn ? barColor : (isDarkMode ? '#cbd5e1' : '#64748b'),
-                              borderLeft: bar.isStartInWeek ? `3px solid ${barColor}` : 'none',
-                              borderRadius: `${bar.isStartInWeek ? '4px' : '0'} ${bar.isEndInWeek ? '4px' : '0'} ${bar.isEndInWeek ? '4px' : '0'} ${bar.isStartInWeek ? '4px' : '0'}`,
-                              overflow: 'hidden',
-                              whiteSpace: 'nowrap',
-                              textOverflow: 'ellipsis',
-                              fontWeight: '600',
-                              lineHeight: '16px',
-                              boxSizing: 'border-box'
-                            }}
-                          >
-                            {!isOwn && bar.isStartInWeek && <span>{bar.event.creator?.name} </span>}
-                            {bar.event.title}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                )}
+                {/* All event bars: multi-day first, then single-day in empty lanes */}
+                <div style={{ position: 'relative', height: 0, overflow: 'visible', zIndex: 2 }}>
+                  {/* Multi-day bars */}
+                  {visibleLanes.map((lane, laneIdx) =>
+                    lane.map(bar => {
+                      const isOwn = bar.event.creator?.id === userId;
+                      const barColor = isOwn ? getStatusColor(bar.event.status) : '#94a3b8';
+                      const colWidth = 100 / 7;
+                      const left = (bar.startCol - 1) * colWidth;
+                      const width = (bar.endCol - bar.startCol + 1) * colWidth;
+                      return (
+                        <div
+                          key={bar.event.id}
+                          title={bar.event.title}
+                          style={{
+                            position: 'absolute',
+                            top: `${laneIdx * laneHeight}px`,
+                            left: `calc(${left}% + ${bar.isStartInWeek ? 3 : 0}px)`,
+                            width: `calc(${width}% - ${(bar.isStartInWeek ? 3 : 0) + (bar.isEndInWeek ? 3 : 0)}px)`,
+                            height: '20px',
+                            fontSize: '11px',
+                            padding: '2px 6px',
+                            backgroundColor: barColor + (isDarkMode ? '45' : '30'),
+                            color: isOwn ? barColor : (isDarkMode ? '#cbd5e1' : '#64748b'),
+                            borderLeft: bar.isStartInWeek ? `3px solid ${barColor}` : 'none',
+                            borderRadius: `${bar.isStartInWeek ? '4px' : '0'} ${bar.isEndInWeek ? '4px' : '0'} ${bar.isEndInWeek ? '4px' : '0'} ${bar.isStartInWeek ? '4px' : '0'}`,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            fontWeight: '600',
+                            lineHeight: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {!isOwn && bar.isStartInWeek && <span>{bar.event.creator?.name} </span>}
+                          {bar.event.title}
+                        </div>
+                      );
+                    })
+                  )}
+                  {/* Single-day events in empty lane slots */}
+                  {week.map((day, col) => {
+                    const singles = getSingleDayEventsForDate(day, events);
+                    if (singles.length === 0) return null;
+                    const emptyLanes = [];
+                    for (let i = 0; i < maxMultiLanes; i++) {
+                      const occupied = i < visibleLanes.length &&
+                        visibleLanes[i].some(bar => (col + 1) >= bar.startCol && (col + 1) <= bar.endCol);
+                      if (!occupied) emptyLanes.push(i);
+                    }
+                    const colWidth = 100 / 7;
+                    return singles.slice(0, emptyLanes.length).map((ev, idx) => {
+                      const laneIdx = emptyLanes[idx];
+                      const isOwn = ev.creator?.id === userId;
+                      const barColor = isOwn ? getStatusColor(ev.status) : '#94a3b8';
+                      return (
+                        <div
+                          key={ev.id}
+                          title={ev.title}
+                          style={{
+                            position: 'absolute',
+                            top: `${laneIdx * laneHeight}px`,
+                            left: `calc(${col * colWidth}% + 3px)`,
+                            width: `calc(${colWidth}% - 6px)`,
+                            height: '20px',
+                            fontSize: '11px',
+                            padding: '2px 4px',
+                            borderRadius: '3px',
+                            backgroundColor: barColor + (isDarkMode ? '35' : '28'),
+                            color: isOwn ? barColor : (isDarkMode ? '#cbd5e1' : '#64748b'),
+                            borderLeft: `3px solid ${barColor}`,
+                            overflow: 'hidden',
+                            whiteSpace: 'nowrap',
+                            textOverflow: 'ellipsis',
+                            fontWeight: '500',
+                            lineHeight: '16px',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {ev.title}
+                        </div>
+                      );
+                    });
+                  })}
+                </div>
 
-                {/* Single-day events per cell */}
+                {/* Overflow +n indicators */}
                 <div style={{
                   display: 'grid',
                   gridTemplateColumns: 'repeat(7, 1fr)',
@@ -173,64 +218,22 @@ const CalendarGrid = React.memo(function CalendarGrid({
                   gap: '0 2px'
                 }}>
                   {week.map((day, col) => {
-                    // Find the highest occupied lane in this cell for tight packing
-                    let maxOccupiedLane = -1;
-                    visibleLanes.forEach((lane, laneIdx) => {
-                      if (lane.some(bar => (col + 1) >= bar.startCol && (col + 1) <= bar.endCol)) {
-                        maxOccupiedLane = laneIdx;
-                      }
-                    });
-                    const cellMultiPad = maxOccupiedLane >= 0 ? (maxOccupiedLane + 1) * laneHeight : 0;
-
-                    const visibleMultiInCell = visibleLanes.reduce((count, lane) =>
-                      count + lane.filter(bar => (col + 1) >= bar.startCol && (col + 1) <= bar.endCol).length
-                    , 0);
+                    const overflowPad = maxMultiLanes * laneHeight;
                     const hiddenMultiInCell = hiddenLanes.reduce((count, lane) =>
                       count + lane.filter(bar => (col + 1) >= bar.startCol && (col + 1) <= bar.endCol).length
                     , 0);
-
                     const singles = getSingleDayEventsForDate(day, events);
-                    const remainingSlots = Math.max(0, 4 - visibleMultiInCell);
-                    const showSingles = Math.min(singles.length, remainingSlots);
-                    const hiddenCount = hiddenMultiInCell + (singles.length - showSingles);
-
-                    if (showSingles === 0 && hiddenCount === 0) return <div key={col} style={{ paddingTop: `${cellMultiPad}px` }} />;
-
+                    let emptyLaneCount = 0;
+                    for (let i = 0; i < maxMultiLanes; i++) {
+                      const occupied = i < visibleLanes.length &&
+                        visibleLanes[i].some(bar => (col + 1) >= bar.startCol && (col + 1) <= bar.endCol);
+                      if (!occupied) emptyLaneCount++;
+                    }
+                    const hiddenCount = hiddenMultiInCell + Math.max(0, singles.length - emptyLaneCount);
+                    if (hiddenCount === 0) return <div key={col} style={{ paddingTop: `${overflowPad}px` }} />;
                     return (
-                      <div key={col} style={{ paddingTop: `${cellMultiPad}px`, paddingLeft: '3px', paddingRight: '3px', overflow: 'hidden' }}>
-                        {singles.slice(0, showSingles).map(ev => {
-                          const isOwn = ev.creator?.id === userId;
-                          const barColor = isOwn ? getStatusColor(ev.status) : '#94a3b8';
-                          return (
-                            <div
-                              key={ev.id}
-                              title={ev.title}
-                              style={{
-                                fontSize: '11px',
-                                padding: '2px 4px',
-                                borderRadius: '3px',
-                                backgroundColor: barColor + (isDarkMode ? '35' : '28'),
-                                color: isOwn ? barColor : (isDarkMode ? '#cbd5e1' : '#64748b'),
-                                borderLeft: `3px solid ${barColor}`,
-                                marginBottom: '1px',
-                                overflow: 'hidden',
-                                whiteSpace: 'nowrap',
-                                textOverflow: 'ellipsis',
-                                fontWeight: '500',
-                                lineHeight: '16px',
-                                boxSizing: 'border-box',
-                                maxWidth: '100%'
-                              }}
-                            >
-                              {ev.title}
-                            </div>
-                          );
-                        })}
-                        {hiddenCount > 0 && (
-                          <div style={{ fontSize: '11px', color: secondaryTextColor, textAlign: 'center' }}>
-                            +{hiddenCount}
-                          </div>
-                        )}
+                      <div key={col} style={{ paddingTop: `${overflowPad}px`, textAlign: 'center' }}>
+                        <div style={{ fontSize: '11px', color: secondaryTextColor }}>+{hiddenCount}</div>
                       </div>
                     );
                   })}
