@@ -1,16 +1,101 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
-import { ArrowLeft, Sun, Moon, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, CheckCircle, Eye, EyeOff, ChevronDown } from 'lucide-react';
 import api from '../../utils/api';
+
+// 커스텀 드롭다운 컴포넌트
+function CustomSelect({ value, onChange, options, placeholder, disabled, colors }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ref = useRef(null);
+  const { isDarkMode, cardBg, textColor, secondaryTextColor, borderColor, inputBg } = colors;
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setIsOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const selectedLabel = options.find(o => o.value === value)?.label || '';
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <div
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={{
+          width: '100%',
+          padding: '12px',
+          borderRadius: '12px',
+          border: `1px solid ${isOpen ? '#3B82F6' : borderColor}`,
+          backgroundColor: disabled ? (isDarkMode ? '#1a1a2e' : '#f3f4f6') : inputBg,
+          color: value ? textColor : secondaryTextColor,
+          fontSize: '14px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          boxSizing: 'border-box',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          paddingRight: '36px',
+          position: 'relative',
+          boxShadow: isOpen ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
+          opacity: disabled ? 0.6 : 1,
+        }}
+      >
+        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedLabel || placeholder}
+        </span>
+        <ChevronDown size={16} style={{
+          position: 'absolute', right: '12px', top: '50%',
+          color: secondaryTextColor,
+          transform: isOpen ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
+          transition: 'transform 0.2s',
+        }} />
+      </div>
+      {isOpen && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+          marginTop: '4px', borderRadius: '12px', border: `1px solid ${borderColor}`,
+          backgroundColor: cardBg,
+          boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
+          overflow: 'hidden',
+          maxHeight: '200px',
+          overflowY: 'auto',
+        }}>
+          {options.map(opt => (
+            <div key={opt.value}
+              onClick={() => { onChange(opt.value); setIsOpen(false); }}
+              style={{
+                padding: '10px 12px', cursor: 'pointer', fontSize: '14px', color: textColor,
+                backgroundColor: value === opt.value
+                  ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (value !== opt.value) e.target.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5';
+              }}
+              onMouseLeave={(e) => {
+                if (value !== opt.value) e.target.style.backgroundColor = 'transparent';
+              }}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function SignupPage({ onBackClick }) {
   const { register } = useAuth();
   const { toggleDarkMode } = useTheme();
-  const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
+  const colors = useThemeColors();
+  const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = colors;
   const { inputStyle, labelStyle } = useCommonStyles();
   const [formData, setFormData] = useState({
     email: '',
@@ -94,12 +179,60 @@ export default function SignupPage({ onBackClick }) {
     }
   };
 
+  const handleCustomChange = (name, value) => {
+    if (name === 'division') {
+      setFormData({ ...formData, division: value, office: '', department: '' });
+    } else if (name === 'office') {
+      setFormData({ ...formData, office: value, department: '' });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
+  };
+
   const availableOffices = formData.division ? (organizations.offices[formData.division] || []) : [];
   const availableDepartments = formData.office ? (organizations.departments[formData.office] || []) : [];
+
+  const positionOptions = [
+    { value: '사원', label: '사원' },
+    { value: '대리', label: '대리' },
+    { value: '과장', label: '과장' },
+    { value: '차장', label: '차장' },
+    { value: '부장', label: '부장' },
+    { value: '처장', label: '처장' },
+    { value: '본부장', label: '본부장' },
+  ];
+
+  const divisionOptions = organizations.divisions.map(d => {
+    const name = typeof d === 'string' ? d : d.name;
+    return { value: name, label: name };
+  });
+
+  const officeOptions = availableOffices.map(o => {
+    const name = typeof o === 'string' ? o : o.name;
+    return { value: name, label: name };
+  });
+
+  const departmentOptions = availableDepartments.map(d => {
+    const name = typeof d === 'string' ? d : d.name;
+    return { value: name, label: name };
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.position) {
+      setError('직급을 선택하세요.');
+      return;
+    }
+    if (!formData.division) {
+      setError('1차 사업소를 선택하세요.');
+      return;
+    }
+    if (!formData.office) {
+      setError('2차 사업소를 선택하세요.');
+      return;
+    }
 
     if (formData.password !== formData.passwordConfirm) {
       setError('비밀번호가 일치하지 않습니다.');
@@ -111,6 +244,7 @@ export default function SignupPage({ onBackClick }) {
       return;
     }
 
+    // eslint-disable-next-line
     if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
       setError('비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
@@ -241,22 +375,13 @@ export default function SignupPage({ onBackClick }) {
             </div>
             <div>
               <label style={labelStyle}>직급 *</label>
-              <select
-                name="position"
+              <CustomSelect
                 value={formData.position}
-                onChange={handleChange}
-                required
-                style={inputStyle}
-              >
-                <option value="">선택</option>
-                <option value="사원">사원</option>
-                <option value="대리">대리</option>
-                <option value="과장">과장</option>
-                <option value="차장">차장</option>
-                <option value="부장">부장</option>
-                <option value="처장">처장</option>
-                <option value="본부장">본부장</option>
-              </select>
+                onChange={(val) => handleCustomChange('position', val)}
+                options={positionOptions}
+                placeholder="선택"
+                colors={colors}
+              />
             </div>
           </div>
 
@@ -357,56 +482,38 @@ export default function SignupPage({ onBackClick }) {
 
           <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>1차 사업소 *</label>
-            <select
-              name="division"
+            <CustomSelect
               value={formData.division}
-              onChange={handleChange}
-              required
+              onChange={(val) => handleCustomChange('division', val)}
+              options={divisionOptions}
+              placeholder="소속 사업소를 선택하세요"
               disabled={loadingOrgs}
-              style={inputStyle}
-            >
-              <option value="">소속 사업소를 선택하세요</option>
-              {organizations.divisions.map(division => {
-                const name = typeof division === 'string' ? division : division.name;
-                return <option key={name} value={name}>{name}</option>;
-              })}
-            </select>
+              colors={colors}
+            />
           </div>
 
           <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>2차 사업소 *</label>
-            <select
-              name="office"
+            <CustomSelect
               value={formData.office}
-              onChange={handleChange}
-              required
+              onChange={(val) => handleCustomChange('office', val)}
+              options={officeOptions}
+              placeholder="소속 사업소를 선택하세요"
               disabled={!formData.division || loadingOrgs}
-              style={inputStyle}
-            >
-              <option value="">소속 사업소를 선택하세요</option>
-              {availableOffices.map(office => {
-                const name = typeof office === 'string' ? office : office.name;
-                return <option key={name} value={name}>{name}</option>;
-              })}
-            </select>
+              colors={colors}
+            />
           </div>
 
           <div style={{ marginBottom: '28px' }}>
             <label style={labelStyle}>부서{availableDepartments.length > 0 ? ' *' : ''}</label>
-            <select
-              name="department"
+            <CustomSelect
               value={formData.department}
-              onChange={handleChange}
-              required={availableDepartments.length > 0}
+              onChange={(val) => handleCustomChange('department', val)}
+              options={departmentOptions}
+              placeholder={availableDepartments.length > 0 ? '소속 부서를 선택하세요' : '해당 없음'}
               disabled={!formData.office || loadingOrgs || availableDepartments.length === 0}
-              style={inputStyle}
-            >
-              <option value="">{availableDepartments.length > 0 ? '소속 부서를 선택하세요' : '해당 없음'}</option>
-              {availableDepartments.map(department => {
-                const name = typeof department === 'string' ? department : department.name;
-                return <option key={name} value={name}>{name}</option>;
-              })}
-            </select>
+              colors={colors}
+            />
           </div>
 
           <ErrorAlert message={error} />

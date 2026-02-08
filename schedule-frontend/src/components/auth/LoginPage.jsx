@@ -70,12 +70,10 @@ export default function LoginPage({ onSignupClick }) {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '28px' }}>📅</span>
-            <h1 style={{ fontSize: '22px', fontWeight: '600', color: textColor, margin: 0 }}>
-              업무일정 관리
-            </h1>
-          </div>
+          <span style={{ fontSize: '36px', display: 'block', marginBottom: '10px' }}>📅</span>
+          <h1 style={{ fontSize: '22px', fontWeight: '600', color: textColor, margin: 0 }}>
+            업무일정 관리
+          </h1>
           <p style={{ fontSize: '14px', color: secondaryTextColor, marginTop: '8px' }}>
             로그인하여 시작하세요
           </p>
