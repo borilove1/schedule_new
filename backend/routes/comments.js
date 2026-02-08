@@ -66,8 +66,16 @@ router.post('/events/:eventId', async (req, res, next) => {
       });
     }
 
-    // 일정 조회 권한 확인
-    if (!canViewEvent(req.user, eventResult.rows[0])) {
+    // 일정 조회 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
+    const eventRow = eventResult.rows[0];
+    const eventForAuth = {
+      ...eventRow,
+      departmentId: eventRow.department_id,
+      officeId: eventRow.office_id,
+      divisionId: eventRow.division_id,
+      creatorId: eventRow.creator_id,
+    };
+    if (!canViewEvent(req.user, eventForAuth)) {
       return res.status(403).json({
         success: false,
         error: { code: 'AUTH_005', message: '권한이 없습니다.' }
@@ -128,8 +136,16 @@ router.post('/series/:seriesId', async (req, res, next) => {
       });
     }
 
-    // 권한 확인
-    if (!canViewEvent(req.user, seriesResult.rows[0])) {
+    // 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
+    const seriesRow = seriesResult.rows[0];
+    const seriesForAuth = {
+      ...seriesRow,
+      departmentId: seriesRow.department_id,
+      officeId: seriesRow.office_id,
+      divisionId: seriesRow.division_id,
+      creatorId: seriesRow.creator_id,
+    };
+    if (!canViewEvent(req.user, seriesForAuth)) {
       return res.status(403).json({
         success: false,
         error: { code: 'AUTH_005', message: '권한이 없습니다.' }

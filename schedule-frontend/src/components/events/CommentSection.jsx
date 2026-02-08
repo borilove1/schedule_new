@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MessageCircle, Send, Edit2, Trash2, X, Check } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useActionGuard } from '../../hooks/useActionGuard';
 import { getRelativeTime } from '../../utils/mockNotifications';
 import { api } from '../../utils/api';
+import ConfirmDialog from '../common/ConfirmDialog';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", "Segoe UI", sans-serif';
 
@@ -15,6 +16,7 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
   const [editingId, setEditingId] = useState(null);
   const [editContent, setEditContent] = useState('');
   const [hoveredAction, setHoveredAction] = useState(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
   const { isDarkMode, textColor, secondaryTextColor, inputBg, borderColor, hoverBg, errorColor } = useThemeColors();
   const actionGuard = useActionGuard();
@@ -60,6 +62,9 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
           await api.addEventComment(eventId, newComment.trim());
         }
         setNewComment('');
+        if (newCommentRef.current) {
+          newCommentRef.current.style.height = 'auto';
+        }
         await loadComments();
       } catch (err) {
         setError(err.message || '댓글 작성에 실패했습니다.');
@@ -93,8 +98,10 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
     });
   };
 
-  const handleDelete = async (commentId) => {
-    if (!window.confirm('정말 이 댓글을 삭제하시겠습니까?')) return;
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirmId) return;
+    const commentId = deleteConfirmId;
+    setDeleteConfirmId(null);
 
     await actionGuard.execute(async () => {
       setError('');
@@ -121,7 +128,16 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
   const getIsEdited = (comment) => comment.is_edited || comment.isEdited;
   const getCreatedAt = (comment) => comment.created_at || comment.createdAt;
 
-  const inProgress = actionGuard.isGuarded;
+  const inProgress = actionGuard.inProgress;
+  const newCommentRef = useRef(null);
+  const editCommentRef = useRef(null);
+
+  // textarea 자동 높이 조절
+  const autoResize = (el) => {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  };
 
   // 아바타 색상 배열 (작성자별 다른 색상)
   const avatarColors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4'];
@@ -320,7 +336,7 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
                       )}
                       {canDeleteComment(comment) && (
                         <button
-                          onClick={() => handleDelete(comment.id)}
+                          onClick={() => setDeleteConfirmId(comment.id)}
                           disabled={inProgress}
                           onMouseEnter={() => setHoveredAction(`del-${comment.id}`)}
                           onMouseLeave={() => setHoveredAction(null)}
@@ -348,8 +364,12 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
                 {isEditing ? (
                   <div>
                     <textarea
+                      ref={editCommentRef}
                       value={editContent}
-                      onChange={(e) => setEditContent(e.target.value)}
+                      onChange={(e) => {
+                        setEditContent(e.target.value);
+                        autoResize(e.target);
+                      }}
                       style={{
                         width: '100%',
                         padding: '10px 12px',
@@ -359,15 +379,19 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
                         color: textColor,
                         fontSize: '14px',
                         fontFamily: FONT_FAMILY,
-                        resize: 'vertical',
+                        resize: 'none',
                         minHeight: '60px',
                         marginBottom: '8px',
                         outline: 'none',
                         boxSizing: 'border-box',
                         transition: 'border-color 0.2s',
                         lineHeight: '1.5',
+                        overflow: 'hidden',
                       }}
-                      onFocus={(e) => { e.target.style.borderColor = '#3B82F6'; }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3B82F6';
+                        autoResize(e.target);
+                      }}
                       onBlur={(e) => { e.target.style.borderColor = borderColor; }}
                     />
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -441,12 +465,16 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
           <div style={{
             display: 'flex',
             gap: '8px',
-            alignItems: 'flex-end',
+            alignItems: 'flex-start',
           }}>
             <div style={{ flex: 1 }}>
               <textarea
+                ref={newCommentRef}
                 value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
+                onChange={(e) => {
+                  setNewComment(e.target.value);
+                  autoResize(e.target);
+                }}
                 placeholder="댓글을 입력하세요..."
                 disabled={inProgress}
                 rows={1}
@@ -467,12 +495,12 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
                   fontFamily: FONT_FAMILY,
                   resize: 'none',
                   minHeight: '42px',
-                  maxHeight: '120px',
                   outline: 'none',
                   boxSizing: 'border-box',
                   opacity: inProgress ? 0.5 : 1,
                   transition: 'border-color 0.2s, box-shadow 0.2s',
                   lineHeight: '1.5',
+                  overflow: 'hidden',
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = '#3B82F6';
@@ -482,29 +510,24 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
                   e.target.style.borderColor = borderColor;
                   e.target.style.boxShadow = 'none';
                 }}
-                onInput={(e) => {
-                  e.target.style.height = 'auto';
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-                }}
               />
             </div>
             <button
               type="submit"
               disabled={!newComment.trim() || inProgress}
               style={{
-                padding: '10px 16px',
+                padding: '10px 12px',
                 borderRadius: '10px',
                 border: 'none',
-                backgroundColor: (!newComment.trim() || inProgress) ? (isDarkMode ? '#334155' : '#cbd5e1') : '#3B82F6',
-                color: '#fff',
+                backgroundColor: (!newComment.trim() || inProgress) ? (isDarkMode ? '#334155' : '#e2e8f0') : '#3B82F6',
+                color: (!newComment.trim() || inProgress) ? secondaryTextColor : '#fff',
                 cursor: (!newComment.trim() || inProgress) ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
-                fontWeight: '500',
-                fontFamily: FONT_FAMILY,
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                justifyContent: 'center',
                 flexShrink: 0,
+                width: '42px',
                 height: '42px',
                 opacity: (!newComment.trim() || inProgress) ? 0.5 : 1,
                 transition: 'all 0.15s',
@@ -523,6 +546,16 @@ export default function CommentSection({ eventId, currentUser, canEdit }) {
             Enter로 전송, Shift+Enter로 줄바꿈
           </div>
         </form>
+      )}
+
+      {/* 댓글 삭제 확인 다이얼로그 */}
+      {deleteConfirmId && (
+        <ConfirmDialog
+          title="댓글 삭제"
+          message="정말 이 댓글을 삭제하시겠습니까?"
+          actions={[{ label: '삭제', onClick: handleDeleteConfirm, variant: 'danger' }]}
+          onCancel={() => setDeleteConfirmId(null)}
+        />
       )}
     </div>
   );
