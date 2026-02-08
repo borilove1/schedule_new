@@ -128,6 +128,25 @@ export default function Calendar() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadEvents]);
 
+  // 10초마다 OVERDUE 상태 재계산 (API 호출 없이 로컬 상태만 갱신)
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setEvents(prev => {
+        const now = new Date();
+        let changed = false;
+        const updated = prev.map(ev => {
+          if (ev.status === 'PENDING' && ev.endAt && new Date(ev.endAt) < now) {
+            changed = true;
+            return { ...ev, status: 'OVERDUE' };
+          }
+          return ev;
+        });
+        return changed ? updated : prev;
+      });
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   // --- Computed ---
   const days = useMemo(() => getCalendarDays(currentDate), [currentDate]);
   const weeks = useMemo(() => getWeeks(days), [days]);

@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const { authenticate, canViewEvent, canEditEvent } = require('../middleware/auth');
 const { notifyByScope } = require('../src/controllers/notificationController');
+const { broadcast } = require('../src/utils/sseManager');
 
 const router = express.Router();
 
@@ -122,6 +123,8 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       console.error('Comment notification error:', notifError);
     }
 
+    broadcast('event_changed', { action: 'comment_updated' }, req.user.id);
+
     res.status(201).json({
       success: true,
       data: {
@@ -197,6 +200,8 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
     } catch (notifError) {
       console.error('Comment notification error:', notifError);
     }
+
+    broadcast('event_changed', { action: 'comment_updated' }, req.user.id);
 
     res.status(201).json({
       success: true,
@@ -294,6 +299,8 @@ router.delete('/:id', async (req, res, next) => {
 
     // 댓글 삭제
     await query('DELETE FROM comments WHERE id = $1', [id]);
+
+    broadcast('event_changed', { action: 'comment_updated' }, req.user.id);
 
     res.json({
       success: true,
