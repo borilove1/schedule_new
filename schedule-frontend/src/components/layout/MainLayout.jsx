@@ -13,7 +13,7 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
   const isMobile = useIsMobile();
 
   return (
-    <div style={{ height: '100vh', backgroundColor: bgColor, color: textColor, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="app-shell" style={{ backgroundColor: bgColor, color: textColor, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* Header */}
       <header style={{
         padding: isMobile ? '6px 16px' : '8px 24px',
