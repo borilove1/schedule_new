@@ -69,8 +69,7 @@ services:
       - "443:443"   # HTTPS
       - "8080:80"   # HTTP (→ HTTPS 리다이렉트)
     volumes:
-      - /etc/letsencrypt/live/teamschedule.duckdns.org:/etc/nginx/ssl:ro  # Let's Encrypt SSL
-      - /etc/letsencrypt/archive/teamschedule.duckdns.org:/etc/letsencrypt/archive/teamschedule.duckdns.org:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Let's Encrypt SSL (심볼릭 링크 해결 위해 전체 마운트)
       - ./ssl:/etc/nginx/ssl-selfsigned:ro  # 기존 자체서명 (IP 접속용 폴백)
     depends_on:
       - backend
