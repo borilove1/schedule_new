@@ -4,7 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
-import { Calendar, ArrowLeft, Sun, Moon, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Sun, Moon, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import api from '../../utils/api';
 
 export default function SignupPage({ onBackClick }) {
@@ -189,8 +189,8 @@ export default function SignupPage({ onBackClick }) {
           </button>
         </div>
 
-        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <Calendar size={36} color="#3B82F6" style={{ margin: '0 auto 10px' }} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', marginBottom: '24px' }}>
+          <span style={{ fontSize: '28px' }}>📋</span>
           <h1 style={{ fontSize: '22px', fontWeight: '600', color: textColor, margin: 0 }}>
             회원가입
           </h1>
@@ -391,7 +391,7 @@ export default function SignupPage({ onBackClick }) {
             </select>
           </div>
 
-          <div style={{ marginBottom: '18px' }}>
+          <div style={{ marginBottom: '28px' }}>
             <label style={labelStyle}>부서{availableDepartments.length > 0 ? ' *' : ''}</label>
             <select
               name="department"

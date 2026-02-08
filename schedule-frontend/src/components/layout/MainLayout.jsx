@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { Calendar, Sun, Moon, LogOut, Shield, User } from 'lucide-react';
+import { Sun, Moon, LogOut, Shield, User } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 
 export default function MainLayout({ children, currentPage, onNavigate }) {
@@ -25,7 +25,7 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
         flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
-          <Calendar size={isMobile ? 20 : 28} color="#3B82F6" />
+          <span style={{ fontSize: isMobile ? '20px' : '28px', lineHeight: 1 }}>📅</span>
           <h1 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: '600', margin: 0 }}>
             업무일정 관리
           </h1>

@@ -4,7 +4,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
-import { Calendar, Sun, Moon, Eye, EyeOff } from 'lucide-react';
+import { Sun, Moon, Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage({ onSignupClick }) {
   const { login } = useAuth();
@@ -70,10 +70,12 @@ export default function LoginPage({ onSignupClick }) {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <Calendar size={36} color="#3B82F6" style={{ margin: '0 auto 10px' }} />
-          <h1 style={{ fontSize: '22px', fontWeight: '600', color: textColor, margin: 0 }}>
-            업무일정 관리
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '28px' }}>📅</span>
+            <h1 style={{ fontSize: '22px', fontWeight: '600', color: textColor, margin: 0 }}>
+              업무일정 관리
+            </h1>
+          </div>
           <p style={{ fontSize: '14px', color: secondaryTextColor, marginTop: '8px' }}>
             로그인하여 시작하세요
           </p>
