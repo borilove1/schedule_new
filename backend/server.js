@@ -80,8 +80,13 @@ app.use(cors({
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// 압축
-app.use(compression());
+// 압축 (SSE 스트리밍 응답은 제외)
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers.accept === 'text/event-stream') return false;
+    return compression.filter(req, res);
+  }
+}));
 
 // 로깅
 if (process.env.NODE_ENV === 'development') {
