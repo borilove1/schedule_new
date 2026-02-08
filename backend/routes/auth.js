@@ -482,9 +482,18 @@ router.get('/email-preferences', authenticate, async (req, res, next) => {
       });
     }
 
+    // 시스템 이메일 활성화 상태도 함께 반환
+    const settingResult = await query(
+      "SELECT value FROM system_settings WHERE key = 'email_enabled'"
+    );
+    const systemEmailEnabled = settingResult.rows.length > 0
+      && settingResult.rows[0].value !== false
+      && settingResult.rows[0].value !== 'false';
+
     res.json({
       success: true,
       data: {
+        systemEmailEnabled,
         emailNotificationsEnabled: result.rows[0].email_notifications_enabled,
         emailPreferences: result.rows[0].email_preferences
       }

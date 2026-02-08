@@ -46,6 +46,7 @@ export default function ProfilePage({ onBack }) {
     }
   });
   const [emailPrefsOriginal, setEmailPrefsOriginal] = useState(null);
+  const [systemEmailEnabled, setSystemEmailEnabled] = useState(false);
   const [emailPrefsLoading, setEmailPrefsLoading] = useState(false);
   const [emailPrefsError, setEmailPrefsError] = useState('');
   const [emailPrefsSuccess, setEmailPrefsSuccess] = useState('');
@@ -74,6 +75,7 @@ export default function ProfilePage({ onBack }) {
     const loadEmailPrefs = async () => {
       try {
         const data = await api.getEmailPreferences();
+        setSystemEmailEnabled(!!data.systemEmailEnabled);
         const prefs = {
           emailNotificationsEnabled: data.emailNotificationsEnabled,
           emailPreferences: data.emailPreferences || {}
@@ -441,98 +443,116 @@ export default function ProfilePage({ onBack }) {
       </div>
 
       {/* 이메일 알림 설정 */}
-      <div style={sectionStyle}>
+      <div style={{ ...sectionStyle, opacity: systemEmailEnabled ? 1 : 0.7 }}>
         <div style={sectionTitleStyle}>
           <Mail size={18} /> 이메일 알림 설정
         </div>
 
-        {emailPrefsSuccess && (
-          <div style={successStyle}>
-            <CheckCircle size={16} /> {emailPrefsSuccess}
+        {/* 시스템 이메일 비활성화 안내 */}
+        {!systemEmailEnabled && (
+          <div style={{
+            padding: '14px 16px', borderRadius: '8px', fontSize: '13px', lineHeight: '1.5',
+            backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+            border: `1px solid ${borderColor}`,
+            color: secondaryTextColor,
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <Mail size={18} style={{ flexShrink: 0, opacity: 0.5 }} />
+            <span>이메일 알림 기능이 현재 비활성화 상태입니다. 관리자가 시스템 설정에서 이메일 알림을 활성화한 후 사용할 수 있습니다.</span>
           </div>
         )}
-        <ErrorAlert message={emailPrefsError} />
 
-        {/* 마스터 토글 */}
-        <div style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          marginBottom: emailPrefs.emailNotificationsEnabled ? '20px' : '0',
-        }}>
-          <div>
-            <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>이메일 알림 받기</div>
-            <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
-              이벤트 발생 시 이메일로 알림을 수신합니다.
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => setEmailPrefs(prev => ({ ...prev, emailNotificationsEnabled: !prev.emailNotificationsEnabled }))}
-            style={{
-              width: '48px', height: '26px', borderRadius: '13px',
-              border: 'none', cursor: 'pointer', position: 'relative',
-              backgroundColor: emailPrefs.emailNotificationsEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
-              transition: 'background-color 0.2s', flexShrink: 0,
-            }}
-          >
-            <div style={{
-              width: '20px', height: '20px', borderRadius: '50%',
-              backgroundColor: '#fff', position: 'absolute', top: '3px',
-              left: emailPrefs.emailNotificationsEnabled ? '25px' : '3px',
-              transition: 'left 0.2s',
-            }} />
-          </button>
-        </div>
-
-        {/* 타입별 토글 */}
-        {emailPrefs.emailNotificationsEnabled && (
-          <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: '16px' }}>
-            {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, label]) => (
-              <div key={type} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '10px 0',
-              }}>
-                <span style={{ fontSize: '14px', color: textColor }}>{label}</span>
-                <button
-                  type="button"
-                  onClick={() => setEmailPrefs(prev => ({
-                    ...prev,
-                    emailPreferences: {
-                      ...prev.emailPreferences,
-                      [type]: !prev.emailPreferences[type]
-                    }
-                  }))}
-                  style={{
-                    width: '44px', height: '24px', borderRadius: '12px',
-                    border: 'none', cursor: 'pointer', position: 'relative',
-                    backgroundColor: emailPrefs.emailPreferences[type] ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
-                    transition: 'background-color 0.2s', flexShrink: 0,
-                  }}
-                >
-                  <div style={{
-                    width: '18px', height: '18px', borderRadius: '50%',
-                    backgroundColor: '#fff', position: 'absolute', top: '3px',
-                    left: emailPrefs.emailPreferences[type] ? '23px' : '3px',
-                    transition: 'left 0.2s',
-                  }} />
-                </button>
+        {systemEmailEnabled && (
+          <>
+            {emailPrefsSuccess && (
+              <div style={successStyle}>
+                <CheckCircle size={16} /> {emailPrefsSuccess}
               </div>
-            ))}
-          </div>
-        )}
+            )}
+            <ErrorAlert message={emailPrefsError} />
 
-        <button
-          type="button"
-          onClick={handleEmailPrefsSave}
-          disabled={emailPrefsLoading || !emailPrefsHasChanges}
-          style={{
-            ...btnStyle,
-            marginTop: '16px',
-            opacity: (emailPrefsLoading || !emailPrefsHasChanges) ? 0.5 : 1,
-            cursor: (emailPrefsLoading || !emailPrefsHasChanges) ? 'not-allowed' : 'pointer',
-          }}
-        >
-          <Save size={16} /> {emailPrefsLoading ? '저장 중...' : '저장'}
-        </button>
+            {/* 마스터 토글 */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              marginBottom: emailPrefs.emailNotificationsEnabled ? '20px' : '0',
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>이메일 알림 받기</div>
+                <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
+                  이벤트 발생 시 이메일로 알림을 수신합니다.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEmailPrefs(prev => ({ ...prev, emailNotificationsEnabled: !prev.emailNotificationsEnabled }))}
+                style={{
+                  width: '48px', height: '26px', borderRadius: '13px',
+                  border: 'none', cursor: 'pointer', position: 'relative',
+                  backgroundColor: emailPrefs.emailNotificationsEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                  transition: 'background-color 0.2s', flexShrink: 0,
+                }}
+              >
+                <div style={{
+                  width: '20px', height: '20px', borderRadius: '50%',
+                  backgroundColor: '#fff', position: 'absolute', top: '3px',
+                  left: emailPrefs.emailNotificationsEnabled ? '25px' : '3px',
+                  transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+
+            {/* 타입별 토글 */}
+            {emailPrefs.emailNotificationsEnabled && (
+              <div style={{ borderTop: `1px solid ${borderColor}`, paddingTop: '16px' }}>
+                {Object.entries(NOTIFICATION_TYPE_LABELS).map(([type, label]) => (
+                  <div key={type} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    padding: '10px 0',
+                  }}>
+                    <span style={{ fontSize: '14px', color: textColor }}>{label}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEmailPrefs(prev => ({
+                        ...prev,
+                        emailPreferences: {
+                          ...prev.emailPreferences,
+                          [type]: !prev.emailPreferences[type]
+                        }
+                      }))}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px',
+                        border: 'none', cursor: 'pointer', position: 'relative',
+                        backgroundColor: emailPrefs.emailPreferences[type] ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                        transition: 'background-color 0.2s', flexShrink: 0,
+                      }}
+                    >
+                      <div style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        backgroundColor: '#fff', position: 'absolute', top: '3px',
+                        left: emailPrefs.emailPreferences[type] ? '23px' : '3px',
+                        transition: 'left 0.2s',
+                      }} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleEmailPrefsSave}
+              disabled={emailPrefsLoading || !emailPrefsHasChanges}
+              style={{
+                ...btnStyle,
+                marginTop: '16px',
+                opacity: (emailPrefsLoading || !emailPrefsHasChanges) ? 0.5 : 1,
+                cursor: (emailPrefsLoading || !emailPrefsHasChanges) ? 'not-allowed' : 'pointer',
+              }}
+            >
+              <Save size={16} /> {emailPrefsLoading ? '저장 중...' : '저장'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
