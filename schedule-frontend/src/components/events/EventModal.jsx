@@ -102,17 +102,21 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
 
   if (!isOpen) return null;
 
-  const fieldHeight = '46px';
+  const fieldHeight = isMobile ? '40px' : '46px';
 
   const dateInputStyle = {
     ...inputStyle,
     height: fieldHeight,
+    padding: isMobile ? '8px 10px' : '12px',
+    fontSize: isMobile ? '13px' : '14px',
     colorScheme: isDarkMode ? 'dark' : 'light',
   };
 
   const uniformInputStyle = {
     ...inputStyle,
     height: fieldHeight,
+    padding: isMobile ? '8px 10px' : '12px',
+    fontSize: isMobile ? '13px' : '14px',
   };
 
   const handleChange = (e) => {

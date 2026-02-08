@@ -32,17 +32,21 @@ export default function EventEditForm({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const fieldHeight = '46px';
+  const fieldHeight = isMobile ? '40px' : '46px';
 
   const dateInputStyle = {
     ...inputStyle,
     height: fieldHeight,
+    padding: isMobile ? '8px 10px' : '12px',
+    fontSize: isMobile ? '13px' : '14px',
     colorScheme: isDarkMode ? 'dark' : 'light',
   };
 
   const uniformInputStyle = {
     ...inputStyle,
     height: fieldHeight,
+    padding: isMobile ? '8px 10px' : '12px',
+    fontSize: isMobile ? '13px' : '14px',
   };
 
   const priorityOptions = [
