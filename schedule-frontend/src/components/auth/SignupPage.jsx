@@ -111,8 +111,8 @@ export default function SignupPage({ onBackClick }) {
       return;
     }
 
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(formData.password)) {
-      setError('비밀번호는 영문과 숫자를 모두 포함해야 합니다.');
+    if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(formData.password)) {
+      setError('비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
     }
 
@@ -284,7 +284,7 @@ export default function SignupPage({ onBackClick }) {
                 required
                 minLength={8}
                 style={{ ...inputStyle, paddingRight: '44px' }}
-                placeholder="영문, 숫자 포함 8자 이상"
+                placeholder="영문, 숫자, 특수문자 포함 8자 이상"
               />
               <button
                 type="button"

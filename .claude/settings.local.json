@@ -39,7 +39,10 @@
       "mcp__playwright__browser_resize",
       "Bash(claude mcp add:*)",
       "mcp__figma__whoami",
-      "mcp__figma__create_design_system_rules"
+      "mcp__figma__create_design_system_rules",
+      "Bash(if not exist \"d:\\\\schedule\\\\schedule-frontend\\\\src\\\\styles\" mkdir \"d:\\\\schedule\\\\schedule-frontend\\\\src\\\\styles\")",
+      "Bash(docker ps:*)",
+      "Bash(artillery run:*)"
     ]
   },
   "enableAllProjectMcpServers": true,

@@ -35,7 +35,11 @@ const query = async (text, params) => {
     
     return result;
   } catch (error) {
-    console.error('쿼리 실행 오류:', error);
+    if (process.env.NODE_ENV === 'production') {
+      console.error('쿼리 실행 오류:', error.message);
+    } else {
+      console.error('쿼리 실행 오류:', error);
+    }
     throw error;
   }
 };

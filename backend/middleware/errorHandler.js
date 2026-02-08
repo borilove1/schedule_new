@@ -1,6 +1,11 @@
 // 에러 핸들러 미들웨어
 const errorHandler = (err, req, res, next) => {
-  console.error('에러 발생:', err);
+  // 프로덕션에서는 스택트레이스 제외, 개발에서만 전체 출력
+  if (process.env.NODE_ENV === 'production') {
+    console.error('에러 발생:', err.message);
+  } else {
+    console.error('에러 발생:', err);
+  }
 
   // Validation 에러
   if (err.name === 'ValidationError') {

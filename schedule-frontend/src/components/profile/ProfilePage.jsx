@@ -142,8 +142,8 @@ export default function ProfilePage({ onBack }) {
       return;
     }
 
-    if (!/(?=.*[a-zA-Z])(?=.*\d)/.test(passwordData.newPassword)) {
-      setPasswordError('새 비밀번호는 영문과 숫자를 모두 포함해야 합니다.');
+    if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(passwordData.newPassword)) {
+      setPasswordError('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
     }
 
@@ -411,7 +411,7 @@ export default function ProfilePage({ onBack }) {
               required
               minLength={8}
               style={inputStyle}
-              placeholder="영문, 숫자 포함 8자 이상"
+              placeholder="영문, 숫자, 특수문자 포함 8자 이상"
             />
           </div>
 

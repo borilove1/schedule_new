@@ -10,8 +10,9 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5433:5432"  # 외부:5433 → 내부:5432 (기존 5432와 충돌 방지)
+    # ports: ["5433:5432"]  # 로컬 개발 시에만 주석 해제
+    expose:
+      - "5432"  # Docker 네트워크 내부에서만 접근 가능
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -39,7 +40,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
-      JWT_EXPIRES_IN: 7d
+      JWT_EXPIRES_IN: 24h
       CORS_ORIGIN: ${CORS_ORIGIN}
     ports:
       - "3001:3000"  # 외부:3001 → 내부:3000

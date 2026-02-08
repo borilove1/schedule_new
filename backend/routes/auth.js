@@ -8,13 +8,15 @@ const { createNotification } = require('../src/controllers/notificationControlle
 
 const router = express.Router();
 
+const BCRYPT_ROUNDS = 12;
+
 // ========== 회원가입 ==========
 router.post('/register',
   [
     body('email').isEmail().withMessage('유효한 이메일을 입력하세요'),
     body('password')
       .isLength({ min: 8 }).withMessage('비밀번호는 최소 8자 이상이어야 합니다')
-      .matches(/(?=.*[a-zA-Z])(?=.*\d)/).withMessage('비밀번호는 영문과 숫자를 모두 포함해야 합니다'),
+      .matches(/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/).withMessage('비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다'),
     body('name').notEmpty().withMessage('이름을 입력하세요'),
     body('position').notEmpty().withMessage('직급을 선택하세요'),
     body('division').notEmpty().withMessage('본부를 선택하세요'),
@@ -112,7 +114,7 @@ router.post('/register',
       }
 
       // 비밀번호 해싱
-      const hashedPassword = await bcrypt.hash(password, 10);
+      const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       // 사용자 생성 (is_active = false: 관리자 승인 필요)
       const result = await query(
@@ -330,7 +332,7 @@ router.put('/change-password', authenticate,
     body('currentPassword').notEmpty().withMessage('현재 비밀번호를 입력하세요'),
     body('newPassword')
       .isLength({ min: 8 }).withMessage('새 비밀번호는 최소 8자 이상이어야 합니다.')
-      .matches(/(?=.*[a-zA-Z])(?=.*\d)/).withMessage('새 비밀번호는 영문과 숫자를 모두 포함해야 합니다.')
+      .matches(/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/).withMessage('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.')
   ],
   async (req, res, next) => {
     try {
@@ -361,7 +363,7 @@ router.put('/change-password', authenticate,
         });
       }
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
       await query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [hashedPassword, req.user.id]);
 
       res.json({ success: true, message: '비밀번호가 변경되었습니다.' });

@@ -27,11 +27,12 @@ router.get('/', authorize('ADMIN'), async (req, res, next) => {
     let params = [];
     let paramCount = 0;
 
-    // 검색 조건
+    // 검색 조건 (ILIKE 와일드카드 이스케이핑)
     if (search) {
       paramCount++;
+      const escapedSearch = search.replace(/[%_\\]/g, '\\$&');
       whereConditions.push(`(u.name ILIKE $${paramCount} OR u.email ILIKE $${paramCount})`);
-      params.push(`%${search}%`);
+      params.push(`%${escapedSearch}%`);
     }
 
     if (role) {

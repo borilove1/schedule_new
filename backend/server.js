@@ -25,20 +25,50 @@ const { checkAllUpcomingEvents } = require('./src/utils/reminderService');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// JWT Secret 강도 검증
+if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32 || process.env.JWT_SECRET.includes('change-this')) {
+  console.warn('⚠️  경고: JWT_SECRET이 안전하지 않습니다. 64자 이상의 랜덤 문자열로 교체하세요.');
+  console.warn('   생성: node -e "console.log(require(\'crypto\').randomBytes(64).toString(\'hex\'))"');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('❌ 프로덕션 환경에서는 안전한 JWT_SECRET이 필수입니다.');
+    process.exit(1);
+  }
+}
+
 // ========== 미들웨어 설정 ==========
 
-// 보안 헤더
-app.use(helmet());
+// Nginx 리버스 프록시 뒤에서 실제 클라이언트 IP 사용 (Rate Limit 정확성)
+app.set('trust proxy', 1);
 
-// CORS 설정
-app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
-  credentials: true
+// 보안 헤더 (helmet 상세 설정)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false,
 }));
 
-// Body Parser
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// CORS 설정 (허용 메서드 및 헤더 명시)
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 86400,
+}));
+
+// Body Parser (1MB 제한 - 일정 관리 앱에 충분)
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // 압축
 app.use(compression());
@@ -77,6 +107,15 @@ const eventsLimiter = rateLimit({
   message: { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' } }
 });
 app.use('/api/v1/events', eventsLimiter);
+
+const commentsLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' } }
+});
+app.use('/api/v1/comments', commentsLimiter);
 
 // ========== 라우트 설정 ==========
 

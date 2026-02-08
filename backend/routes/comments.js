@@ -1,9 +1,18 @@
 const express = require('express');
+const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const { authenticate, canViewEvent, canEditEvent } = require('../middleware/auth');
 const { createNotification } = require('../src/controllers/notificationController');
 
 const router = express.Router();
+
+// 댓글 내용 검증 미들웨어
+const validateComment = [
+  body('content')
+    .trim()
+    .notEmpty().withMessage('댓글 내용을 입력해주세요.')
+    .isLength({ max: 2000 }).withMessage('댓글은 2000자 이내로 입력해주세요.')
+];
 
 router.use(authenticate);
 
@@ -52,8 +61,16 @@ router.get('/series/:seriesId', async (req, res, next) => {
 });
 
 // ========== 댓글 추가 (일정) ==========
-router.post('/events/:eventId', async (req, res, next) => {
+router.post('/events/:eventId', validateComment, async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: errors.array()[0].msg }
+      });
+    }
+
     const { eventId } = req.params;
     const { content } = req.body;
 
@@ -122,8 +139,16 @@ router.post('/events/:eventId', async (req, res, next) => {
 });
 
 // ========== 댓글 추가 (반복 일정 시리즈) ==========
-router.post('/series/:seriesId', async (req, res, next) => {
+router.post('/series/:seriesId', validateComment, async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: errors.array()[0].msg }
+      });
+    }
+
     const { seriesId } = req.params;
     const { content } = req.body;
 
@@ -193,8 +218,16 @@ router.post('/series/:seriesId', async (req, res, next) => {
 });
 
 // ========== 댓글 수정 ==========
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', validateComment, async (req, res, next) => {
   try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: errors.array()[0].msg }
+      });
+    }
+
     const { id } = req.params;
     const { content } = req.body;
 

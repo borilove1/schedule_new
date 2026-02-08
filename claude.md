@@ -9,8 +9,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **기술 스택:**
 - **백엔드**: Node.js 18+ / Express 4 / PostgreSQL 13+
 - **프론트엔드**: React 18 (CRA) / lucide-react (아이콘)
-- **인증**: JWT (jsonwebtoken) + bcrypt
-- **보안**: helmet, cors, express-rate-limit, express-validator, compression
+- **인증**: JWT (jsonwebtoken) + bcrypt (12 rounds)
+- **보안**: helmet (CSP/HSTS), cors (명시적 whitelist), express-rate-limit (4단계), express-validator, compression
 - **알림**: node-cron 기반 리마인더 + 인앱 알림
 - **배포**: Docker Compose (3 컨테이너: backend, frontend, database)
 - **배포 경로**: `/var/www/schedule-app`
@@ -22,13 +22,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 schedule/
 ├── CLAUDE.md                           # Claude Code 가이드 (이 파일)
 ├── docker-compose.yml                  # Docker 오케스트레이션 (SSL 포함)
-├── .env                                # Docker 환경변수
+├── .env                                # Docker 환경변수 (⚠️ .gitignore 대상)
+├── .env.example                        # 환경변수 템플릿 (민감 정보 제외)
 │
 ├── backend/
-│   ├── server.js                       # Express 진입점 + Rate Limit + Cron jobs
+│   ├── server.js                       # Express 진입점 + 보안 설정 + Rate Limit + Cron jobs
 │   ├── Dockerfile                      # node:18-alpine, production 빌드
 │   ├── package.json
-│   ├── .env                            # 백엔드 환경변수
+│   ├── .env                            # 백엔드 환경변수 (⚠️ .gitignore 대상)
+│   ├── .env.example                    # 환경변수 템플릿
 │   ├── config/
 │   │   └── database.js                 # PG Pool (max:20) + query/transaction 헬퍼
 │   ├── middleware/
@@ -39,7 +41,7 @@ schedule/
 │   │   ├── events.js                   # 일정 CRUD + 완료/완료취소
 │   │   ├── users.js                    # 사용자 관리 + 승인 (ADMIN 전용)
 │   │   ├── organizations.js            # 조직 구조 CRUD (본부/처/부서)
-│   │   ├── comments.js                 # 댓글 조회/CRUD + 댓글 알림 (일정/시리즈)
+│   │   ├── comments.js                 # 댓글 조회/CRUD + 댓글 알림 + 입력 검증 (2000자)
 │   │   ├── notifications.js            # 알림 조회/읽음/삭제/리마인더체크
 │   │   └── settings.js                 # 시스템 설정 (ADMIN 전용)
 │   └── src/
@@ -52,7 +54,7 @@ schedule/
 │
 ├── schedule-frontend/
 │   ├── Dockerfile                      # node:18-alpine 빌드 → nginx:alpine
-│   ├── nginx.conf                      # SPA 라우팅 + /api/ 리버스 프록시 → backend:3000
+│   ├── nginx.conf                      # SPA 라우팅 + /api/ 프록시 + 보안 헤더 (HSTS/CSP/X-Frame)
 │   ├── package.json
 │   └── src/
 │       ├── App.js                      # 루트 (ThemeProvider → AuthProvider → AppContent)
@@ -248,7 +250,7 @@ schedule/
 ### 댓글 시스템
 - **인라인 UI**: EventDetailView 하단에 CommentSection 컴포넌트 (구분선 아래)
 - **데이터 흐름**: eventId가 `series-*` 형식이면 seriesId 추출 → 시리즈 댓글 API 호출
-- **CRUD**: 조회(GET)/작성(POST)/수정(PUT, 본인만)/삭제(DELETE, 본인 또는 ADMIN)
+- **CRUD**: 조회(GET)/작성(POST)/수정(PUT, 본인만)/삭제(DELETE, 본인 또는 ADMIN), express-validator로 content 필수+2000자 제한
 - **알림**: 타인 일정에 댓글 시 작성자에게 EVENT_COMMENTED 알림 (자기 댓글 제외)
 - **EventList 뱃지**: `getEvents()` 응답에 `commentCount` 포함 → 카드에 💬 N 뱃지 표시
 - **UX**: Enter 전송/Shift+Enter 줄바꿈, 이니셜 아바타(작성자별 색상), 상대 시간, (수정됨) 뱃지
@@ -369,10 +371,19 @@ schedule/
 
 ## Rate Limiting
 
-3개 Rate Limiter 활성화 (`server.js`):
+4개 Rate Limiter 활성화 (`server.js`, `trust proxy: 1`로 실제 IP 기반):
 - **로그인**: 15분당 10회 (`/api/v1/auth/login`)
 - **인증 전체**: 15분당 N회 (`/api/v1/auth`, `RATE_LIMIT_MAX_REQUESTS` 환경변수)
-- **일정**: 1분당 100회 (`/api/v1/events`)
+- **일정**: 30초당 100회 (`/api/v1/events`)
+- **댓글**: 1분당 30회 (`/api/v1/comments`)
+
+**프론트엔드 Rate Limit UX**:
+- Calendar.jsx에서 카운트다운 상태 관리 (`rateLimitCountdown`, `startCountdown`)
+- EventDetailModal/EventModal에 `rateLimitCountdown`과 `onRateLimitStart` props 전달
+- 모달 내 API 에러 catch에서 rate limit 감지 시 `onRateLimitStart(30)` 호출
+- EventDetailView/EventEditForm/EventModal에 노란색 카운트다운 배너 표시 (30→0초)
+- 카운트다운이 Calendar에서 공유 관리되므로 모달 닫고 다른 일정 열어도 카운트다운 유지
+- loadEvents에서 rate limit 시 30초 후 자동 재시도
 
 ## 주요 코드 패턴
 
@@ -414,7 +425,7 @@ schedule/
 ### 백엔드 database.js
 - `query(text, params)`: 파라미터화된 쿼리 실행 (SQL injection 방지)
 - `transaction(callback)`: BEGIN/COMMIT/ROLLBACK 자동 처리
-- 개발 모드에서 쿼리 실행 시간 로깅
+- 개발 모드에서 쿼리 실행 시간 로깅, 프로덕션에서는 에러 메시지만 로깅 (파라미터 제외)
 - Pool: max 20, idle 30s, connect timeout 2s
 
 ## 로컬 개발 환경
@@ -443,9 +454,9 @@ curl http://localhost:3000/health
 ## 배포 (Docker)
 
 ### Docker Compose 구성
-- `database`: postgres:13-alpine (포트 5433:5432), healthcheck 포함
-- `backend`: node:18-alpine (포트 3001:3000), database healthy 이후 시작
-- `frontend`: nginx:alpine (포트 8080:80, 443:443), SSL 인증서 마운트, /api/ → backend:3000 프록시
+- `database`: postgres:13-alpine (내부 5432 expose만, 외부 포트 미노출), healthcheck 포함
+- `backend`: node:18-alpine (포트 3001:3000), database healthy 이후 시작, JWT Secret 검증
+- `frontend`: nginx:alpine (포트 8080:80, 443:443), SSL + 보안 헤더 (HSTS/X-Frame/CSP), /api/ → backend:3000 프록시
 
 ### 프론트엔드 배포
 ```bash
@@ -485,14 +496,18 @@ docker-compose exec database psql -U scheduleuser -d schedule_management -f /pat
 
 ## 환경 변수
 
+> **주의**: `.env` 파일은 `.gitignore`에 등록됨. `.env.example`을 복사하여 사용.
+> **JWT_SECRET 생성**: `node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"`
+> 프로덕션에서 약한 JWT_SECRET 사용 시 서버가 시작 거부됨 (server.js 검증)
+
 ### 프로젝트 루트 `.env` (Docker Compose용)
 ```
 NODE_ENV=production
 DB_NAME=schedule_management
 DB_USER=scheduleuser
-DB_PASSWORD=<비밀번호>
-JWT_SECRET=<시크릿>
-JWT_EXPIRES_IN=7d
+DB_PASSWORD=<강력한 비밀번호>
+JWT_SECRET=<64자 이상 랜덤 문자열>
+JWT_EXPIRES_IN=24h
 CORS_ORIGIN=https://1.215.38.118
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -507,8 +522,8 @@ DB_PORT=5433
 DB_NAME=schedule_management
 DB_USER=scheduleuser
 DB_PASSWORD=<비밀번호>
-JWT_SECRET=<시크릿>
-JWT_EXPIRES_IN=7d
+JWT_SECRET=<64자 이상 랜덤 문자열>
+JWT_EXPIRES_IN=24h
 CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
@@ -553,7 +568,7 @@ SELECT eso.*, o.name FROM event_shared_offices eso JOIN offices o ON eso.office_
 다시 로그인하여 새 토큰 발급. Authorization 헤더 형식: `Bearer <token>`
 
 ### Rate Limit 429 에러
-`.env`에서 `RATE_LIMIT_MAX_REQUESTS` 값 조정. 현재 설정: 로그인 10/15분, 인증 100/15분, 일정 100/1분.
+`.env`에서 `RATE_LIMIT_MAX_REQUESTS` 값 조정. 현재 설정: 로그인 10/15분, 인증 100/15분, 일정 100/30초, 댓글 30/1분.
 
 ### 사용자 승인 관련
 ```sql
@@ -563,6 +578,31 @@ SELECT id, name, email, is_active, approved_at FROM users WHERE is_active = fals
 -- 수동 승인
 UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 ```
+
+## 보안 설정
+
+### Phase 1 보안 강화 (적용됨)
+- **JWT Secret 검증**: 프로덕션 시작 시 32자 미만 또는 기본값 감지 → 서버 시작 거부
+- **JWT 만료**: 7일 → 24시간으로 단축
+- **.env 보호**: `.gitignore`에 `.env`, `backend/.env` 등록, `.env.example` 템플릿 분리
+- **bcrypt rounds**: 10 → 12 (상수 `BCRYPT_ROUNDS`)
+- **비밀번호 정책**: 영문 + 숫자 + **특수문자** 필수 8자 이상 (백엔드 + 프론트엔드 동기화)
+- **에러 정보 노출 방지**: 프로덕션에서 스택트레이스/쿼리 파라미터 로그 제외
+- **Body size**: 10MB → 1MB (server.js + nginx client_max_body_size)
+- **trust proxy**: Nginx 뒤 실제 클라이언트 IP로 Rate Limit 적용
+- **CORS 강화**: methods/headers/maxAge 명시적 설정
+- **helmet CSP**: defaultSrc, scriptSrc, styleSrc, imgSrc, connectSrc, frameAncestors 세부 설정
+- **DB 포트 차단**: docker-compose에서 `ports` → `expose` (Docker 내부 네트워크만)
+- **Nginx 보안 헤더**: HSTS, X-Frame-Options(DENY), X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, server_tokens off, SSL ciphers
+- **댓글 검증**: express-validator로 content 필수 + 2000자 제한
+- **댓글 Rate Limit**: 1분당 30회
+- **ILIKE 이스케이핑**: 사용자 검색 시 `%`, `_`, `\` 와일드카드 이스케이핑
+
+### 보안 주의사항
+- `.env` 파일은 절대 Git에 커밋하지 않기 (`.env.example` 사용)
+- JWT_SECRET은 반드시 `crypto.randomBytes(64)` 이상으로 생성
+- 프로덕션 DB는 Docker 외부 네트워크에서 접근 불가 (로컬 개발 시에만 ports 주석 해제)
+- `admin@admin.com` / `admin1234` 기본 관리자 비밀번호 반드시 변경
 
 ## 해결된 이슈
 
@@ -575,9 +615,13 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 7. Rate Limit 비활성화 → 재활성화 (로그인/인증/일정 3단계) + 프론트엔드 입력 검증 추가
 8. 캘린더 레인 고정 배치로 단일 일정 +n 과다 → 유연 레인 배치 (멀티데이 우선 → 빈 레인에 단일 일정)
 9. 댓글 UI 미구현 → CommentSection 인라인 컴포넌트 구현 (조회/작성/수정/삭제 + 알림 + EventList 뱃지)
+10. Rate Limit 에러 시 사용자 피드백 부족 → 모달 내 30초 카운트다운 배너 (상세/생성/수정 모달 공통, 모달 간 상태 공유)
+11. 보안 취약점 Phase 1 수정 → JWT 강화/bcrypt 12/비밀번호 특수문자/에러 노출 방지/Body 1MB/DB 포트 차단/Nginx 보안 헤더/CORS·helmet 상세 설정/댓글 검증·Rate Limit/ILIKE 이스케이핑
 
 ## 알려진 이슈 및 남은 작업
 
 1. 테스트 코드 작성 (유닛/통합 테스트 미구현)
 2. 예외 이벤트에서 "전체 완료" 시 시리즈 미전파 (BUG-003)
 3. DEPT_LEAD 스코프별 일정 조회 실제 테스트 필요
+4. 보안 Phase 2: JWT 토큰 블랙리스트(로그아웃 무효화), Refresh Token 패턴
+5. 보안 Phase 3: 로그인 계정 잠금(N회 실패 시), 비밀번호 이력 관리, 세션 관리 강화

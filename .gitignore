@@ -1,3 +1,15 @@
 # SSL 인증서 (자체 서명 인증서는 서버에서 직접 생성)
 ssl/*.crt
 ssl/*.key
+
+# 환경변수 파일 (민감 정보 포함)
+.env
+backend/.env
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# 테스트/임시 파일
+*.log
+.playwright-mcp/
