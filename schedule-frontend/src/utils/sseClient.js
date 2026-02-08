@@ -4,30 +4,47 @@
 const API_BASE_URL = process.env.REACT_APP_API_URL || '/api/v1';
 
 let eventSource = null;
+let reconnectTimer = null;
+let errorCount = 0;
+const MAX_ERRORS_BEFORE_RECONNECT = 3;
+const RECONNECT_DELAY = 5000;
 const listeners = new Map(); // eventType → Set<callback>
 
 /**
  * SSE 연결 시작
+ * - OPEN 상태면 스킵
+ * - CONNECTING/CLOSED/에러 상태면 기존 연결 정리 후 새로 연결
  */
 export function connectSSE() {
-  if (eventSource) return; // 이미 연결됨
+  // 이미 연결 중이고 정상이면 스킵
+  if (eventSource?.readyState === EventSource.OPEN) return;
+
+  // 기존 연결이 끊어졌거나 CONNECTING 상태로 멈춰있으면 정리
+  if (eventSource) {
+    eventSource.close();
+    eventSource = null;
+  }
 
   const token = localStorage.getItem('token');
   if (!token) return;
 
-  // EventSource는 커스텀 헤더를 지원하지 않으므로 쿼리 파라미터로 토큰 전달
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
   const url = `${API_BASE_URL}/sse/events?token=${encodeURIComponent(token)}`;
-  console.log('[SSE] 연결 시도:', url.substring(0, 40) + '...');
   eventSource = new EventSource(url);
+  errorCount = 0;
 
   eventSource.onopen = () => {
     console.log('[SSE] 연결 성공');
+    errorCount = 0;
   };
 
   eventSource.onmessage = (event) => {
     try {
       const data = JSON.parse(event.data);
-      console.log('[SSE] 수신:', data.type, data.action || '');
       const callbacks = listeners.get(data.type);
       if (callbacks) {
         callbacks.forEach(cb => cb(data));
@@ -37,25 +54,47 @@ export function connectSSE() {
     }
   };
 
-  eventSource.onerror = (err) => {
-    console.log('[SSE] 에러, readyState:', eventSource?.readyState);
-    // 자동 재연결 (EventSource 내장 기능)
-    // 연결이 완전히 끊어지면 정리
+  eventSource.onerror = () => {
+    errorCount++;
+
     if (eventSource?.readyState === EventSource.CLOSED) {
-      console.log('[SSE] 연결 종료됨 (CLOSED)');
+      // 완전히 닫힘 → 정리 후 재연결 예약
       disconnectSSE();
+      scheduleReconnect();
+    } else if (errorCount >= MAX_ERRORS_BEFORE_RECONNECT) {
+      // CONNECTING 상태에서 연속 에러 → 강제 재연결
+      disconnectSSE();
+      scheduleReconnect();
     }
+    // 그 외: EventSource 내장 자동 재연결에 맡김
   };
+}
+
+/**
+ * 재연결 예약
+ */
+function scheduleReconnect() {
+  if (reconnectTimer) return;
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    errorCount = 0;
+    connectSSE();
+  }, RECONNECT_DELAY);
 }
 
 /**
  * SSE 연결 종료
  */
 export function disconnectSSE() {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (eventSource) {
     eventSource.close();
     eventSource = null;
   }
+  errorCount = 0;
 }
 
 /**
