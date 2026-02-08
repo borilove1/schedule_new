@@ -4,7 +4,7 @@ const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const { generateToken, authenticate } = require('../middleware/auth');
 const { AppError } = require('../middleware/errorHandler');
-const { createNotification } = require('../src/controllers/notificationController');
+const { notifyByScope } = require('../src/controllers/notificationController');
 
 const router = express.Router();
 
@@ -128,19 +128,10 @@ router.post('/register',
 
       // 관리자에게 승인 요청 알림 발송
       try {
-        const adminUsers = await query(
-          "SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true"
-        );
-        for (const admin of adminUsers.rows) {
-          await createNotification(
-            admin.id,
-            'USER_REGISTERED',
-            '새 사용자 가입 승인 요청',
-            `${name} (${email})님이 회원가입했습니다. 승인이 필요합니다.`,
-            null,
-            { userId: user.id, userName: name, userEmail: email }
-          );
-        }
+        await notifyByScope('USER_REGISTERED', '새 사용자 가입 승인 요청', `${name} (${email})님이 회원가입했습니다. 승인이 필요합니다.`, {
+          actorId: null,
+          metadata: { userId: user.id, userName: name, userEmail: email },
+        });
       } catch (notifErr) {
         console.error('Failed to notify admins:', notifErr);
       }

@@ -2,7 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
 const { authenticate, canViewEvent, canEditEvent } = require('../middleware/auth');
-const { createNotification } = require('../src/controllers/notificationController');
+const { notifyByScope } = require('../src/controllers/notificationController');
 
 const router = express.Router();
 
@@ -106,21 +106,20 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       RETURNING id, content, is_edited, created_at
     `, [content, eventId, req.user.id]);
 
-    // 일정 작성자에게 알림 (자기 댓글 제외)
+    // 일정 작성자에게 알림 (notifyByScope가 actorId 필터로 자기 댓글 제외)
     const event = eventResult.rows[0];
-    if (event.creator_id !== req.user.id) {
-      try {
-        await createNotification(
-          event.creator_id,
-          'EVENT_COMMENTED',
-          '새 댓글',
-          `"${event.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`,
-          parseInt(eventId),
-          { commentAuthor: req.user.name, commentContent: content.substring(0, 100) }
-        );
-      } catch (notifError) {
-        console.error('Comment notification error:', notifError);
-      }
+    try {
+      await notifyByScope('EVENT_COMMENTED', '새 댓글', `"${event.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
+        actorId: req.user.id,
+        creatorId: event.creator_id,
+        departmentId: event.department_id,
+        officeId: event.office_id,
+        divisionId: event.division_id,
+        relatedEventId: parseInt(eventId),
+        metadata: { commentAuthor: req.user.name, commentContent: content.substring(0, 100) },
+      });
+    } catch (notifError) {
+      console.error('Comment notification error:', notifError);
     }
 
     res.status(201).json({
@@ -184,21 +183,19 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       RETURNING id, content, is_edited, created_at
     `, [content, seriesId, req.user.id]);
 
-    // 시리즈 작성자에게 알림 (자기 댓글 제외)
+    // 시리즈 작성자에게 알림 (notifyByScope가 actorId 필터로 자기 댓글 제외)
     const series = seriesResult.rows[0];
-    if (series.creator_id !== req.user.id) {
-      try {
-        await createNotification(
-          series.creator_id,
-          'EVENT_COMMENTED',
-          '새 댓글',
-          `"${series.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`,
-          null,
-          { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100) }
-        );
-      } catch (notifError) {
-        console.error('Comment notification error:', notifError);
-      }
+    try {
+      await notifyByScope('EVENT_COMMENTED', '새 댓글', `"${series.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
+        actorId: req.user.id,
+        creatorId: series.creator_id,
+        departmentId: series.department_id,
+        officeId: series.office_id,
+        divisionId: series.division_id,
+        metadata: { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100) },
+      });
+    } catch (notifError) {
+      console.error('Comment notification error:', notifError);
     }
 
     res.status(201).json({

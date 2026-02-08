@@ -167,6 +167,80 @@ exports.deleteNotification = async (req, res) => {
 };
 
 /**
+ * 알림 타입 설정에 따라 수신자를 결정하고 알림 발송
+ * @param {string} type - 알림 타입 (EVENT_UPDATED, EVENT_COMPLETED 등)
+ * @param {string} title - 알림 제목
+ * @param {string} message - 알림 내용
+ * @param {object} context - { actorId, creatorId, departmentId, officeId, divisionId, targetUserId, relatedEventId, metadata }
+ */
+exports.notifyByScope = async (type, title, message, context) => {
+  try {
+    // 1. notification_config 조회
+    const configResult = await query("SELECT value FROM system_settings WHERE key = 'notification_config'");
+    const config = configResult.rows[0]?.value || {};
+    const typeConfig = config[type];
+    if (!typeConfig?.enabled) return; // OFF면 스킵
+
+    // 2. scope에 따라 수신자 목록 결정
+    const recipients = await resolveRecipients(typeConfig.scope, context);
+
+    // 3. 행위자 본인 제외 (자기 알림 방지)
+    const filtered = context.actorId
+      ? recipients.filter(id => id !== context.actorId)
+      : recipients;
+
+    if (filtered.length === 0) return;
+
+    // 4. 각 수신자에게 알림 생성
+    for (const userId of filtered) {
+      await exports.createNotification(userId, type, title, message, context.relatedEventId || null, context.metadata || null);
+    }
+  } catch (error) {
+    console.error('[notifyByScope] Error:', error.message);
+  }
+};
+
+/**
+ * scope에 따라 수신자 목록 반환
+ */
+async function resolveRecipients(scope, context) {
+  switch (scope) {
+    case 'creator':
+      return context.creatorId ? [context.creatorId] : [];
+    case 'target':
+      return context.targetUserId ? [context.targetUserId] : [];
+    case 'department':
+      if (!context.departmentId) return context.creatorId ? [context.creatorId] : [];
+      return (await query(
+        'SELECT id FROM users WHERE department_id = $1 AND is_active = true AND approved_at IS NOT NULL',
+        [context.departmentId]
+      )).rows.map(r => r.id);
+    case 'dept_leads':
+      return (await query(`
+        SELECT id FROM users
+        WHERE role = 'DEPT_LEAD' AND is_active = true AND approved_at IS NOT NULL
+        AND (
+          (scope = 'DEPARTMENT' AND department_id = $1)
+          OR (scope = 'OFFICE' AND office_id = $2)
+          OR (scope = 'DIVISION' AND division_id = $3)
+        )
+      `, [context.departmentId, context.officeId, context.divisionId])).rows.map(r => r.id);
+    case 'office':
+      if (!context.officeId) return context.creatorId ? [context.creatorId] : [];
+      return (await query(
+        'SELECT id FROM users WHERE office_id = $1 AND is_active = true AND approved_at IS NOT NULL',
+        [context.officeId]
+      )).rows.map(r => r.id);
+    case 'admins':
+      return (await query(
+        "SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true"
+      )).rows.map(r => r.id);
+    default:
+      return context.creatorId ? [context.creatorId] : [];
+  }
+}
+
+/**
  * Create notification (helper function)
  * Used internally by other controllers
  */

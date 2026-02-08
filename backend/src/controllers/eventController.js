@@ -3,7 +3,7 @@
 
 const { query, transaction } = require('../../config/database');
 const { generateOccurrencesFromSeries } = require('../utils/recurringEvents');
-const { createNotification } = require('./notificationController');
+const { notifyByScope } = require('./notificationController');
 const {
   scheduleEventReminder,
   cancelEventReminders,
@@ -526,13 +526,14 @@ exports.updateEvent = async (req, res) => {
 
         // 알림 생성
         try {
-          await createNotification(
-            userId,
-            'EVENT_UPDATED',
-            '일정 수정',
-            `"${updatedEvent.title}" 일정이 수정되었습니다.`,
-            updatedEvent.id
-          );
+          await notifyByScope('EVENT_UPDATED', '일정 수정', `"${updatedEvent.title}" 일정이 수정되었습니다.`, {
+            actorId: userId,
+            creatorId: series.creator_id,
+            departmentId: series.department_id,
+            officeId: series.office_id,
+            divisionId: series.division_id,
+            relatedEventId: updatedEvent.id,
+          });
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }
@@ -622,13 +623,13 @@ exports.updateEvent = async (req, res) => {
 
         // 알림 생성
         try {
-          await createNotification(
-            userId,
-            'EVENT_UPDATED',
-            '반복 일정 수정',
-            `"${updatedSeries.title}" 반복 일정이 수정되었습니다.`,
-            null
-          );
+          await notifyByScope('EVENT_UPDATED', '반복 일정 수정', `"${updatedSeries.title}" 반복 일정이 수정되었습니다.`, {
+            actorId: userId,
+            creatorId: updatedSeries.creator_id,
+            departmentId: updatedSeries.department_id,
+            officeId: updatedSeries.office_id,
+            divisionId: updatedSeries.division_id,
+          });
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }
@@ -688,13 +689,14 @@ exports.updateEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_UPDATED',
-          '일정 수정',
-          `"${updatedEvent.title}" 일정이 수정되었습니다.`,
-          updatedEvent.id
-        );
+        await notifyByScope('EVENT_UPDATED', '일정 수정', `"${updatedEvent.title}" 일정이 수정되었습니다.`, {
+          actorId: userId,
+          creatorId: originalEvent.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+          relatedEventId: updatedEvent.id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -715,13 +717,13 @@ exports.updateEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_UPDATED',
-          '반복 일정 수정',
-          `"${updatedSeries.title}" 반복 일정이 수정되었습니다.`,
-          null
-        );
+        await notifyByScope('EVENT_UPDATED', '반복 일정 수정', `"${updatedSeries.title}" 반복 일정이 수정되었습니다.`, {
+          actorId: userId,
+          creatorId: updatedSeries.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -774,13 +776,13 @@ exports.updateEvent = async (req, res) => {
       const newSeries = result.rows[0];
 
       try {
-        await createNotification(
-          userId,
-          'EVENT_UPDATED',
-          '반복 일정 변환',
-          `"${newSeries.title}" 일정이 반복 일정으로 변환되었습니다.`,
-          null
-        );
+        await notifyByScope('EVENT_UPDATED', '반복 일정 변환', `"${newSeries.title}" 일정이 반복 일정으로 변환되었습니다.`, {
+          actorId: userId,
+          creatorId: newSeries.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -820,13 +822,14 @@ exports.updateEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_UPDATED',
-          '일정 수정',
-          `"${updatedEvent.title}" 일정이 수정되었습니다.`,
-          updatedEvent.id
-        );
+        await notifyByScope('EVENT_UPDATED', '일정 수정', `"${updatedEvent.title}" 일정이 수정되었습니다.`, {
+          actorId: userId,
+          creatorId: updatedEvent.creator_id,
+          departmentId: updatedEvent.department_id,
+          officeId: updatedEvent.office_id,
+          divisionId: updatedEvent.division_id,
+          relatedEventId: updatedEvent.id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -889,13 +892,13 @@ exports.deleteEvent = async (req, res) => {
 
         // 알림 생성
         try {
-          await createNotification(
-            userId,
-            'EVENT_DELETED',
-            '일정 삭제',
-            `"${series.title}" 일정 (${occurrenceDateStr})이 삭제되었습니다.`,
-            null
-          );
+          await notifyByScope('EVENT_DELETED', '일정 삭제', `"${series.title}" 일정 (${occurrenceDateStr})이 삭제되었습니다.`, {
+            actorId: userId,
+            creatorId: series.creator_id,
+            departmentId: series.department_id,
+            officeId: series.office_id,
+            divisionId: series.division_id,
+          });
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }
@@ -917,13 +920,13 @@ exports.deleteEvent = async (req, res) => {
 
         // 알림 생성
         try {
-          await createNotification(
-            userId,
-            'EVENT_DELETED',
-            '반복 일정 삭제',
-            `"${series.title}" 반복 일정이 모두 삭제되었습니다.`,
-            null
-          );
+          await notifyByScope('EVENT_DELETED', '반복 일정 삭제', `"${series.title}" 반복 일정이 모두 삭제되었습니다.`, {
+            actorId: userId,
+            creatorId: series.creator_id,
+            departmentId: series.department_id,
+            officeId: series.office_id,
+            divisionId: series.division_id,
+          });
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }
@@ -958,13 +961,13 @@ exports.deleteEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_DELETED',
-          '일정 삭제',
-          `"${originalEvent.title}" 일정이 삭제되었습니다.`,
-          null
-        );
+        await notifyByScope('EVENT_DELETED', '일정 삭제', `"${originalEvent.title}" 일정이 삭제되었습니다.`, {
+          actorId: userId,
+          creatorId: originalEvent.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -986,13 +989,13 @@ exports.deleteEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_DELETED',
-          '반복 일정 삭제',
-          `"${originalEvent.title}" 반복 일정이 모두 삭제되었습니다.`,
-          null
-        );
+        await notifyByScope('EVENT_DELETED', '반복 일정 삭제', `"${originalEvent.title}" 반복 일정이 모두 삭제되었습니다.`, {
+          actorId: userId,
+          creatorId: originalEvent.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -1014,13 +1017,13 @@ exports.deleteEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_DELETED',
-          '일정 삭제',
-          `"${eventTitle}" 일정이 삭제되었습니다.`,
-          null
-        );
+        await notifyByScope('EVENT_DELETED', '일정 삭제', `"${eventTitle}" 일정이 삭제되었습니다.`, {
+          actorId: userId,
+          creatorId: originalEvent.creator_id,
+          departmentId: originalEvent.department_id,
+          officeId: originalEvent.office_id,
+          divisionId: originalEvent.division_id,
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -1282,13 +1285,13 @@ exports.completeEvent = async (req, res) => {
 
         // 알림 생성
         try {
-          await createNotification(
-            userId,
-            'EVENT_COMPLETED',
-            '반복 일정 전체 완료',
-            `"${series.title}" 반복 일정을 전체 완료했습니다.`,
-            null
-          );
+          await notifyByScope('EVENT_COMPLETED', '반복 일정 전체 완료', `"${series.title}" 반복 일정을 전체 완료했습니다.`, {
+            actorId: userId,
+            creatorId: series.creator_id,
+            departmentId: series.department_id,
+            officeId: series.office_id,
+            divisionId: series.division_id,
+          });
         } catch (notifError) {
           console.error('Failed to create notification:', notifError);
         }
@@ -1347,14 +1350,14 @@ exports.completeEvent = async (req, res) => {
 
       // 알림 생성
       try {
-        await createNotification(
-          userId,
-          'EVENT_COMPLETED',
-          '일정 완료',
-          `"${series.title}" 일정을 완료했습니다.`,
-          null,
-          { occurrenceDate: occurrenceDateStr }
-        );
+        await notifyByScope('EVENT_COMPLETED', '일정 완료', `"${series.title}" 일정을 완료했습니다.`, {
+          actorId: userId,
+          creatorId: series.creator_id,
+          departmentId: series.department_id,
+          officeId: series.office_id,
+          divisionId: series.division_id,
+          metadata: { occurrenceDate: occurrenceDateStr },
+        });
       } catch (notifError) {
         console.error('Failed to create notification:', notifError);
       }
@@ -1395,13 +1398,14 @@ exports.completeEvent = async (req, res) => {
 
     // 알림 생성
     try {
-      await createNotification(
-        userId,
-        'EVENT_COMPLETED',
-        '일정 완료',
-        `"${completedEvent.title}" 일정을 완료했습니다.`,
-        completedEvent.id
-      );
+      await notifyByScope('EVENT_COMPLETED', '일정 완료', `"${completedEvent.title}" 일정을 완료했습니다.`, {
+        actorId: userId,
+        creatorId: completedEvent.creator_id,
+        departmentId: completedEvent.department_id,
+        officeId: completedEvent.office_id,
+        divisionId: completedEvent.division_id,
+        relatedEventId: completedEvent.id,
+      });
     } catch (notifError) {
       console.error('Failed to create notification:', notifError);
     }

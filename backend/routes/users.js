@@ -2,7 +2,7 @@ const express = require('express');
 const { query } = require('../config/database');
 const { authenticate, authorize } = require('../middleware/auth');
 const { AppError } = require('../middleware/errorHandler');
-const { createNotification } = require('../src/controllers/notificationController');
+const { notifyByScope } = require('../src/controllers/notificationController');
 
 const router = express.Router();
 
@@ -253,14 +253,10 @@ router.patch('/:id/approve', authorize('ADMIN'), async (req, res, next) => {
 
     // 승인된 사용자에게 알림 발송
     try {
-      await createNotification(
-        parseInt(id),
-        'ACCOUNT_APPROVED',
-        '계정 승인 완료',
-        '관리자가 계정을 승인했습니다. 이제 로그인할 수 있습니다.',
-        null,
-        null
-      );
+      await notifyByScope('ACCOUNT_APPROVED', '계정 승인 완료', '관리자가 계정을 승인했습니다. 이제 로그인할 수 있습니다.', {
+        actorId: req.user.id,
+        targetUserId: parseInt(id),
+      });
     } catch (notifErr) {
       console.error('Failed to notify user:', notifErr);
     }

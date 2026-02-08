@@ -2,7 +2,7 @@
 // pg-boss 기반 알림 큐 서비스
 
 const { query } = require('../../config/database');
-const { createNotification } = require('../controllers/notificationController');
+const { notifyByScope } = require('../controllers/notificationController');
 
 // pg-boss 인스턴스 (server.js에서 주입)
 let boss = null;
@@ -370,14 +370,12 @@ async function processEventReminder(job) {
       metadata.compositeId = `series-${seriesId}-${new Date(occurrenceDate).getTime()}`;
     }
 
-    await createNotification(
-      targetUserId,
-      'EVENT_REMINDER',
-      '일정 알림',
-      `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`,
-      eventId,
-      metadata
-    );
+    await notifyByScope('EVENT_REMINDER', '일정 알림', `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`, {
+      actorId: null,
+      creatorId: targetUserId,
+      relatedEventId: eventId,
+      metadata,
+    });
 
     console.log(`[ReminderQueue] Notification sent: "${eventTitle}" (${timeKey})`);
   } catch (error) {

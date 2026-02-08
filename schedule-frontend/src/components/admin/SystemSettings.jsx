@@ -2,8 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import ErrorAlert from '../common/ErrorAlert';
 import SuccessAlert from '../common/SuccessAlert';
-import { Save, RefreshCw, Mail, Send, Eye, EyeOff } from 'lucide-react';
+import { Save, RefreshCw, Mail, Send, Eye, EyeOff, Bell } from 'lucide-react';
 import api from '../../utils/api';
+
+// 알림 타입별 메타데이터
+const NOTIFICATION_TYPES = {
+  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator'] },
+  EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
+  EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
+  EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
+  EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_leads'] },
+  USER_REGISTERED:  { label: '신규 가입 요청', scopes: ['admins'] },
+  ACCOUNT_APPROVED: { label: '계정 승인',     scopes: ['target'] },
+};
+
+const SCOPE_LABELS = {
+  creator: '작성자만',
+  department: '같은 부서',
+  dept_leads: '상위 관리자',
+  office: '같은 처/실',
+  admins: '전체 관리자',
+  target: '해당 사용자',
+};
 
 const SETTING_CONFIG = {
   // ===== 일반 설정 =====
@@ -398,6 +418,84 @@ export default function SystemSettings() {
         {generalEntries.map(([key, config], index) =>
           renderSettingRow(key, config, index === generalEntries.length - 1)
         )}
+      </div>
+
+      {/* 알림 설정 */}
+      <div style={sectionHeaderStyle}>
+        <Bell size={18} /> 알림 발송 설정
+      </div>
+      <div style={cardStyle}>
+        {Object.entries(NOTIFICATION_TYPES).map(([type, meta], index, arr) => {
+          const config = settings.notification_config || {};
+          const typeConfig = config[type] || { enabled: false, scope: meta.scopes[0] };
+          const isLast = index === arr.length - 1;
+          const hasSingleScope = meta.scopes.length <= 1;
+
+          return (
+            <div key={type} style={{
+              padding: '16px 24px',
+              borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>
+                  {meta.label}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+                {/* 수신 범위 드롭다운 */}
+                <select
+                  value={typeConfig.scope || meta.scopes[0]}
+                  onChange={e => {
+                    const updated = { ...config, [type]: { ...typeConfig, scope: e.target.value } };
+                    handleChange('notification_config', updated);
+                  }}
+                  disabled={!typeConfig.enabled || hasSingleScope}
+                  style={{
+                    ...inputStyle,
+                    minWidth: '120px',
+                    opacity: (!typeConfig.enabled || hasSingleScope) ? 0.5 : 1,
+                    cursor: (!typeConfig.enabled || hasSingleScope) ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {meta.scopes.map(s => (
+                    <option key={s} value={s}>{SCOPE_LABELS[s]}</option>
+                  ))}
+                </select>
+
+                {/* ON/OFF 토글 */}
+                <button
+                  onClick={() => {
+                    const updated = { ...config, [type]: { ...typeConfig, enabled: !typeConfig.enabled } };
+                    handleChange('notification_config', updated);
+                  }}
+                  style={{
+                    width: '48px', height: '26px', borderRadius: '13px',
+                    border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                    backgroundColor: typeConfig.enabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    backgroundColor: '#fff', position: 'absolute', top: '3px',
+                    left: typeConfig.enabled ? '25px' : '3px', transition: 'left 0.2s',
+                  }} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+        <div style={{
+          padding: '12px 24px',
+          fontSize: '12px',
+          color: secondaryTextColor,
+          borderTop: `1px solid ${borderColor}`,
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+        }}>
+          * 비활성화된 알림은 인앱/푸시/이메일 모두 발송되지 않습니다. 행위자 본인에게는 알림이 발송되지 않습니다.
+        </div>
       </div>
 
       {/* 이메일 알림 설정 */}
