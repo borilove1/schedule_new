@@ -65,7 +65,7 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, colors,
           backgroundColor: cardBg,
           boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
           overflow: 'hidden',
-          maxHeight: maxItems ? `${maxItems * 38}px` : '200px',
+          maxHeight: maxItems ? `${maxItems * 40}px` : '200px',
           overflowY: 'auto',
         }}>
           {options.map(opt => (
