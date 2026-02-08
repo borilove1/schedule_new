@@ -135,15 +135,6 @@ export default function EventDetailView({
 
       <ErrorAlert message={error} />
 
-      {actionInProgress && (
-        <div style={{
-          padding: '12px', borderRadius: '8px', backgroundColor: '#1e40af',
-          color: '#93c5fd', fontSize: '14px', marginBottom: '16px', textAlign: 'center'
-        }}>
-          처리 중...
-        </div>
-      )}
-
       {canEdit ? (
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
@@ -157,7 +148,7 @@ export default function EventDetailView({
               justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily: FONT_FAMILY
             }}
           >
-            <Check size={18} />{event.status === 'DONE' ? '완료 취소' : '완료 처리'}
+            <Check size={18} />{actionInProgress ? '처리 중...' : (event.status === 'DONE' ? '완료 취소' : '완료 처리')}
           </button>
           <button
             onClick={onEdit}

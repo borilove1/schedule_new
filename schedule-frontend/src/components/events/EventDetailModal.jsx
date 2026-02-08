@@ -245,7 +245,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess }
     >
       <div style={{
         backgroundColor: cardBg, borderRadius: '16px', width: '100%',
-        maxWidth: '600px', maxHeight: '90vh', overflow: 'auto', fontFamily: FONT_FAMILY,
+        maxWidth: '600px', maxHeight: '90vh', overflowY: 'scroll', fontFamily: FONT_FAMILY,
         transform: isAnimating ? 'translateY(0)' : 'translateY(20px)',
         opacity: isAnimating ? 1 : 0,
         transition: 'transform 0.25s ease, opacity 0.2s ease',
