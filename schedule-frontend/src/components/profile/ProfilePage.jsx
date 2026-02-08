@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
-import { ArrowLeft, Save, Lock, CheckCircle, Mail, ChevronDown } from 'lucide-react';
+import { ArrowLeft, Save, Lock, CheckCircle, Mail, Bell, ChevronDown } from 'lucide-react';
 import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
+import { useNotification } from '../../contexts/NotificationContext';
+import { subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '../../utils/pushHelper';
 
 // 커스텀 드롭다운 컴포넌트
 function CustomSelect({ value, onChange, options, placeholder, disabled, colors, dropUp, maxItems }) {
@@ -131,6 +133,7 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, colors,
 
 export default function ProfilePage({ onBack }) {
   const { user, updateProfile } = useAuth();
+  const { pushSupported, pushSubscribed, setPushSubscribed } = useNotification();
   const colors = useThemeColors();
   const { isDarkMode, cardBg, textColor, secondaryTextColor, borderColor } = colors;
   const { inputStyle, labelStyle } = useCommonStyles();
@@ -301,6 +304,7 @@ export default function ProfilePage({ onBack }) {
       return;
     }
 
+    // eslint-disable-next-line no-useless-escape
     if (!/(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/.test(passwordData.newPassword)) {
       setPasswordError('새 비밀번호는 영문, 숫자, 특수문자를 모두 포함해야 합니다.');
       return;
@@ -688,6 +692,63 @@ export default function ProfilePage({ onBack }) {
           </>
         )}
       </div>
+
+      {/* 푸시 알림 설정 */}
+      {pushSupported && (
+        <div style={sectionStyle}>
+          <div style={sectionTitleStyle}>
+            <Bell size={18} /> 푸시 알림
+          </div>
+
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          }}>
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>푸시 알림 받기</div>
+              <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
+                앱이 닫혀있어도 실시간 알림을 받을 수 있습니다.
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={async () => {
+                if (pushSubscribed) {
+                  const success = await unsubscribeFromPush();
+                  if (success) setPushSubscribed(false);
+                } else {
+                  const success = await subscribeToPush();
+                  setPushSubscribed(success);
+                }
+              }}
+              style={{
+                width: '48px', height: '26px', borderRadius: '13px',
+                border: 'none', cursor: 'pointer', position: 'relative',
+                backgroundColor: pushSubscribed ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                transition: 'background-color 0.2s', flexShrink: 0,
+              }}
+            >
+              <div style={{
+                width: '20px', height: '20px', borderRadius: '50%',
+                backgroundColor: '#fff', position: 'absolute', top: '3px',
+                left: pushSubscribed ? '25px' : '3px',
+                transition: 'left 0.2s',
+              }} />
+            </button>
+          </div>
+
+          {getPushPermissionState() === 'denied' && (
+            <div style={{
+              marginTop: '12px', padding: '10px 14px', borderRadius: '8px',
+              fontSize: '12px', lineHeight: '1.5',
+              backgroundColor: isDarkMode ? '#1e293b' : '#fef2f2',
+              border: `1px solid ${isDarkMode ? '#374151' : '#fecaca'}`,
+              color: isDarkMode ? '#fca5a5' : '#dc2626',
+            }}>
+              브라우저에서 알림이 차단되었습니다. 브라우저 설정에서 이 사이트의 알림을 허용해주세요.
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

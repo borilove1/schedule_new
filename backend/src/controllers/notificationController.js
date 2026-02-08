@@ -1,5 +1,6 @@
 const { query } = require('../../config/database');
 const { sendEmail } = require('../utils/emailService');
+const { sendPushToUser } = require('../utils/pushService');
 
 /**
  * Convert snake_case to camelCase for frontend
@@ -191,6 +192,23 @@ exports.createNotification = async (userId, type, title, message, relatedEventId
     // 이메일 알림 비동기 발송 (인앱 알림에 영향 없음)
     sendEmailNotification(userId, type, title, message).catch(err => {
       console.error('[Email] Background send error:', err.message);
+    });
+
+    // 푸시 알림 비동기 발송
+    sendPushToUser(userId, {
+      title: title,
+      body: message,
+      icon: '/logo192.png',
+      badge: '/logo192.png',
+      tag: `notif-${notification.id}`,
+      data: {
+        notificationId: notification.id,
+        type: type,
+        relatedEventId: relatedEventId,
+        url: '/',
+      }
+    }).catch(err => {
+      console.error('[Push] Background send error:', err.message);
     });
 
     return notification;

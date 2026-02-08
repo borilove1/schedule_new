@@ -18,3 +18,14 @@ root.render(
     <App />
   </React.StrictMode>
 );
+
+// Service Worker 등록 (PWA + Push)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then(registration => {
+        console.log('[SW] Registered:', registration.scope);
+      })
+      .catch(err => console.error('[SW] Registration failed:', err));
+  });
+}

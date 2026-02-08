@@ -357,6 +357,25 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  // Push Notifications
+  async getVapidPublicKey() {
+    return this.request('/push/vapid-public-key');
+  }
+
+  async subscribeToPush(subscription) {
+    return this.request('/push/subscribe', {
+      method: 'POST',
+      body: JSON.stringify(subscription),
+    });
+  }
+
+  async unsubscribeFromPush(endpoint) {
+    return this.request('/push/unsubscribe', {
+      method: 'DELETE',
+      body: JSON.stringify({ endpoint }),
+    });
+  }
 }
 
 export const api = new ApiClient();

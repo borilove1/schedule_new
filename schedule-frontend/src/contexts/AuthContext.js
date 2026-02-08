@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../utils/api';
+import { unsubscribeFromPush } from '../utils/pushHelper';
 
 const AuthContext = createContext();
 
@@ -47,6 +48,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const logout = useCallback(async () => {
+    try { await unsubscribeFromPush(); } catch (e) { /* ignore */ }
     await api.logout();
     setUser(null);
   }, []);

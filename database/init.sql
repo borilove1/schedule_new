@@ -377,6 +377,27 @@ CREATE TRIGGER update_comments_updated_at BEFORE UPDATE ON comments
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ========================================
+-- 8-1. 푸시 구독 테이블
+-- ========================================
+
+CREATE TABLE push_subscriptions (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    user_agent VARCHAR(500),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(endpoint)
+);
+
+CREATE INDEX idx_push_subs_user_id ON push_subscriptions(user_id);
+
+CREATE TRIGGER update_push_subscriptions_updated_at BEFORE UPDATE ON push_subscriptions
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- ========================================
 -- 9. 샘플 데이터 (개발/테스트용)
 -- ========================================
 

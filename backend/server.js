@@ -15,6 +15,7 @@ const eventRoutes = require('./routes/events');
 const commentRoutes = require('./routes/comments');
 const settingsRoutes = require('./routes/settings');
 const notificationRoutes = require('./routes/notifications');
+const pushRoutes = require('./routes/push');
 
 // 미들웨어 임포트
 const errorHandler = require('./middleware/errorHandler');
@@ -26,6 +27,7 @@ const {
   scheduleSeriesReminders,
   scheduleExistingEvents,
 } = require('./src/utils/reminderQueueService');
+const { initPush } = require('./src/utils/pushService');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -55,6 +57,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
+      workerSrc: ["'self'"],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
     },
@@ -122,6 +125,15 @@ const commentsLimiter = rateLimit({
 });
 app.use('/api/v1/comments', commentsLimiter);
 
+const pushLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '너무 많은 요청이 발생했습니다.' } }
+});
+app.use('/api/v1/push', pushLimiter);
+
 // ========== 라우트 설정 ==========
 
 // Health Check
@@ -141,6 +153,7 @@ app.use('/api/v1/events', eventRoutes);
 app.use('/api/v1/comments', commentRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
+app.use('/api/v1/push', pushRoutes);
 
 // 404 처리
 app.use((req, res) => {
@@ -201,6 +214,9 @@ app.listen(PORT, async () => {
     // 서버 시작 시 초기 스케줄링
     await scheduleExistingEvents();
     await scheduleSeriesReminders();
+
+    // Web Push 초기화
+    initPush();
 
     console.log('✅ pg-boss 큐 시스템 시작됨:');
     console.log('   - event-reminder 워커 등록 완료');
