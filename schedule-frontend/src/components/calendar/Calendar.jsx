@@ -12,7 +12,7 @@ import EventList from './EventList';
 import { getCalendarDays, getWeeks, getEventsForDate, filterEventsByTab } from './calendarHelpers';
 import Skeleton from '../common/Skeleton';
 import api from '../../utils/api';
-import { connectSSE, disconnectSSE, onSSE } from '../../utils/sseClient';
+import { connectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
