@@ -21,7 +21,7 @@ export default function NotificationModal({ isOpen, onClose }) {
     setLoading(true);
     setError('');
     try {
-      const { notifications: loadedNotifications } = await api.getNotifications();
+      const { notifications: loadedNotifications } = await api.getNotifications({ limit: 200 });
       setNotifications(loadedNotifications || []);
     } catch (err) {
       console.error('Failed to load notifications:', err);
