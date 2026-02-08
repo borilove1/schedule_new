@@ -9,6 +9,7 @@ const {
   cancelEventReminders,
   cancelSeriesReminders,
 } = require('../utils/reminderQueueService');
+const { broadcast } = require('../utils/sseManager');
 
 /**
  * PG의 TIMESTAMP WITH TIME ZONE → 타임존 없는 나이브 문자열 변환
@@ -356,6 +357,7 @@ exports.createEvent = async (req, res) => {
         return seriesResult;
       });
 
+      broadcast('event_changed', { action: 'created' }, userId);
       res.status(201).json({
         success: true,
         data: { series: result.rows[0] }
@@ -402,6 +404,7 @@ exports.createEvent = async (req, res) => {
         console.error('[Queue] Failed to schedule reminder:', qErr.message);
       }
 
+      broadcast('event_changed', { action: 'created' }, userId);
       res.status(201).json({
         success: true,
         data: { event: formatEventRow(newEvent) }
@@ -534,6 +537,7 @@ exports.updateEvent = async (req, res) => {
           console.error('Failed to create notification:', notifError);
         }
 
+        broadcast('event_changed', { action: 'updated' }, req.user.id);
         return res.json({ success: true, data: { event: formatEventRow(updatedEvent) } });
       } else if (seriesEditType === 'all') {
         // 전체 반복 일정 수정 (동적 SET 절)
@@ -629,6 +633,7 @@ exports.updateEvent = async (req, res) => {
           console.error('Failed to create notification:', notifError);
         }
 
+        broadcast('event_changed', { action: 'updated' }, req.user.id);
         return res.json({ success: true, data: { series: updatedSeries } });
       }
     }
@@ -694,6 +699,7 @@ exports.updateEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'updated' }, req.user.id);
       return res.json({ success: true, data: { event: formatEventRow(updatedEvent) } });
     } else if (originalEvent.series_id && actualEditType === 'all') {
       // 전체 반복 일정 수정
@@ -720,6 +726,7 @@ exports.updateEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'updated' }, req.user.id);
       return res.json({ success: true, data: { series: updatedSeries } });
     } else if (req.body.isRecurring) {
       // 단일 일정 → 반복 일정 변환
@@ -778,6 +785,7 @@ exports.updateEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'updated' }, req.user.id);
       return res.json({ success: true, data: { series: newSeries } });
     } else {
       // 일반 일정 수정 (공유 처 업데이트 포함)
@@ -823,6 +831,7 @@ exports.updateEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'updated' }, req.user.id);
       return res.json({ success: true, data: { event: formatEventRow(updatedEvent) } });
     }
   } catch (error) {
@@ -891,6 +900,7 @@ exports.deleteEvent = async (req, res) => {
           console.error('Failed to create notification:', notifError);
         }
 
+        broadcast('event_changed', { action: 'deleted' }, userId);
         return res.json({ success: true, message: 'Event occurrence deleted' });
       } else if (actualDeleteType === 'series') {
         // 시리즈 리마인더 취소
@@ -918,6 +928,7 @@ exports.deleteEvent = async (req, res) => {
           console.error('Failed to create notification:', notifError);
         }
 
+        broadcast('event_changed', { action: 'deleted' }, userId);
         return res.json({ success: true, message: 'All recurring events deleted' });
       }
     }
@@ -958,6 +969,7 @@ exports.deleteEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'deleted' }, userId);
       return res.json({ success: true, message: 'Event occurrence deleted' });
     } else if (originalEvent.series_id && actualDeleteType === 'series') {
       // 시리즈 리마인더 취소
@@ -985,6 +997,7 @@ exports.deleteEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'deleted' }, userId);
       return res.json({ success: true, message: 'All recurring events deleted' });
     } else {
       // 일반 일정 삭제
@@ -1012,6 +1025,7 @@ exports.deleteEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'deleted' }, userId);
       return res.json({ success: true, message: 'Event deleted' });
     }
   } catch (error) {
@@ -1279,6 +1293,7 @@ exports.completeEvent = async (req, res) => {
           console.error('Failed to create notification:', notifError);
         }
 
+        broadcast('event_changed', { action: 'completed' }, req.user.id);
         return res.json({
           success: true,
           message: 'All recurring events completed',
@@ -1344,6 +1359,7 @@ exports.completeEvent = async (req, res) => {
         console.error('Failed to create notification:', notifError);
       }
 
+      broadcast('event_changed', { action: 'completed' }, req.user.id);
       return res.json({
         success: true,
         message: 'Event completed',
@@ -1390,6 +1406,7 @@ exports.completeEvent = async (req, res) => {
       console.error('Failed to create notification:', notifError);
     }
 
+    broadcast('event_changed', { action: 'completed' }, req.user.id);
     res.json({
       success: true,
       message: 'Event completed',
@@ -1442,6 +1459,7 @@ exports.uncompleteEvent = async (req, res) => {
           );
         });
 
+        broadcast('event_changed', { action: 'uncompleted' }, req.user.id);
         return res.json({
           success: true,
           message: 'All recurring events uncompleted'
@@ -1462,6 +1480,7 @@ exports.uncompleteEvent = async (req, res) => {
         );
       });
 
+      broadcast('event_changed', { action: 'uncompleted' }, req.user.id);
       return res.json({
         success: true,
         message: 'Event uncompleted'
@@ -1491,6 +1510,7 @@ exports.uncompleteEvent = async (req, res) => {
       console.error('[Queue] Failed to reschedule reminder:', qErr.message);
     }
 
+    broadcast('event_changed', { action: 'uncompleted' }, req.user.id);
     res.json({
       success: true,
       message: 'Event uncompleted',

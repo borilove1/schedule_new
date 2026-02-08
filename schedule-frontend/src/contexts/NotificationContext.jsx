@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../utils/api';
 import { subscribeToPush, isSubscribedToPush } from '../utils/pushHelper';
+import { onSSE } from '../utils/sseClient';
 
 const NotificationContext = createContext();
 
@@ -58,13 +59,30 @@ export function NotificationProvider({ children }) {
     initPush();
   }, []);
 
-  // Load on mount and set up polling
+  // Load on mount and set up polling (30초)
   useEffect(() => {
     loadUnreadCount();
-
-    // Poll every 60 seconds
-    const interval = setInterval(loadUnreadCount, 60000);
+    const interval = setInterval(loadUnreadCount, 30000);
     return () => clearInterval(interval);
+  }, [loadUnreadCount]);
+
+  // SSE 실시간 갱신: 일정 변경 시 알림 카운트도 갱신
+  useEffect(() => {
+    const unsubscribe = onSSE('event_changed', () => {
+      loadUnreadCount();
+    });
+    return unsubscribe;
+  }, [loadUnreadCount]);
+
+  // Visibility API: 앱 복귀 시 즉시 갱신
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadUnreadCount();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadUnreadCount]);
 
   // Service Worker 메시지 수신 (푸시 도착 시 즉시 카운트 갱신)

@@ -12,6 +12,7 @@ import EventList from './EventList';
 import { getCalendarDays, getWeeks, getEventsForDate, filterEventsByTab } from './calendarHelpers';
 import Skeleton from '../common/Skeleton';
 import api from '../../utils/api';
+import { connectSSE, disconnectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
@@ -53,8 +54,11 @@ export default function Calendar() {
     return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
   }, []);
 
-  const loadEvents = useCallback(async () => {
-    setEventsLoading(true);
+  const loadEventsRef = useRef(false);
+  const loadEvents = useCallback(async (silent = false) => {
+    if (loadEventsRef.current) return; // 중복 호출 방지
+    loadEventsRef.current = true;
+    if (!silent) setEventsLoading(true);
     try {
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -92,12 +96,36 @@ export default function Calendar() {
         setTimeout(() => loadEvents(), 60000);
       }
     } finally {
-      setEventsLoading(false);
+      if (!silent) setEventsLoading(false);
+      loadEventsRef.current = false;
     }
   }, [currentDate, startCountdown]);
 
   useEffect(() => {
     loadEvents();
+  }, [loadEvents]);
+
+  // SSE 실시간 갱신: 다른 사용자의 일정 변경 시 즉시 반영 (스켈레톤 없이)
+  useEffect(() => {
+    connectSSE();
+    const unsubscribe = onSSE('event_changed', () => {
+      loadEvents(true);
+    });
+    return () => {
+      unsubscribe();
+    };
+  }, [loadEvents]);
+
+  // Visibility API: 앱 복귀 시 즉시 갱신 (스켈레톤 없이)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadEvents(true);
+        connectSSE();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadEvents]);
 
   // --- Computed ---

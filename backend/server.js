@@ -16,9 +16,11 @@ const commentRoutes = require('./routes/comments');
 const settingsRoutes = require('./routes/settings');
 const notificationRoutes = require('./routes/notifications');
 const pushRoutes = require('./routes/push');
+const { handleSSEConnection } = require('./src/utils/sseManager');
 
 // 미들웨어 임포트
 const errorHandler = require('./middleware/errorHandler');
+const { authenticate } = require('./middleware/auth');
 
 // 서비스 임포트
 const {
@@ -154,6 +156,15 @@ app.use('/api/v1/comments', commentRoutes);
 app.use('/api/v1/settings', settingsRoutes);
 app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/push', pushRoutes);
+
+// SSE 엔드포인트 (실시간 이벤트 스트림)
+// EventSource는 커스텀 헤더 미지원 → 쿼리 파라미터 토큰을 Authorization 헤더로 변환
+app.get('/api/v1/sse/events', (req, res, next) => {
+  if (!req.headers.authorization && req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, authenticate, handleSSEConnection);
 
 // 404 처리
 app.use((req, res) => {
