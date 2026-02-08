@@ -159,40 +159,40 @@ export default function EventDetailView({
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <button
             onClick={onComplete}
-            disabled={loading || actionInProgress}
+            disabled={loading || actionInProgress || rateLimitCountdown > 0}
             style={{
               flex: 1, padding: '12px 24px', borderRadius: '8px', border: 'none',
-              backgroundColor: (loading || actionInProgress) ? '#64748b' : (event.status === 'DONE' ? '#64748b' : '#10B981'),
-              color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer',
+              backgroundColor: (loading || actionInProgress || rateLimitCountdown > 0) ? '#64748b' : (event.status === 'DONE' ? '#64748b' : '#10B981'),
+              color: '#fff', cursor: (loading || actionInProgress || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer',
               fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily: FONT_FAMILY
+              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress || rateLimitCountdown > 0) ? 0.5 : 1, fontFamily: FONT_FAMILY
             }}
           >
             <Check size={18} />{actionInProgress ? '처리 중...' : (event.status === 'DONE' ? '완료 취소' : '완료 처리')}
           </button>
           <button
             onClick={onEdit}
-            disabled={loading || actionInProgress}
+            disabled={loading || actionInProgress || rateLimitCountdown > 0}
             style={{
               flex: 1, padding: '12px 24px', borderRadius: '8px',
               border: `1px solid ${isDarkMode ? '#475569' : '#cbd5e1'}`,
               backgroundColor: 'transparent', color: textColor,
-              cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer',
+              cursor: (loading || actionInProgress || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer',
               fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily: FONT_FAMILY
+              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress || rateLimitCountdown > 0) ? 0.5 : 1, fontFamily: FONT_FAMILY
             }}
           >
             <Edit2 size={18} />수정
           </button>
           <button
             onClick={onDelete}
-            disabled={loading || actionInProgress}
+            disabled={loading || actionInProgress || rateLimitCountdown > 0}
             style={{
               padding: '12px 24px', borderRadius: '8px', border: 'none',
-              backgroundColor: (loading || actionInProgress) ? '#991b1b' : '#ef4444',
-              color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer',
+              backgroundColor: (loading || actionInProgress || rateLimitCountdown > 0) ? '#991b1b' : '#ef4444',
+              color: '#fff', cursor: (loading || actionInProgress || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer',
               fontSize: '14px', fontWeight: '500', display: 'flex', alignItems: 'center',
-              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress) ? 0.5 : 1, fontFamily: FONT_FAMILY
+              justifyContent: 'center', gap: '6px', opacity: (loading || actionInProgress || rateLimitCountdown > 0) ? 0.5 : 1, fontFamily: FONT_FAMILY
             }}
           >
             <Trash2 size={18} />삭제

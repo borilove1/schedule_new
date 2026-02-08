@@ -237,11 +237,11 @@ export default function EventEditForm({
           취소
         </button>
         <button
-          type="submit" disabled={loading || actionInProgress}
+          type="submit" disabled={loading || actionInProgress || rateLimitCountdown > 0}
           style={{
             padding: '12px 24px', borderRadius: '8px', border: 'none',
-            backgroundColor: (loading || actionInProgress) ? '#1e40af' : '#3B82F6',
-            color: '#fff', cursor: (loading || actionInProgress) ? 'not-allowed' : 'pointer',
+            backgroundColor: (loading || actionInProgress || rateLimitCountdown > 0) ? '#1e40af' : '#3B82F6',
+            color: '#fff', cursor: (loading || actionInProgress || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer',
             fontSize: '14px', fontWeight: '500', fontFamily
           }}
         >
