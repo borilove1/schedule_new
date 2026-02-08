@@ -36,7 +36,9 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
   const [offices, setOffices] = useState([]);
   const [selectedOfficeIds, setSelectedOfficeIds] = useState([]);
   const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
+  const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const officeDropdownRef = useRef(null);
+  const priorityDropdownRef = useRef(null);
 
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
   const { fontFamily, inputStyle, labelStyle } = useCommonStyles();
@@ -48,6 +50,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
       setLoading(false);
       setSelectedOfficeIds([]);
       setShowOfficeDropdown(false);
+      setShowPriorityDropdown(false);
       // 처/실 목록 로드
       if (user?.divisionId) {
         api.getOffices(user.divisionId).then(data => {
@@ -62,6 +65,9 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
     const handleClickOutside = (e) => {
       if (officeDropdownRef.current && !officeDropdownRef.current.contains(e.target)) {
         setShowOfficeDropdown(false);
+      }
+      if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target)) {
+        setShowPriorityDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -92,9 +98,17 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
 
   if (!isOpen) return null;
 
+  const fieldHeight = '46px';
+
   const dateInputStyle = {
     ...inputStyle,
+    height: fieldHeight,
     colorScheme: isDarkMode ? 'dark' : 'light',
+  };
+
+  const uniformInputStyle = {
+    ...inputStyle,
+    height: fieldHeight,
   };
 
   const handleChange = (e) => {
@@ -161,51 +175,55 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: '20px',
+        zIndex: 1000, padding: '5px',
         transition: 'background-color 0.2s ease',
       }}
     >
       <div style={{
         backgroundColor: cardBg, borderRadius: '16px',
-        width: '100%', maxWidth: '600px', maxHeight: '90vh', overflow: 'auto',
+        width: '100%', maxWidth: '600px', maxHeight: 'calc(100vh - 10px)',
+        display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily,
         transform: isAnimating ? 'translateY(0)' : 'translateY(20px)',
         opacity: isAnimating ? 1 : 0,
         transition: 'transform 0.25s ease, opacity 0.2s ease',
       }}>
-        {/* Header */}
+        {/* Header - sticky */}
         <div style={{
           padding: '24px', borderBottom: `1px solid ${borderColor}`,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexShrink: 0, backgroundColor: cardBg, zIndex: 1,
         }}>
-          <h2 id="event-modal-title" style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>새 일정 만들기</h2>
+          <h2 id="event-modal-title" style={{ fontSize: '24px', fontWeight: '600', margin: 0, color: textColor }}>새 일정 만들기</h2>
           <button onClick={onClose} style={{
-            background: 'none', border: 'none', color: textColor, cursor: 'pointer', padding: '4px'
+            background: 'none', border: 'none', color: textColor, cursor: 'pointer'
           }}>
             <X size={24} />
           </button>
         </div>
 
-        {/* Body */}
-        <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+        {/* Body - scrollable */}
+        <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
+          {/* 작성자 정보 (필요 시 주석 해제)
           <div style={{
-            padding: '12px', borderRadius: '8px', backgroundColor: bgColor,
-            marginBottom: '24px', fontSize: '14px', color: textColor
+            padding: '8px 12px', borderRadius: '8px', backgroundColor: bgColor,
+            marginBottom: '14px', fontSize: '13px', color: secondaryTextColor
           }}>
-            <strong>작성자:</strong> {user?.division} {user?.office} {user?.department} {user?.position} {user?.name}
+            <strong style={{ color: textColor }}>작성자:</strong> {user?.division} {user?.office} {user?.department} {user?.position} {user?.name}
           </div>
+          */}
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>제목 *</label>
-            <input type="text" name="title" value={formData.title} onChange={handleChange} required style={inputStyle} placeholder="일정 제목을 입력하세요" />
+            <input type="text" name="title" value={formData.title} onChange={handleChange} required autoFocus style={uniformInputStyle} placeholder="일정 제목을 입력하세요" />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>내용</label>
-            <textarea name="content" value={formData.content} onChange={handleChange} rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
+            <textarea name="content" value={formData.content} onChange={handleChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div>
               <label style={labelStyle}>시작 날짜 *</label>
               <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={dateInputStyle} />
@@ -216,7 +234,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
             <div>
               <label style={labelStyle}>종료 날짜 *</label>
               <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={dateInputStyle} />
@@ -227,18 +245,60 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
             </div>
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>우선순위</label>
-            <select name="priority" value={formData.priority} onChange={handleChange} style={inputStyle}>
-              <option value="LOW">낮음</option>
-              <option value="NORMAL">보통</option>
-              <option value="HIGH">높음</option>
-            </select>
+            <div ref={priorityDropdownRef} style={{ position: 'relative' }}>
+              <div
+                onClick={() => setShowPriorityDropdown(!showPriorityDropdown)}
+                style={{
+                  ...uniformInputStyle,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  paddingRight: '36px',
+                  position: 'relative',
+                  borderColor: showPriorityDropdown ? '#3B82F6' : borderColor,
+                  boxShadow: showPriorityDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                }}
+              >
+                <span>{{ LOW: '낮음', NORMAL: '보통', HIGH: '높음' }[formData.priority]}</span>
+                <ChevronDown size={16} style={{
+                  position: 'absolute', right: '12px', top: '50%',
+                  color: secondaryTextColor,
+                  transform: showPriorityDropdown ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
+                  transition: 'transform 0.2s',
+                }} />
+              </div>
+              {showPriorityDropdown && (
+                <div style={{
+                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                  marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                  backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
+                  overflow: 'hidden',
+                }}>
+                  {[{ value: 'LOW', label: '낮음' }, { value: 'NORMAL', label: '보통' }, { value: 'HIGH', label: '높음' }].map(opt => (
+                    <div key={opt.value}
+                      onClick={() => { setFormData({ ...formData, priority: opt.value }); setShowPriorityDropdown(false); }}
+                      style={{
+                        padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px', color: textColor,
+                        backgroundColor: formData.priority === opt.value
+                          ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                      }}
+                      onMouseEnter={(e) => { if (formData.priority !== opt.value) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                      onMouseLeave={(e) => { if (formData.priority !== opt.value) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                    >
+                      {opt.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* 일정 공유 */}
           {offices.length > 0 && (
-            <div style={{ marginBottom: '20px' }}>
+            <div style={{ marginBottom: '14px' }}>
               <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Share2 size={14} /> 일정 공유 (선택사항)
               </label>
@@ -246,15 +306,18 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
                 <div
                   onClick={() => setShowOfficeDropdown(!showOfficeDropdown)}
                   style={{
-                    ...inputStyle,
+                    ...uniformInputStyle,
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    minHeight: '44px',
+                    minHeight: fieldHeight,
+                    height: 'auto',
                     paddingRight: '36px',
                     position: 'relative',
                     flexWrap: 'wrap',
-                    gap: '4px'
+                    gap: '4px',
+                    borderColor: showOfficeDropdown ? '#3B82F6' : borderColor,
+                    boxShadow: showOfficeDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                   }}
                 >
                   {selectedOfficeIds.length > 0 ? (
@@ -291,7 +354,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
                     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                     marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                     backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                    maxHeight: '200px', overflowY: 'auto'
+                    maxHeight: '120px', overflowY: 'auto'
                   }}>
                     {offices.map(office => (
                       <label key={office.id} style={{
@@ -320,12 +383,12 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
             </div>
           )}
 
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', fontFamily }}>
+          <div style={{ marginBottom: '14px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontFamily }}>
               <input
                 type="checkbox" name="isRecurring" checked={formData.isRecurring}
                 onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
-                style={{ width: '20px', height: '20px', cursor: 'pointer', accentColor: '#3B82F6' }}
+                style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: '#3B82F6' }}
               />
               <span style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>반복 일정으로 등록</span>
             </label>
@@ -333,8 +396,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
 
           {formData.isRecurring && (
             <div style={{
-              padding: '20px', borderRadius: '12px', backgroundColor: bgColor,
-              marginBottom: '24px', border: `1px solid ${borderColor}`
+              padding: '14px', borderRadius: '10px', backgroundColor: bgColor,
+              marginBottom: '16px', border: `1px solid ${borderColor}`
             }}>
               <div style={{ marginBottom: '16px' }}>
                 <label style={labelStyle}>반복 주기</label>
@@ -363,13 +426,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate })
 
           <ErrorAlert message={error} />
 
-          <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
             <button type="button" onClick={onClose} style={{
-              padding: '12px 24px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+              padding: '10px 20px', borderRadius: '8px', border: `1px solid ${borderColor}`,
               backgroundColor: 'transparent', color: textColor, cursor: 'pointer', fontSize: '14px', fontWeight: '500', fontFamily
             }}>취소</button>
             <button type="submit" disabled={loading} style={{
-              padding: '12px 24px', borderRadius: '8px', border: 'none',
+              padding: '10px 20px', borderRadius: '8px', border: 'none',
               backgroundColor: loading ? '#1e40af' : '#3B82F6', color: '#fff',
               cursor: loading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', fontFamily
             }}>{loading ? '생성 중...' : '일정 만들기'}</button>

@@ -87,6 +87,7 @@ export default function LoginPage({ onSignupClick }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
+              autoFocus
               style={inputStyle}
               placeholder="email@example.com"
             />

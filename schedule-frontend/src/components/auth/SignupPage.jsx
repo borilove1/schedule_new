@@ -234,6 +234,7 @@ export default function SignupPage({ onBackClick }) {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                autoFocus
                 style={inputStyle}
                 placeholder="홍길동"
               />
