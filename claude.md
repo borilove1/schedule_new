@@ -4,14 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 프로젝트 개요
 
-업무 일정 관리 시스템. 반복 일정, 알림, 일정 공유, 댓글, 사용자 승인, 관리자 페이지, 프로필 관리, 다크모드를 지원하는 풀스택 웹 애플리케이션이며 Docker로 배포됩니다.
+업무 일정 관리 시스템. 반복 일정, 알림(인앱/푸시/이메일), SSE 실시간 동기화, 일정 검색, 일정 공유, 댓글, 마감임박, 사용자 승인, 관리자 페이지, 프로필 관리, 다크모드를 지원하는 풀스택 웹 애플리케이션이며 Docker로 배포됩니다.
 
 **기술 스택:**
 - **백엔드**: Node.js 18+ / Express 4 / PostgreSQL 13+
 - **프론트엔드**: React 18 (CRA) / lucide-react (아이콘)
 - **인증**: JWT (jsonwebtoken) + bcrypt (12 rounds)
-- **보안**: helmet (CSP/HSTS), cors (명시적 whitelist), express-rate-limit (4단계), express-validator, compression
-- **알림**: pg-boss 9 (PostgreSQL 기반 큐) 리마인더 + 인앱 알림
+- **보안**: helmet (CSP/HSTS), cors (명시적 whitelist), express-rate-limit (5단계), express-validator, compression
+- **알림**: pg-boss 9 (PostgreSQL 기반 큐) 리마인더 + 인앱 알림 + Web Push (web-push) + 이메일 (nodemailer)
+- **실시간**: SSE (Server-Sent Events) 브로드캐스트 + Service Worker
 - **배포**: Docker Compose (3 컨테이너: backend, frontend, database)
 - **배포 경로**: `/var/www/schedule-app`
 - **프로덕션 URL**: `https://1.215.38.118`
@@ -26,7 +27,7 @@ schedule/
 ├── .env.example                        # 환경변수 템플릿 (민감 정보 제외)
 │
 ├── backend/
-│   ├── server.js                       # Express 진입점 + 보안 설정 + Rate Limit + pg-boss 큐 초기화
+│   ├── server.js                       # Express 진입점 + 보안 설정 + Rate Limit(5단계) + pg-boss 큐 + SSE + Push 초기화
 │   ├── Dockerfile                      # node:18-alpine, production 빌드
 │   ├── package.json
 │   ├── .env                            # 백엔드 환경변수 (⚠️ .gitignore 대상)
@@ -37,32 +38,38 @@ schedule/
 │   │   ├── auth.js                     # JWT 인증 + 역할 권한(authorize) + 일정 권한(canViewEvent/canEditEvent)
 │   │   └── errorHandler.js             # 중앙 에러 처리 (Validation/JWT/PG/커스텀 에러)
 │   ├── routes/
-│   │   ├── auth.js                     # 회원가입/로그인/로그아웃/내정보/프로필수정/비밀번호변경
-│   │   ├── events.js                   # 일정 CRUD + 완료/완료취소
+│   │   ├── auth.js                     # 회원가입/로그인/로그아웃/내정보/프로필수정/비밀번호변경/이메일설정
+│   │   ├── events.js                   # 일정 CRUD + 완료/완료취소 + 검색
 │   │   ├── users.js                    # 사용자 관리 + 승인 (ADMIN 전용)
 │   │   ├── organizations.js            # 조직 구조 CRUD (본부/처/부서)
-│   │   ├── comments.js                 # 댓글 조회/CRUD + 댓글 알림 + 입력 검증 (2000자)
+│   │   ├── comments.js                 # 댓글 조회/CRUD + 댓글 알림 + SSE broadcast + 입력 검증 (2000자)
 │   │   ├── notifications.js            # 알림 조회/읽음/삭제/리마인더체크
-│   │   └── settings.js                 # 시스템 설정 (ADMIN 전용) + reminder_times 변경 시 큐 재스케줄링
+│   │   ├── settings.js                 # 시스템 설정 (ADMIN 전용) + SMTP 캐시 무효화 + 큐 재스케줄링
+│   │   └── push.js                     # Web Push 구독/해제/VAPID 키 조회
 │   └── src/
 │       ├── controllers/
-│       │   ├── eventController.js      # 일정 CRUD + 반복 일정 처리 + 공유 + 큐 연동 (핵심, ~1450줄)
-│       │   └── notificationController.js # 알림 CRUD + createNotification 헬퍼
+│       │   ├── eventController.js      # 일정 CRUD + 반복 일정 처리 + 검색 + 공유 + 큐 연동 + SSE broadcast (~1650줄)
+│       │   └── notificationController.js # 알림 CRUD + notifyByScope(범위별 발송) + 이메일/푸시 연동
 │       └── utils/
 │           ├── recurringEvents.js      # 반복 일정 확장 로직 (duration_days 지원)
-│           └── reminderQueueService.js # pg-boss 큐 기반 리마인더 스케줄링/취소/재스케줄링
+│           ├── reminderQueueService.js  # pg-boss 큐 기반 리마인더 + 마감임박 스케줄링/취소/재스케줄링
+│           ├── sseManager.js           # SSE 연결 관리 (broadcast/sendToUser/heartbeat)
+│           ├── pushService.js          # Web Push 발송 (VAPID, stale 구독 자동 정리)
+│           └── emailService.js         # 이메일 발송 (nodemailer, SMTP 설정 캐시, HTML 템플릿)
 │
 ├── schedule-frontend/
 │   ├── Dockerfile                      # node:18-alpine 빌드 → nginx:alpine
 │   ├── nginx.conf                      # SPA 라우팅 + /api/ 프록시 + 보안 헤더 (HSTS/CSP/X-Frame)
 │   ├── package.json
+│   ├── public/
+│   │   └── sw.js                       # Service Worker (캐시 + Push 수신 + 알림 클릭 처리)
 │   └── src/
 │       ├── App.js                      # 루트 (ThemeProvider → AuthProvider → AppContent)
 │       ├── index.js
 │       ├── contexts/
 │       │   ├── AuthContext.js          # 인증 상태 (user, login, register, logout, updateProfile)
 │       │   ├── ThemeContext.jsx         # 다크모드 토글 (localStorage 저장)
-│       │   └── NotificationContext.jsx  # 읽지 않은 알림 개수 (60초 폴링)
+│       │   └── NotificationContext.jsx  # 읽지 않은 알림 개수 (30초 폴링 + SSE + Push + Visibility API)
 │       ├── hooks/
 │       │   ├── useThemeColors.js       # 다크/라이트 색상 팔레트 반환
 │       │   ├── useIsMobile.js          # 모바일 뷰포트 감지 (768px)
@@ -84,17 +91,18 @@ schedule/
 │       │   ├── layout/
 │       │   │   └── MainLayout.jsx      # 헤더(사용자정보/다크모드/알림벨/관리자/로그아웃) + 컨텐츠
 │       │   ├── calendar/
-│       │   │   ├── Calendar.jsx        # 월간 캘린더 뷰 (메인 컨테이너)
-│       │   │   ├── CalendarHeader.jsx  # 월/년 표시, 이전/다음 월, TODAY, + 버튼
+│       │   │   ├── Calendar.jsx        # 월간 캘린더 뷰 (메인 컨테이너, SSE 연동, 검색 모달)
+│       │   │   ├── CalendarHeader.jsx  # 월/년 표시, 이전/다음 월, TODAY, 검색, + 버튼
 │       │   │   ├── CalendarGrid.jsx    # 캘린더 그리드 (유연 레인: 멀티→단일 배치)
 │       │   │   ├── calendarHelpers.js  # 날짜/주/멀티데이/단일/레인 할당 유틸
-│       │   │   └── EventList.jsx       # 일정 목록 (탭 필터/날짜 필터/더보기/댓글 카운트 뱃지)
+│       │   │   └── EventList.jsx       # 일정 목록 (탭 필터/날짜 필터/더보기/댓글 카운트/마감임박 뱃지)
 │       │   ├── events/
 │       │   │   ├── EventModal.jsx      # 일정 생성 모달 (반복 설정 + 처/실 공유)
 │       │   │   ├── EventDetailModal.jsx # 일정 상세/수정/삭제/완료 모달
 │       │   │   ├── EventDetailView.jsx # 일정 상세 표시 (상태/제목/시간/작성자/반복/공유/댓글)
 │       │   │   ├── CommentSection.jsx  # 댓글 인라인 섹션 (조회/작성/수정/삭제)
-│       │   │   └── EventEditForm.jsx   # 일정 수정 폼 (반복/공유 설정 포함)
+│       │   │   ├── EventEditForm.jsx   # 일정 수정 폼 (반복/공유 설정 포함)
+│       │   │   └── EventSearchModal.jsx # 일정 검색 모달 (디바운스 검색/페이징/결과 클릭)
 │       │   ├── notifications/
 │       │   │   ├── NotificationBell.jsx # 헤더 알림 벨 아이콘 + 뱃지 (99+)
 │       │   │   └── NotificationModal.jsx # 알림 목록 모달 (전체/읽지않음 탭)
@@ -104,14 +112,15 @@ schedule/
 │       │   │   ├── UserDetailModal.jsx  # 사용자 상세/수정 모달 (직급→역할 자동매핑)
 │       │   │   ├── OrganizationManagement.jsx # 본부/처/부서 트리 관리
 │       │   │   ├── OrgNodeEditModal.jsx # 조직 노드 편집 모달
-│       │   │   └── SystemSettings.jsx   # 시스템 설정 관리 (7개 항목, multiSelect 타입 포함)
+│       │   │   └── SystemSettings.jsx   # 시스템 설정 관리 (17개 항목, multiSelect/SMTP/알림범위 설정)
 │       │   └── profile/
-│       │       └── ProfilePage.jsx      # 내 정보 수정 (기본정보 + 비밀번호 변경)
+│       │       └── ProfilePage.jsx      # 내 정보 수정 (기본정보 + 비밀번호 + 푸시 알림 토글 + 이메일 알림 설정)
 │       └── utils/
 │           ├── api.js                   # ApiClient 클래스 (fetch 기반, 싱글톤)
 │           ├── eventHelpers.js          # 상태 색상/텍스트, 반복 설명, 날짜 정규화
 │           ├── mockNotifications.js     # 알림 타입 enum, 상대시간, 아이콘 매핑
-│           └── design-tokens.js         # 디자인 토큰 (spacing/fontSize/shadow/breakpoints)
+│           ├── sseClient.js            # SSE 클라이언트 (연결/해제/리스너/자동 재연결)
+│           └── pushHelper.js           # Web Push 헬퍼 (구독/해제/상태 확인/권한 체크)
 │
 ├── database/
 │   ├── init.sql                        # 전체 스키마 + 시드 데이터
@@ -155,7 +164,7 @@ schedule/
 | `divisions` | 본부 | name (UNIQUE) |
 | `offices` | 처/실/지사 | name, division_id (FK), UNIQUE(name, division_id) |
 | `departments` | 부서 | name, office_id (FK), UNIQUE(name, office_id) |
-| `users` | 사용자 | email, password_hash, name, position, role, scope, department_id, office_id, division_id, is_active, **approved_at**, last_login_at |
+| `users` | 사용자 | email, password_hash, name, position, role, scope, department_id, office_id, division_id, is_active, **approved_at**, last_login_at, **email_notifications_enabled**, **email_preferences** (JSONB) |
 | `event_series` | 반복 일정 템플릿 | title, content, recurrence_type/interval/end_date, start_time, end_time, first_occurrence_date, **duration_days**, status, completed_at, alert, creator_id, department_id, office_id, division_id |
 | `events` | 단일+예외 일정 | title, content, start_at, end_at, status, completed_at, alert, series_id (FK), occurrence_date, is_exception, original_series_id, creator_id, department_id, office_id, division_id |
 | `event_exceptions` | 반복 일정 예외 날짜 | series_id (FK), exception_date, UNIQUE(series_id, exception_date) |
@@ -163,6 +172,7 @@ schedule/
 | `comments` | 댓글 | content, event_id XOR series_id, author_id, is_edited |
 | `notifications` | 인앱 알림 | user_id, type, title, message, is_read, related_event_id, related_series_id, metadata (JSONB) |
 | `system_settings` | 시스템 설정 | key (UNIQUE), value (JSONB), description, updated_by |
+| `push_subscriptions` | 푸시 구독 | user_id (FK), endpoint (UNIQUE), p256dh, auth, user_agent |
 | `sessions` | 세션 (미사용) | user_id, token, expires_at |
 
 ### 주요 제약 조건
@@ -186,7 +196,7 @@ schedule/
 ### 시드 데이터
 - 부산울산본부 1개, 20개 처/실/지사, 19개 부서 (기획관리실 4, 전력사업처 7, 전력관리처 8)
 - 기본 관리자: `admin@admin.com` / `admin1234`
-- 시스템 설정 기본값 7개 (reminder_times 포함)
+- 시스템 설정 기본값 17개 (reminder_times, due_soon_threshold, SMTP, notification_config 포함)
 
 ## 핵심 아키텍처
 
@@ -199,17 +209,18 @@ schedule/
 
 **스코프 필터링** (`buildScopeFilter()`):
 - ADMIN → 필터 없음 (1=1)
-- DEPT_LEAD(DIVISION) → division_id 일치
-- DEPT_LEAD(OFFICE) → office_id 일치
-- 기타 → department_id 일치 OR creator_id 일치
+- 본부장 → division_id 일치
+- 처장/실장 → office_id 일치
+- 사원~부장 → department_id 일치
 - 추가로 `event_shared_offices`를 통한 공유 일정도 조회 가능
 
 ### 사용자 승인 워크플로우
 1. 회원가입 → `is_active=false`, `approved_at=NULL`
 2. 로그인 시도 → AUTH_006 ("관리자 승인 필요")
-3. 관리자가 `PATCH /users/:id/approve` → `is_active=true`, `approved_at=NOW()`
-4. ACCOUNT_APPROVED 알림 → 사용자에게 전달
-5. 승인 후 로그인 가능
+3. 관리자에게 USER_REGISTERED 알림 (`notifyByScope` → admins scope)
+4. 관리자가 `PATCH /users/:id/approve` → `is_active=true`, `approved_at=NOW()`
+5. ACCOUNT_APPROVED 알림 → 사용자에게 전달 (`notifyByScope` → target scope)
+6. 승인 후 로그인 가능
 
 ### 반복 일정 시스템
 
@@ -233,12 +244,81 @@ schedule/
 - "이번만 수정" 시 시리즈 공유 처를 예외 이벤트로 복사
 - 조회 시 `buildScopeFilter()`에서 shared office도 포함하여 필터링
 
+### 일정 검색 시스템
+- **백엔드**: `GET /api/v1/events/search?q=검색어&page=1&limit=20`
+- events + event_series 모두 검색 (title/content ILIKE)
+- 스코프 필터 적용 (권한 범위 내 일정만 검색)
+- ILIKE 와일드카드 이스케이핑 (`%`, `_`, `\`)
+- 이벤트 우선, 이후 시리즈 순으로 페이지네이션
+- **프론트엔드**: `EventSearchModal` (디바운스 검색, 2글자 이상, 페이징, 결과 클릭 시 상세 모달)
+
+### 마감임박 시스템 (Due Soon)
+- **시스템 설정**: `due_soon_threshold` (복수 선택: 30min/1hour/3hour)
+- **판정 로직**: `getEvents()`에서 각 일정의 시작 시간이 현재~threshold 이내 + PENDING 상태 → `isDueSoon: true`
+- **캘린더 표시**: 앰버(amber) 색상 뱃지로 마감임박 일정 강조
+- **알림**: `EVENT_DUE_SOON` 타입으로 별도 알림 발송 (pg-boss 큐, `duesoon-*` singletonKey)
+- **스케줄링**: `scheduleEventReminder()`에서 리마인더와 마감임박 알림을 동시 스케줄링
+
 ### 타임존 처리
 - Docker(UTC) 환경에서 PG가 나이브 문자열을 UTC로 저장
 - 읽을 때 `toNaiveDateTimeString()`으로 getUTC*를 사용하여 원래 입력값 복원
 - 프론트엔드에 타임존 없는 `YYYY-MM-DDTHH:mm:ss` 문자열로 전달
 
-### 알림 시스템 (pg-boss 큐 기반)
+### SSE 실시간 동기화
+
+**아키텍처:**
+- **백엔드** (`sseManager.js`): userId별 SSE 연결 관리 (Map<userId, Set<res>>)
+- **프론트엔드** (`sseClient.js`): EventSource 기반 SSE 클라이언트
+- **SSE 엔드포인트**: `GET /api/v1/sse/events?token=JWT` (EventSource는 커스텀 헤더 미지원 → 쿼리 파라미터 토큰)
+
+**연결 관리:**
+- 서버: 30초 하트비트, 연결 종료 시 자동 정리
+- 클라이언트: 연속 에러 3회 시 강제 재연결 (5초 딜레이), Visibility API로 앱 복귀 시 재연결
+- nginx: `X-Accel-Buffering: no`로 SSE 스트리밍 프록시
+- compression 미들웨어: SSE 응답 제외 (`text/event-stream` 필터)
+
+**브로드캐스트 이벤트:**
+- `event_changed`: 일정 CRUD/완료/완료취소 시 모든 연결 클라이언트에 전송 (action: created/updated/deleted/completed/uncompleted)
+- `event_changed` (action: comment_updated): 댓글 작성/삭제 시 전송
+- 프론트엔드: `Calendar.jsx`에서 `onSSE('event_changed', ...)` → 스켈레톤 없이 즉시 데이터 새로고침
+- 프론트엔드: `NotificationContext`에서 `onSSE('event_changed', ...)` → 알림 카운트 갱신
+
+**함수:**
+- `broadcast(eventType, data, excludeUserId)`: 전체 클라이언트에 전송 (선택적 사용자 제외)
+- `sendToUser(userId, eventType, data)`: 특정 사용자에게만 전송
+- `handleSSEConnection(req, res)`: SSE 연결 핸들러
+
+### 알림 시스템 (3채널: 인앱 + 푸시 + 이메일)
+
+**알림 발송 아키텍처 (`notifyByScope`):**
+1. `notification_config` 시스템 설정에서 해당 알림 타입 활성화 여부 확인
+2. `scope`에 따라 수신자 목록 결정 (`resolveRecipients()`)
+3. 행위자 본인 제외 (자기 알림 방지)
+4. 각 수신자에게 `createNotification()` 호출 → 인앱 + 이메일 + 푸시 동시 발송
+
+**알림 scope 종류:**
+| scope | 수신 대상 |
+|-------|-----------|
+| `creator` | 일정 작성자 |
+| `target` | 특정 대상 사용자 (예: 승인된 사용자) |
+| `department` | 같은 부서 전체 |
+| `dept_leads` | 상위 부서장 (DEPARTMENT/OFFICE/DIVISION scope) |
+| `office` | 같은 처 전체 |
+| `admins` | 모든 ADMIN |
+
+**알림 타입:**
+| 타입 | 기본 scope | 설명 |
+|------|-----------|------|
+| `EVENT_REMINDER` | creator | 일정 시작 전 리마인더 |
+| `EVENT_DUE_SOON` | creator | 마감임박 알림 |
+| `EVENT_UPDATED` | creator | 일정 수정 알림 |
+| `EVENT_COMPLETED` | dept_leads | 일정 완료 알림 |
+| `EVENT_DELETED` | creator | 일정 삭제 알림 |
+| `EVENT_COMMENTED` | creator | 댓글 알림 |
+| `USER_REGISTERED` | admins | 신규 가입 승인 요청 |
+| `ACCOUNT_APPROVED` | target | 계정 승인 완료 |
+
+#### pg-boss 큐 기반 리마인더
 
 **큐 아키텍처:**
 - **pg-boss 9** (PostgreSQL 기반 작업 큐): 별도 인프라(Redis) 없이 기존 DB 활용
@@ -250,8 +330,9 @@ schedule/
 - **단일 일정**: CRUD 시점에 `scheduleEventReminder()` → pg-boss에 지연 작업 등록 (`startAfter`)
 - **반복 일정**: daily scheduler가 48시간 이내 occurrence를 스캔 → 작업 등록
 - **알림 시간**: 시스템 설정 `reminder_times`에서 읽음 (기본: `["1hour"]`, 옵션: 30min/1hour/3hour)
+- **마감임박**: 시스템 설정 `due_soon_threshold`에서 읽음 → `duesoon-*` singletonKey로 별도 스케줄링
 - **관리자 설정 변경**: `rescheduleAllReminders()` → 기존 대기 작업 전체 삭제 후 재스케줄링
-- **중복 방지**: `singletonKey`로 작업 고유성 보장 (예: `reminder-event-123-1hour`)
+- **중복 방지**: `singletonKey`로 작업 고유성 보장 (예: `reminder-event-123-1hour`, `duesoon-event-123-3hour`)
 
 **큐 연동 포인트 (eventController.js):**
 | 액션 | 큐 호출 |
@@ -270,20 +351,50 @@ schedule/
 1. 이벤트 아직 유효한지 확인 (삭제/완료 안됨)
 2. 반복 일정은 해당 날짜가 예외인지 추가 확인
 3. 4시간 이내 중복 알림 체크 (`metadata->>'timeKey'`)
-4. `createNotification()` 호출
+4. `notifyByScope()` 호출 (알림 타입에 따라 EVENT_REMINDER 또는 EVENT_DUE_SOON)
 
-**기타 알림:**
-- **이벤트 알림**: 일정 생성/수정/완료/삭제 시 `createNotification()` 호출
-- **가입 알림**: 회원가입 시 ADMIN에게 USER_REGISTERED, 승인 시 사용자에게 ACCOUNT_APPROVED
-- **프론트엔드**: `NotificationContext`에서 60초마다 읽지 않은 알림 개수 폴링
-- **댓글 알림**: 댓글 작성 시 일정 작성자에게 EVENT_COMMENTED 알림 (자기 댓글 제외)
-- **알림 타입**: EVENT_REMINDER, EVENT_COMPLETED, EVENT_UPDATED, EVENT_DELETED, EVENT_COMMENTED, USER_REGISTERED, ACCOUNT_APPROVED, SYSTEM
+#### Web Push 알림
+
+**아키텍처:**
+- **VAPID 인증**: 환경변수 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` 사용
+- **백엔드** (`pushService.js`): `web-push` 라이브러리, `sendPushToUser()` → 사용자의 모든 구독에 발송
+- **프론트엔드** (`pushHelper.js`): `subscribeToPush()`, `unsubscribeFromPush()`, `isSubscribedToPush()`
+- **Service Worker** (`sw.js`): Push 이벤트 수신 → `showNotification()`, 클릭 시 앱 포커스/오픈
+
+**흐름:**
+1. 프론트 로그인 → Service Worker 등록 → Push 권한 요청
+2. 권한 granted → `PushManager.subscribe()` → 구독 정보를 `POST /api/v1/push/subscribe`
+3. `createNotification()` 호출 시 → `sendPushToUser()` 비동기 발송
+4. Service Worker가 Push 수신 → 시스템 알림 표시 + `NOTIFICATION_RECEIVED` 메시지 → 앱 내 카운트 즉시 갱신
+5. 알림 클릭 → 앱 창 포커스 또는 새 탭 오픈
+
+**stale 구독 정리:**
+- 410/404 응답 시 해당 구독 자동 DELETE (브라우저가 구독 해제한 경우)
+
+#### 이메일 알림
+
+**아키텍처:**
+- **백엔드** (`emailService.js`): `nodemailer` 기반, SMTP 설정은 `system_settings`에서 동적 로드
+- **인증 방식 3가지**: LOGIN (사용자명/비밀번호), NONE (내부 릴레이), API_KEY (SendGrid/Mailgun)
+- **트랜스포터 캐시**: 설정 변경 전까지 재사용, 설정 변경 시 `invalidateTransporterCache()` 호출
+
+**발송 조건 (모두 충족 시):**
+1. 시스템 설정 `email_enabled` = true
+2. 사용자 `email_notifications_enabled` = true (마스터 토글)
+3. 사용자 `email_preferences[type]` !== false (타입별 수신 설정)
+4. SMTP 설정 완료 (`smtp_from_email` 필수)
+
+**흐름:**
+- `createNotification()` → `sendEmailNotification()` 비동기 호출 (인앱 알림에 영향 없음)
+- 사용자 설정 + 시스템 설정 확인 후 조건 통과 시 `sendEmail()` 호출
+- HTML 템플릿 기반 이메일 발송
 
 ### 댓글 시스템
 - **인라인 UI**: EventDetailView 하단에 CommentSection 컴포넌트 (구분선 아래)
 - **데이터 흐름**: eventId가 `series-*` 형식이면 seriesId 추출 → 시리즈 댓글 API 호출
 - **CRUD**: 조회(GET)/작성(POST)/수정(PUT, 본인만)/삭제(DELETE, 본인 또는 ADMIN), express-validator로 content 필수+2000자 제한
-- **알림**: 타인 일정에 댓글 시 작성자에게 EVENT_COMMENTED 알림 (자기 댓글 제외)
+- **알림**: `notifyByScope('EVENT_COMMENTED', ...)` → scope 설정에 따라 수신자 결정 (기본: creator)
+- **SSE**: 댓글 작성/삭제 시 `broadcast('event_changed', { action: 'comment_updated' })` → 실시간 UI 갱신
 - **EventList 뱃지**: `getEvents()` 응답에 `commentCount` 포함 → 카드에 💬 N 뱃지 표시
 - **UX**: Enter 전송/Shift+Enter 줄바꿈, 이니셜 아바타(작성자별 색상), 상대 시간, (수정됨) 뱃지
 - **권한**: canEdit=true면 댓글 작성 가능, 수정은 본인만, 삭제는 본인 또는 ADMIN
@@ -293,6 +404,7 @@ schedule/
 - **유연 레인 배치**: 멀티데이 우선 배치 후 각 셀의 빈 레인에 단일 일정을 절대 위치로 배치
 - 빈 레인이 부족한 셀은 +n 오버플로우로 표시
 - 소유 일정: 상태 색상 표시 / 타인 일정: 회색 + 작성자명
+- 마감임박 일정: 앰버(amber) 색상 뱃지
 
 ### 프론트엔드 네비게이션
 - SPA (라우터 미사용), `currentPage` state로 페이지 전환
@@ -308,6 +420,14 @@ schedule/
 - `Skeleton`: 로딩 플레이스홀더 (pulse 애니메이션)
 - `ErrorAlert`, `SuccessAlert`: 알림 박스
 
+### Service Worker (`sw.js`)
+- **캐시 전략**: 앱 셸 프리캐시 (/, index.html, manifest.json, logo)
+  - 정적 자산: cache-first (JS/CSS/PNG/SVG/WOFF)
+  - 네비게이션: network-first, 오프라인 시 캐시된 index.html 폴백
+  - API 요청: 네트워크 직접 전달 (캐시 안 함)
+- **Push 수신**: `push` 이벤트 → `showNotification()` + 앱 내 `NOTIFICATION_RECEIVED` 메시지
+- **알림 클릭**: 기존 앱 창 포커스 또는 새 탭 오픈, `NOTIFICATION_CLICKED` 메시지
+
 ## API 엔드포인트
 
 모든 API는 `/api/v1` 프리픽스. 인증 필요 시 `Authorization: Bearer {token}` 헤더.
@@ -321,11 +441,14 @@ schedule/
 | GET | /me | O | 현재 사용자 정보 (조직 포함) |
 | PUT | /me | O | 프로필 수정 (이름, 직급, 소속) |
 | PUT | /change-password | O | 비밀번호 변경 (현재 비밀번호 검증) |
+| GET | /email-preferences | O | 이메일 알림 설정 조회 (시스템 + 사용자 설정) |
+| PUT | /email-preferences | O | 이메일 알림 설정 수정 (마스터 토글 + 타입별) |
 
 ### 일정 (`/events`)
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
-| GET | / | O | 일정 목록 (startDate, endDate 쿼리, 반복 자동 확장, 공유 일정 포함) |
+| GET | / | O | 일정 목록 (startDate, endDate 쿼리, 반복 자동 확장, 공유 일정 포함, isDueSoon 포함) |
+| GET | /search | O | 일정 검색 (q, page, limit 쿼리, 이벤트+시리즈 검색, 스코프 필터) |
 | GET | /:id | O | 일정 상세 (series-* ID 지원) |
 | POST | / | O | 일정 생성 (isRecurring + sharedOfficeIds) |
 | PUT | /:id | O | 일정 수정 (seriesEditType: 'this'/'all', isRecurring으로 단일→반복 변환) |
@@ -366,10 +489,10 @@ schedule/
 |--------|------|------|------|
 | GET | /events/:eventId | O | 일정 댓글 목록 (v_comments_with_details, ASC) |
 | GET | /series/:seriesId | O | 시리즈 댓글 목록 |
-| POST | /events/:eventId | O | 일정에 댓글 추가 (canViewEvent 확인) + 작성자에게 EVENT_COMMENTED 알림 |
-| POST | /series/:seriesId | O | 시리즈에 댓글 추가 + 작성자에게 EVENT_COMMENTED 알림 |
+| POST | /events/:eventId | O | 일정에 댓글 추가 (canViewEvent 확인) + 알림 + SSE broadcast |
+| POST | /series/:seriesId | O | 시리즈에 댓글 추가 + 알림 + SSE broadcast |
 | PUT | /:id | O | 댓글 수정 (본인만, is_edited=true) |
-| DELETE | /:id | O | 댓글 삭제 (본인 또는 ADMIN) |
+| DELETE | /:id | O | 댓글 삭제 (본인 또는 ADMIN) + SSE broadcast |
 
 ### 알림 (`/notifications`)
 | Method | Path | 인증 | 설명 |
@@ -379,16 +502,28 @@ schedule/
 | PATCH | /:id/read | O | 알림 읽음 처리 |
 | POST | /read-all | O | 전체 읽음 처리 |
 | DELETE | /:id | O | 알림 삭제 |
-| POST | /check-reminders | O | 수동 리마인더 체크 |
+| POST | /check-reminders | O | 수동 리마인더 체크 (기존 이벤트 + 시리즈 재스케줄링) |
+
+### 푸시 알림 (`/push`)
+| Method | Path | 인증 | 설명 |
+|--------|------|------|------|
+| GET | /vapid-public-key | O | VAPID 공개키 조회 |
+| POST | /subscribe | O | 푸시 구독 등록 (endpoint, keys 검증) |
+| DELETE | /unsubscribe | O | 푸시 구독 해제 |
+
+### SSE (`/sse`)
+| Method | Path | 인증 | 설명 |
+|--------|------|------|------|
+| GET | /events?token=JWT | O | SSE 실시간 이벤트 스트림 (쿼리 파라미터 토큰 인증) |
 
 ### 시스템 설정 (`/settings`) - ADMIN 전용
 | Method | Path | 인증 | 설명 |
 |--------|------|------|------|
 | GET | / | O (ADMIN) | 전체 설정 조회 |
-| PUT | / | O (ADMIN) | 설정 일괄 수정 (reminder_times 변경 시 큐 재스케줄링) |
+| PUT | / | O (ADMIN) | 설정 일괄 수정 (reminder_times/due_soon_threshold 변경 시 큐 재스케줄링, SMTP 변경 시 캐시 무효화) |
 | GET | /:key | O (ADMIN) | 개별 설정 조회 |
 | PUT | /:key | O (ADMIN) | 개별 설정 수정 |
-| POST | /test-email | O (ADMIN) | SMTP 테스트 이메일 발송 |
+| POST | /test-email | O (ADMIN) | SMTP 연결 테스트 + 관리자 이메일로 테스트 발송 |
 
 ## API 응답 패턴
 
@@ -400,15 +535,16 @@ schedule/
 { "success": false, "error": { "code": "ERROR_CODE", "message": "에러 메시지" } }
 ```
 
-**주요 에러 코드**: AUTH_003 (토큰 없음), AUTH_004 (토큰 만료), AUTH_005 (권한 없음), AUTH_006 (승인 대기), AUTH_007 (비활성화), VALIDATION_ERROR, DUPLICATE_EMAIL, DUPLICATE_NAME, INVALID_PASSWORD, USER_001 (사용자 없음), HAS_USERS (소속원 존재)
+**주요 에러 코드**: AUTH_003 (토큰 없음), AUTH_004 (토큰 만료), AUTH_005 (권한 없음), AUTH_006 (승인 대기), AUTH_007 (비활성화), VALIDATION_ERROR, DUPLICATE_EMAIL, DUPLICATE_NAME, INVALID_PASSWORD, USER_001 (사용자 없음), HAS_USERS (소속원 존재), RATE_LIMIT (요청 초과)
 
 ## Rate Limiting
 
-4개 Rate Limiter 활성화 (`server.js`, `trust proxy: 1`로 실제 IP 기반):
+5개 Rate Limiter 활성화 (`server.js`, `trust proxy: 1`로 실제 IP 기반):
 - **로그인**: 15분당 10회 (`/api/v1/auth/login`)
 - **인증 전체**: 15분당 N회 (`/api/v1/auth`, `RATE_LIMIT_MAX_REQUESTS` 환경변수)
 - **일정**: 30초당 100회 (`/api/v1/events`)
 - **댓글**: 1분당 30회 (`/api/v1/comments`)
+- **푸시**: 1분당 20회 (`/api/v1/push`)
 
 **프론트엔드 Rate Limit UX**:
 - Calendar.jsx에서 카운트다운 상태 관리 (`rateLimitCountdown`, `startCountdown`)
@@ -425,19 +561,27 @@ schedule/
 - `API_BASE_URL`은 `REACT_APP_API_URL` 환경변수 또는 `/api/v1` (nginx 프록시 사용 시)
 - **중요**: `getEvent()`는 `response?.event || response` 반환
 - `request()` 메서드가 `{ success: true, data: {...} }` 형태면 `data`만 자동 추출
-- 메서드 그룹: Auth, Events, Users, Organizations, Settings, Comments (getEventComments/getSeriesComments/addEventComment/addSeriesComment/updateComment/deleteComment), Notifications
+- 메서드 그룹: Auth, Events (CRUD + search), Users, Organizations, Settings, Comments, Notifications, Push (subscribe/unsubscribe/vapidKey), EmailPreferences
 
 ### 프론트엔드 상태 관리
 - React Context API만 사용 (외부 상태 관리 라이브러리 없음)
 - `AuthContext`: user 객체, login/register/logout/updateProfile
 - `ThemeContext`: isDarkMode, toggleDarkMode (localStorage 연동)
-- `NotificationContext`: unreadCount, refreshNotifications (60초 폴링)
+- `NotificationContext`: unreadCount, refreshNotifications (30초 폴링 + SSE + Push + Visibility API), pushSupported/pushSubscribed 상태
+
+### 프론트엔드 실시간 갱신 패턴
+- **SSE 연결**: `Calendar.jsx` mount 시 `connectSSE()` → `onSSE('event_changed', loadEvents)`
+- **알림 갱신 경로** (4가지):
+  1. 30초 폴링 (`setInterval`)
+  2. SSE `event_changed` 이벤트 수신
+  3. Visibility API (`visibilitychange` → 앱 복귀 시 즉시 갱신)
+  4. Service Worker `NOTIFICATION_RECEIVED` 메시지 (푸시 도착 시 즉시 갱신)
 
 ### 프론트엔드 스타일링
 - CSS-in-JS (인라인 스타일), 외부 CSS 파일 없음
 - lucide-react 아이콘만 사용
 - 다크모드: `useThemeColors()` 훅으로 색상 팔레트 공급
-- 디자인 토큰: `design-tokens.js` (spacing, fontSize, shadow, breakpoints)
+- 디자인 토큰: `styles/design-tokens.js` (spacing, fontSize, shadow, breakpoints)
 - 폰트: `-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`
 - 반응형: `useIsMobile()` / `useResponsive()` 훅
 
@@ -451,10 +595,12 @@ schedule/
 ### 백엔드 eventController.js
 - `toNaiveDateTimeString()`: PG TIMESTAMPTZ → 나이브 문자열 변환 (UTC 기준)
 - `formatEventRow()`: DB row의 모든 타임스탬프 필드를 나이브 문자열로 변환
-- `buildScopeFilter()`: 역할 기반 SQL WHERE절 동적 생성
+- `buildScopeFilter()`: 역할/직급 기반 SQL WHERE절 동적 생성
 - camelCase(프론트엔드)와 snake_case(DB) 양방향 지원
-- `getEvents()`에서 반복 일정 자동 확장 + 예외 이벤트 상태 반영 + 공유 일정 포함
-- CRUD 시 `reminderQueueService`의 `scheduleEventReminder`/`cancelEventReminders`/`cancelSeriesReminders` 호출 (큐 연동)
+- `getEvents()`에서 반복 일정 자동 확장 + 예외 이벤트 상태 반영 + 공유 일정 포함 + isDueSoon 판정 + commentCount 집계
+- `searchEvents()`: 이벤트+시리즈 검색, 스코프 필터, 페이지네이션
+- CRUD 시 `reminderQueueService` 호출 (큐 연동) + `broadcast()` 호출 (SSE 실시간 갱신)
+- 모든 CRUD 작업에서 `notifyByScope()` 호출 (범위별 알림 발송)
 
 ### 백엔드 database.js
 - `query(text, params)`: 파라미터화된 쿼리 실행 (SQL injection 방지)
@@ -545,6 +691,9 @@ JWT_EXPIRES_IN=24h
 CORS_ORIGIN=https://1.215.38.118
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
+VAPID_PUBLIC_KEY=<VAPID 공개키>
+VAPID_PRIVATE_KEY=<VAPID 비밀키>
+VAPID_SUBJECT=mailto:admin@admin.com
 ```
 
 ### `backend/.env` (로컬 개발용)
@@ -561,7 +710,13 @@ JWT_EXPIRES_IN=24h
 CORS_ORIGIN=http://localhost:3000
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
+VAPID_PUBLIC_KEY=<VAPID 공개키 (없으면 푸시 비활성)>
+VAPID_PRIVATE_KEY=<VAPID 비밀키>
+VAPID_SUBJECT=mailto:admin@admin.com
 ```
+
+> **VAPID 키 생성**: `npx web-push generate-vapid-keys`
+> VAPID 키가 없으면 푸시 알림이 비활성화되며, 서버는 정상 작동합니다.
 
 ## 부하 테스트
 
@@ -604,8 +759,8 @@ SELECT eso.*, o.name FROM event_shared_offices eso JOIN offices o ON eso.office_
 SELECT name, state, singletonkey, startafter FROM pgboss.job
 WHERE name = 'event-reminder' AND state = 'created' ORDER BY startafter;
 
--- 특정 이벤트의 대기 작업 확인
-SELECT * FROM pgboss.job WHERE singletonkey LIKE 'reminder-event-123-%';
+-- 특정 이벤트의 대기 작업 확인 (리마인더 + 마감임박)
+SELECT * FROM pgboss.job WHERE singletonkey LIKE 'reminder-event-123-%' OR singletonkey LIKE 'duesoon-event-123-%';
 
 -- 특정 시리즈의 대기 작업 확인
 SELECT * FROM pgboss.job WHERE name = 'event-reminder' AND state = 'created'
@@ -616,11 +771,42 @@ SELECT name, state, completedon, output FROM pgboss.job
 WHERE name = 'event-reminder' AND state IN ('completed', 'failed') ORDER BY completedon DESC LIMIT 20;
 ```
 
+### SSE 연결 확인
+```bash
+# 서버 로그에서 SSE 연결 현황 확인
+docker-compose logs backend --tail=20 -f | grep SSE
+
+# 클라이언트 브라우저 DevTools → Network 탭 → EventStream 필터
+```
+
+### 푸시 알림 디버깅
+```sql
+-- 푸시 구독 현황
+SELECT ps.id, ps.user_id, u.name, ps.endpoint, ps.created_at
+FROM push_subscriptions ps JOIN users u ON ps.user_id = u.id;
+
+-- stale 구독 정리 (수동)
+DELETE FROM push_subscriptions WHERE updated_at < NOW() - INTERVAL '90 days';
+```
+
+### 이메일 알림 디버깅
+```bash
+# SMTP 연결 테스트 (관리자 로그인 후)
+curl -X POST https://1.215.38.118/api/v1/settings/test-email -H "Authorization: Bearer <token>"
+```
+```sql
+-- 이메일 설정 확인
+SELECT key, value FROM system_settings WHERE key LIKE 'smtp_%' OR key = 'email_enabled';
+
+-- 사용자 이메일 설정 확인
+SELECT id, name, email, email_notifications_enabled, email_preferences FROM users WHERE id = <userId>;
+```
+
 ### JWT 토큰 오류
 다시 로그인하여 새 토큰 발급. Authorization 헤더 형식: `Bearer <token>`
 
 ### Rate Limit 429 에러
-`.env`에서 `RATE_LIMIT_MAX_REQUESTS` 값 조정. 현재 설정: 로그인 10/15분, 인증 100/15분, 일정 100/30초, 댓글 30/1분.
+`.env`에서 `RATE_LIMIT_MAX_REQUESTS` 값 조정. 현재 설정: 로그인 10/15분, 인증 100/15분, 일정 100/30초, 댓글 30/1분, 푸시 20/1분.
 
 ### 사용자 승인 관련
 ```sql
@@ -648,13 +834,17 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 - **Nginx 보안 헤더**: HSTS, X-Frame-Options(DENY), X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, server_tokens off, SSL ciphers
 - **댓글 검증**: express-validator로 content 필수 + 2000자 제한
 - **댓글 Rate Limit**: 1분당 30회
-- **ILIKE 이스케이핑**: 사용자 검색 시 `%`, `_`, `\` 와일드카드 이스케이핑
+- **ILIKE 이스케이핑**: 사용자/일정 검색 시 `%`, `_`, `\` 와일드카드 이스케이핑
+- **푸시 구독 검증**: endpoint URL 검증 + keys 필수 + Rate Limit 20/분
+- **SSE 인증**: 쿼리 파라미터 토큰 → Authorization 헤더 변환 + authenticate 미들웨어
 
 ### 보안 주의사항
 - `.env` 파일은 절대 Git에 커밋하지 않기 (`.env.example` 사용)
 - JWT_SECRET은 반드시 `crypto.randomBytes(64)` 이상으로 생성
 - 프로덕션 DB는 Docker 외부 네트워크에서 접근 불가 (로컬 개발 시에만 ports 주석 해제)
 - `admin@admin.com` / `admin1234` 기본 관리자 비밀번호 반드시 변경
+- VAPID 비밀키 노출 금지 (`.env`에만 저장)
+- SMTP 비밀번호는 `system_settings`에 저장 (DB 접근 제한 필요)
 
 ## 해결된 이슈
 
@@ -670,6 +860,12 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 10. Rate Limit 에러 시 사용자 피드백 부족 → 모달 내 30초 카운트다운 배너 (상세/생성/수정 모달 공통, 모달 간 상태 공유)
 11. 보안 취약점 Phase 1 수정 → JWT 강화/bcrypt 12/비밀번호 특수문자/에러 노출 방지/Body 1MB/DB 포트 차단/Nginx 보안 헤더/CORS·helmet 상세 설정/댓글 검증·Rate Limit/ILIKE 이스케이핑
 12. 알림 시스템 cron → pg-boss 큐 전환: 최대 1시간 오차 문제 해결, 정확한 시간에 리마인더 발송, 관리자 설정에서 알림 시간(30분/1시간/3시간) 복수 선택 가능, node-cron 제거
+13. 마감임박 기능 구현: 앰버 뱃지 + EVENT_DUE_SOON 알림 + due_soon_threshold 시스템 설정
+14. 알림 발송 범위 제어: notification_config 시스템 설정 (타입별 ON/OFF + 수신 범위 scope), notifyByScope() 함수로 통합
+15. 푸시 알림 시스템 구현: VAPID 기반 Web Push + Service Worker + push_subscriptions 테이블 + 프로필 페이지 토글
+16. SSE 실시간 동기화 구현: 일정/댓글 CRUD 시 전체 클라이언트에 broadcast → 스켈레톤 없이 즉시 UI 갱신, 알림 카운트 실시간 갱신
+17. 이메일 알림 구현: nodemailer + SMTP 설정 (3가지 인증 방식) + 사용자별 수신 설정 + HTML 템플릿
+18. 일정 검색 기능 구현: 이벤트+시리즈 통합 검색 + 스코프 필터 + 페이지네이션 + 프론트엔드 검색 모달
 
 ## 알려진 이슈 및 남은 작업
 
