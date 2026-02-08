@@ -90,7 +90,7 @@ export default function EventSearchModal({ isOpen, onClose, onEventClick }) {
       setTotalPages(0);
       return;
     }
-    debounceRef.current = setTimeout(() => doSearch(searchQuery, 1), 300);
+    debounceRef.current = setTimeout(() => doSearch(searchQuery, 1), 150);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [searchQuery, doSearch]);
 
