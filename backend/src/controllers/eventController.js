@@ -1501,3 +1501,183 @@ exports.uncompleteEvent = async (req, res) => {
     res.status(500).json({ success: false, message: 'Failed to uncomplete event' });
   }
 };
+
+/**
+ * 일정 검색
+ */
+exports.searchEvents = async (req, res) => {
+  try {
+    const { q, page = 1, limit = 20 } = req.query;
+    const userId = req.user.id;
+    const userOfficeId = req.user.officeId;
+    const pageNum = Math.max(1, parseInt(page));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    const offset = (pageNum - 1) * limitNum;
+
+    if (!q || q.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: '검색어는 2글자 이상 입력하세요.' }
+      });
+    }
+
+    const escapedSearch = q.replace(/[%_\\]/g, '\\$&');
+    const searchPattern = `%${escapedSearch}%`;
+
+    // --- 일반 이벤트 검색 ---
+    const evtScope = buildScopeFilter(req.user, 1, 'e', 'u');
+    let evtShareClause = '';
+    let evtShareParams = [];
+    if (req.user.role !== 'ADMIN' && userOfficeId) {
+      evtShareClause = ` OR EXISTS (SELECT 1 FROM event_shared_offices eso WHERE eso.event_id = e.id AND eso.office_id = $${evtScope.nextParamIdx})`;
+      evtShareParams = [userOfficeId];
+    }
+    const evtSearchIdx = evtScope.nextParamIdx + evtShareParams.length;
+
+    const evtBaseWhere = `
+      WHERE (${evtScope.clause}${evtShareClause})
+      AND e.series_id IS NULL
+      AND (e.title ILIKE $${evtSearchIdx} OR e.content ILIKE $${evtSearchIdx})
+    `;
+    const evtBaseParams = [...evtScope.params, ...evtShareParams, searchPattern];
+
+    const evtCountQuery = `SELECT COUNT(*) FROM events e JOIN users u ON e.creator_id = u.id ${evtBaseWhere}`;
+    const evtDataQuery = `
+      SELECT e.*,
+             u.name as creator_name,
+             d.name as department_name,
+             o.name as office_name,
+             dv.name as division_name
+      FROM events e
+      JOIN users u ON e.creator_id = u.id
+      LEFT JOIN departments d ON e.department_id = d.id
+      LEFT JOIN offices o ON e.office_id = o.id
+      LEFT JOIN divisions dv ON e.division_id = dv.id
+      ${evtBaseWhere}
+      ORDER BY e.created_at DESC
+    `;
+
+    // --- 시리즈 검색 ---
+    const serScope = buildScopeFilter(req.user, 1, 'es', 'u');
+    let serShareClause = '';
+    let serShareParams = [];
+    if (req.user.role !== 'ADMIN' && userOfficeId) {
+      serShareClause = ` OR EXISTS (SELECT 1 FROM event_shared_offices eso WHERE eso.series_id = es.id AND eso.office_id = $${serScope.nextParamIdx})`;
+      serShareParams = [userOfficeId];
+    }
+    const serSearchIdx = serScope.nextParamIdx + serShareParams.length;
+
+    const serBaseWhere = `
+      WHERE (${serScope.clause}${serShareClause})
+      AND (es.title ILIKE $${serSearchIdx} OR es.content ILIKE $${serSearchIdx})
+    `;
+    const serBaseParams = [...serScope.params, ...serShareParams, searchPattern];
+
+    const serCountQuery = `SELECT COUNT(*) FROM event_series es JOIN users u ON es.creator_id = u.id ${serBaseWhere}`;
+    const serDataQuery = `
+      SELECT es.*,
+             u.name as creator_name
+      FROM event_series es
+      JOIN users u ON es.creator_id = u.id
+      ${serBaseWhere}
+      ORDER BY es.created_at DESC
+    `;
+
+    // 병렬 COUNT
+    const [evtCountRes, serCountRes] = await Promise.all([
+      query(evtCountQuery, evtBaseParams),
+      query(serCountQuery, serBaseParams)
+    ]);
+    const evtTotal = parseInt(evtCountRes.rows[0].count);
+    const serTotal = parseInt(serCountRes.rows[0].count);
+    const total = evtTotal + serTotal;
+    const totalPages = Math.ceil(total / limitNum);
+
+    // 페이지네이션: 이벤트 우선, 이후 시리즈
+    let results = [];
+    if (offset < evtTotal) {
+      const evtRemaining = limitNum;
+      const evtOffset = offset;
+      const evtLimitIdx = evtSearchIdx + 1;
+      const evtOffsetIdx = evtSearchIdx + 2;
+      const evtResult = await query(
+        evtDataQuery + ` LIMIT $${evtLimitIdx} OFFSET $${evtOffsetIdx}`,
+        [...evtBaseParams, evtRemaining, evtOffset]
+      );
+      results.push(...evtResult.rows.map(row => ({ ...row, _type: 'event' })));
+
+      if (results.length < limitNum) {
+        const serRemaining = limitNum - results.length;
+        const serLimitIdx = serSearchIdx + 1;
+        const serOffsetIdx = serSearchIdx + 2;
+        const serResult = await query(
+          serDataQuery + ` LIMIT $${serLimitIdx} OFFSET $${serOffsetIdx}`,
+          [...serBaseParams, serRemaining, 0]
+        );
+        results.push(...serResult.rows.map(row => ({ ...row, _type: 'series' })));
+      }
+    } else {
+      const serOffset = offset - evtTotal;
+      const serLimitIdx = serSearchIdx + 1;
+      const serOffsetIdx = serSearchIdx + 2;
+      const serResult = await query(
+        serDataQuery + ` LIMIT $${serLimitIdx} OFFSET $${serOffsetIdx}`,
+        [...serBaseParams, limitNum, serOffset]
+      );
+      results.push(...serResult.rows.map(row => ({ ...row, _type: 'series' })));
+    }
+
+    // 포맷 변환
+    const formattedEvents = results.map(row => {
+      if (row._type === 'series') {
+        const startTime = row.start_time || '09:00:00';
+        const firstDate = row.first_occurrence_date
+          ? new Date(row.first_occurrence_date).toISOString().split('T')[0]
+          : new Date(row.created_at).toISOString().split('T')[0];
+        const ts = new Date(`${firstDate}T${startTime}`).getTime();
+        return {
+          id: `series-${row.id}-${ts}`,
+          title: row.title,
+          content: row.content,
+          startAt: `${firstDate}T${startTime}`,
+          endAt: row.end_time ? `${firstDate}T${row.end_time}` : null,
+          status: row.status || 'PENDING',
+          isRecurring: true,
+          recurrenceType: row.recurrence_type,
+          creator: { id: row.creator_id, name: row.creator_name },
+          isOwner: row.creator_id === userId,
+          canEdit: row.creator_id === userId || req.user.role === 'ADMIN',
+          createdAt: toNaiveDateTimeString(row.created_at),
+        };
+      } else {
+        return {
+          id: row.id,
+          title: row.title,
+          content: row.content,
+          startAt: toNaiveDateTimeString(row.start_at),
+          endAt: toNaiveDateTimeString(row.end_at),
+          status: row.status,
+          isRecurring: false,
+          creator: { id: row.creator_id, name: row.creator_name },
+          isOwner: row.creator_id === userId,
+          canEdit: row.creator_id === userId || req.user.role === 'ADMIN',
+          department: row.department_name,
+          office: row.office_name,
+          division: row.division_name,
+          createdAt: toNaiveDateTimeString(row.created_at),
+        };
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        events: formattedEvents,
+        pagination: { total, page: pageNum, limit: limitNum, totalPages }
+      }
+    });
+  } catch (error) {
+    console.error('Search events error:', error);
+    res.status(500).json({ success: false, message: 'Failed to search events' });
+  }
+};

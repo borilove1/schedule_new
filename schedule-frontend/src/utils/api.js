@@ -135,6 +135,11 @@ class ApiClient {
     });
   }
 
+  async searchEvents(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/events/search${query ? `?${query}` : ''}`);
+  }
+
   // ========== 사용자 관리 (Admin) ==========
   async getUsers(params = {}) {
     const query = new URLSearchParams(params).toString();

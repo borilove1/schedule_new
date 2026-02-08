@@ -4,6 +4,7 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import EventModal from '../events/EventModal';
 import EventDetailModal from '../events/EventDetailModal';
+import EventSearchModal from '../events/EventSearchModal';
 import CalendarHeader from './CalendarHeader';
 import CalendarGrid from './CalendarGrid';
 import EventList from './EventList';
@@ -28,6 +29,7 @@ export default function Calendar() {
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedTab, setSelectedTab] = useState('all');
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const countdownRef = useRef(null);
 
   const startCountdown = useCallback((seconds) => {
@@ -147,6 +149,9 @@ export default function Calendar() {
     setSelectedDay(new Date());
   }, []);
 
+  const handleSearchOpen = useCallback(() => setShowSearchModal(true), []);
+  const handleSearchClose = useCallback(() => setShowSearchModal(false), []);
+
   return (
     <div style={{ color: textColor, fontFamily: FONT_FAMILY }}>
       <CalendarHeader
@@ -155,6 +160,7 @@ export default function Calendar() {
         onNextMonth={handleNextMonth}
         onToday={handleToday}
         onNewEvent={() => handleNewEvent(selectedDay)}
+        onSearch={handleSearchOpen}
         isMobile={isMobile}
       />
 
@@ -212,6 +218,11 @@ export default function Calendar() {
         onSuccess={handleEventSuccess}
         rateLimitCountdown={rateLimitCountdown}
         onRateLimitStart={startCountdown}
+      />
+      <EventSearchModal
+        isOpen={showSearchModal}
+        onClose={handleSearchClose}
+        onEventClick={handleEventClick}
       />
     </div>
   );

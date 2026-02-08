@@ -1,9 +1,9 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 
 const CalendarHeader = React.memo(function CalendarHeader({
-  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, isMobile
+  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, onSearch, isMobile
 }) {
   const { textColor, secondaryTextColor, cardBg, borderColor } = useThemeColors();
 
@@ -35,6 +35,14 @@ const CalendarHeader = React.memo(function CalendarHeader({
           style={{ background: 'none', border: 'none', color: secondaryTextColor, cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '6px' }}
         >
           <ChevronRight size={20} />
+        </button>
+        <button
+          onClick={onSearch}
+          style={{ background: 'none', border: 'none', color: secondaryTextColor, cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '6px' }}
+          title="일정 검색"
+          aria-label="일정 검색"
+        >
+          <Search size={18} />
         </button>
         <button
           onClick={onToday}

@@ -48,6 +48,9 @@ const updateEventValidation = [
 // ========== 일정 목록 조회 (반복 일정 자동 확장) ==========
 router.get('/', eventController.getEvents);
 
+// ========== 일정 검색 ==========
+router.get('/search', eventController.searchEvents);
+
 // ========== 일정 상세 조회 ==========
 router.get('/:id', eventController.getEventById);
 
