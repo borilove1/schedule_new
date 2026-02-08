@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -224,6 +225,34 @@ export default function Calendar() {
         onClose={handleSearchClose}
         onEventClick={handleEventClick}
       />
+
+      {/* 모바일 FAB - 모달 열려있을 때 숨김 */}
+      {isMobile && !showModal && !showDetailModal && !showSearchModal && (
+        <button
+          onClick={() => handleNewEvent(selectedDay)}
+          aria-label="새 일정 만들기"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            border: 'none',
+            backgroundColor: '#3B82F6',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(59, 130, 246, 0.4)',
+            zIndex: 900,
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          }}
+        >
+          <Plus size={28} />
+        </button>
+      )}
     </div>
   );
 }

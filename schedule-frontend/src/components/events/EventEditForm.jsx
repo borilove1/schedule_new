@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Share2, ChevronDown } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
 
@@ -9,6 +10,7 @@ export default function EventEditForm({
   offices = [], selectedOfficeIds = [], onOfficeToggle, onRecurringToggle, rateLimitCountdown = 0
 }) {
   const { isDarkMode, borderColor, textColor, cardBg, bgColor, secondaryTextColor } = useThemeColors();
+  const isMobile = useIsMobile();
   const { inputStyle, labelStyle, fontFamily } = useCommonStyles();
   const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
@@ -61,7 +63,7 @@ export default function EventEditForm({
         <textarea name="content" value={formData.content} onChange={onChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
         <div>
           <label style={labelStyle}>시작 날짜 *</label>
           <input type="date" name="startDate" value={formData.startDate} onChange={onChange} required style={dateInputStyle} />
@@ -72,7 +74,7 @@ export default function EventEditForm({
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
         <div>
           <label style={labelStyle}>종료 날짜 *</label>
           <input type="date" name="endDate" value={formData.endDate} onChange={onChange} required style={dateInputStyle} />
@@ -355,13 +357,21 @@ export default function EventEditForm({
         <ErrorAlert message={error} />
       )}
 
-      <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: isMobile ? 'column-reverse' : 'row',
+        gap: '10px',
+        justifyContent: 'flex-end',
+        marginTop: '4px',
+        paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : 0,
+      }}>
         <button
           type="button" onClick={onCancel}
           style={{
-            padding: '10px 20px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+            padding: isMobile ? '12px 20px' : '10px 20px', borderRadius: '8px', border: `1px solid ${borderColor}`,
             backgroundColor: 'transparent', color: textColor, cursor: 'pointer',
-            fontSize: '14px', fontWeight: '500', fontFamily
+            fontSize: '14px', fontWeight: '500', fontFamily,
+            width: isMobile ? '100%' : 'auto',
           }}
         >
           취소
@@ -369,11 +379,12 @@ export default function EventEditForm({
         <button
           type="submit" disabled={loading || actionInProgress || rateLimitCountdown > 0}
           style={{
-            padding: '10px 20px', borderRadius: '8px', border: 'none',
+            padding: isMobile ? '12px 20px' : '10px 20px', borderRadius: '8px', border: 'none',
             backgroundColor: (loading || actionInProgress || rateLimitCountdown > 0) ? '#1e40af' : '#3B82F6',
             color: '#fff', cursor: (loading || actionInProgress || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer',
             fontSize: '14px', fontWeight: '500', fontFamily,
-            opacity: (loading || actionInProgress || rateLimitCountdown > 0) ? 0.5 : 1
+            opacity: (loading || actionInProgress || rateLimitCountdown > 0) ? 0.5 : 1,
+            width: isMobile ? '100%' : 'auto',
           }}
         >
           {(loading || actionInProgress) ? '저장 중...' : '저장'}

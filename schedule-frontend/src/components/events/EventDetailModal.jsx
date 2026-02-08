@@ -4,6 +4,7 @@ import api from '../../utils/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useActionGuard } from '../../hooks/useActionGuard';
 import { formatDateTimeForInput } from '../../utils/eventHelpers';
 import EventDetailView from './EventDetailView';
@@ -15,7 +16,8 @@ const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", s
 export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, rateLimitCountdown = 0, onRateLimitStart }) {
   const { user: currentUser } = useAuth();
   const { refreshNotifications } = useNotification();
-  const { cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
+  const { isDarkMode, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
+  const isMobile = useIsMobile();
   const actionGuard = useActionGuard();
 
   const isRateLimitError = (msg) => msg && (msg.includes('너무 많은 요청') || msg.includes('RATE_LIMIT'));
@@ -256,22 +258,34 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px',
+        alignItems: isMobile ? 'flex-end' : 'center',
+        justifyContent: 'center', zIndex: 1000,
+        padding: isMobile ? 0 : '20px',
         transition: 'background-color 0.2s ease',
       }}
     >
       <div style={{
-        backgroundColor: cardBg, borderRadius: '16px', width: '100%',
-        maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto', fontFamily: FONT_FAMILY,
-        transform: isAnimating ? 'translateY(0)' : 'translateY(20px)',
-        opacity: isAnimating ? 1 : 0,
-        transition: 'transform 0.25s ease, opacity 0.2s ease',
+        backgroundColor: cardBg,
+        borderRadius: isMobile ? '20px 20px 0 0' : '16px',
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '600px',
+        maxHeight: isMobile ? '92vh' : '90vh',
+        overflowY: 'auto', fontFamily: FONT_FAMILY,
+        transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
+        opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
+        transition: isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease',
       }}>
+        {isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '2px' }}>
+            <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: isDarkMode ? '#4a5568' : '#cbd5e0' }} />
+          </div>
+        )}
         <div style={{
-          padding: '24px', borderBottom: `1px solid ${borderColor}`,
+          padding: isMobile ? '12px 20px' : '24px',
+          borderBottom: `1px solid ${borderColor}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center'
         }}>
-          <h2 id="event-detail-modal-title" style={{ fontSize: '24px', fontWeight: '600', margin: 0, color: textColor }}>
+          <h2 id="event-detail-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>
             {isEditing ? (editType === 'all' ? '반복 일정 수정' : '일정 수정') : '일정 상세'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer' }}>
@@ -282,7 +296,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         {loading && !event ? (
           <div style={{ padding: '40px', textAlign: 'center', color: secondaryTextColor }}>로딩 중...</div>
         ) : event ? (
-          <div style={{ padding: '24px' }}>
+          <div style={{ padding: isMobile ? '16px 20px' : '24px' }}>
             {!isEditing ? (
               <EventDetailView
                 event={event}

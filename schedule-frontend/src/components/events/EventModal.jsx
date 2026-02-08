@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Share2, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
@@ -43,6 +44,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
   const priorityDropdownRef = useRef(null);
 
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
+  const isMobile = useIsMobile();
   const { fontFamily, inputStyle, labelStyle } = useCommonStyles();
 
   useEffect(() => {
@@ -178,27 +180,39 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
         backgroundColor: isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        zIndex: 1000, padding: '5px',
+        display: 'flex',
+        alignItems: isMobile ? 'flex-end' : 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: isMobile ? 0 : '5px',
         transition: 'background-color 0.2s ease',
       }}
     >
       <div style={{
-        backgroundColor: cardBg, borderRadius: '16px',
-        width: '100%', maxWidth: '600px', maxHeight: 'calc(100vh - 10px)',
+        backgroundColor: cardBg,
+        borderRadius: isMobile ? '20px 20px 0 0' : '16px',
+        width: '100%',
+        maxWidth: isMobile ? '100%' : '600px',
+        maxHeight: isMobile ? '92vh' : 'calc(100vh - 10px)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily,
-        transform: isAnimating ? 'translateY(0)' : 'translateY(20px)',
-        opacity: isAnimating ? 1 : 0,
-        transition: 'transform 0.25s ease, opacity 0.2s ease',
+        transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
+        opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
+        transition: isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease',
       }}>
         {/* Header - sticky */}
+        {isMobile && (
+          <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '2px', flexShrink: 0 }}>
+            <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: isDarkMode ? '#4a5568' : '#cbd5e0' }} />
+          </div>
+        )}
         <div style={{
-          padding: '24px', borderBottom: `1px solid ${borderColor}`,
+          padding: isMobile ? '12px 20px' : '24px',
+          borderBottom: `1px solid ${borderColor}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexShrink: 0, backgroundColor: cardBg, zIndex: 1,
         }}>
-          <h2 id="event-modal-title" style={{ fontSize: '24px', fontWeight: '600', margin: 0, color: textColor }}>새 일정 만들기</h2>
+          <h2 id="event-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>{isMobile ? '새 일정' : '새 일정 만들기'}</h2>
           <button onClick={onClose} style={{
             background: 'none', border: 'none', color: textColor, cursor: 'pointer'
           }}>
@@ -207,7 +221,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         </div>
 
         {/* Body - scrollable */}
-        <form onSubmit={handleSubmit} style={{ padding: '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
+        <form onSubmit={handleSubmit} style={{ padding: isMobile ? '16px 20px 20px' : '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
           {/* 작성자 정보 (필요 시 주석 해제)
           <div style={{
             padding: '8px 12px', borderRadius: '8px', backgroundColor: bgColor,
@@ -227,7 +241,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             <textarea name="content" value={formData.content} onChange={handleChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
             <div>
               <label style={labelStyle}>시작 날짜 *</label>
               <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={dateInputStyle} />
@@ -238,7 +252,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
             <div>
               <label style={labelStyle}>종료 날짜 *</label>
               <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={dateInputStyle} />
@@ -488,16 +502,25 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             <ErrorAlert message={error} />
           )}
 
-          <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '4px' }}>
+          <div style={{
+            display: 'flex',
+            flexDirection: isMobile ? 'column-reverse' : 'row',
+            gap: '10px',
+            justifyContent: 'flex-end',
+            marginTop: '4px',
+            paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 0px)' : 0,
+          }}>
             <button type="button" onClick={onClose} style={{
-              padding: '10px 20px', borderRadius: '8px', border: `1px solid ${borderColor}`,
-              backgroundColor: 'transparent', color: textColor, cursor: 'pointer', fontSize: '14px', fontWeight: '500', fontFamily
+              padding: isMobile ? '12px 20px' : '10px 20px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+              backgroundColor: 'transparent', color: textColor, cursor: 'pointer', fontSize: '14px', fontWeight: '500', fontFamily,
+              width: isMobile ? '100%' : 'auto',
             }}>취소</button>
             <button type="submit" disabled={loading || rateLimitCountdown > 0} style={{
-              padding: '10px 20px', borderRadius: '8px', border: 'none',
+              padding: isMobile ? '12px 20px' : '10px 20px', borderRadius: '8px', border: 'none',
               backgroundColor: (loading || rateLimitCountdown > 0) ? '#1e40af' : '#3B82F6', color: '#fff',
               cursor: (loading || rateLimitCountdown > 0) ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '500', fontFamily,
-              opacity: (loading || rateLimitCountdown > 0) ? 0.5 : 1
+              opacity: (loading || rateLimitCountdown > 0) ? 0.5 : 1,
+              width: isMobile ? '100%' : 'auto',
             }}>{loading ? '생성 중...' : '일정 만들기'}</button>
           </div>
         </form>

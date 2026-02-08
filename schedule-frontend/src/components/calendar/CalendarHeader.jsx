@@ -63,24 +63,26 @@ const CalendarHeader = React.memo(function CalendarHeader({
         >
           <span style={{ fontSize: '11px', letterSpacing: '0.05em' }}>TODAY</span>
         </button>
-        <button
-          onClick={onNewEvent}
-          style={{
-            width: '34px',
-            height: '34px',
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: '#3B82F6',
-            color: '#fff',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginLeft: '4px'
-          }}
-        >
-          <Plus size={16} />
-        </button>
+        {!isMobile && (
+          <button
+            onClick={onNewEvent}
+            style={{
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: '#3B82F6',
+              color: '#fff',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginLeft: '4px'
+            }}
+          >
+            <Plus size={16} />
+          </button>
+        )}
       </div>
     </div>
   );
