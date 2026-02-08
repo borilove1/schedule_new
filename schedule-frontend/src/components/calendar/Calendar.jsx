@@ -31,7 +31,8 @@ export default function Calendar() {
   const countdownRef = useRef(null);
 
   const startCountdown = useCallback((seconds) => {
-    if (countdownRef.current) clearInterval(countdownRef.current);
+    // 이미 카운트다운 진행 중이면 리셋하지 않음
+    if (countdownRef.current) return;
     setRateLimitCountdown(seconds);
     countdownRef.current = setInterval(() => {
       setRateLimitCountdown(prev => {
