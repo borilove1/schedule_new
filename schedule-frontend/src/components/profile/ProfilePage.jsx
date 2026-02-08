@@ -698,7 +698,7 @@ export default function ProfilePage({ onBack }) {
       {/* 푸시 알림 설정 */}
       <div style={{ ...sectionStyle, opacity: pushSupported ? 1 : 0.7 }}>
         <div style={sectionTitleStyle}>
-          <Bell size={18} /> 푸시 알림 (모바일 전용)
+          <Bell size={18} /> 푸시 알림
         </div>
 
         {!pushSupported ? (
@@ -720,7 +720,7 @@ export default function ProfilePage({ onBack }) {
               <div>
                 <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>푸시 알림 받기</div>
                 <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
-                  앱이 닫혀있어도 실시간 알림을 받을 수 있습니다.
+                  PC에서는 브라우저 알림, 모바일에서는 푸시 알림을 받을 수 있습니다.
                 </div>
               </div>
               <button
