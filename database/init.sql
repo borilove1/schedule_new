@@ -304,7 +304,7 @@ CREATE TABLE system_settings (
 
 -- 기본 설정 데이터 삽입
 INSERT INTO system_settings (key, value, description) VALUES
-    ('due_soon_threshold', '3', '마감임박 기준 시간 (시간 단위)'),
+    ('due_soon_threshold', '["3hour"]', '마감임박 기준 시간 (복수 선택 가능: 30min, 1hour, 3hour)'),
     ('max_events_per_month', '100', '월 최대 일정 수'),
     ('allow_past_events', 'false', '과거 일정 생성 허용'),
     ('default_alert', '"1hour"', '기본 알림 시간'),
@@ -321,7 +321,7 @@ INSERT INTO system_settings (key, value, description) VALUES
     ('smtp_api_key', '""', 'SMTP API 키 (SendGrid/Mailgun)'),
     ('smtp_from_email', '""', '발신 이메일 주소'),
     ('smtp_from_name', '"업무일정 관리 시스템"', '발신자 이름'),
-    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scope":"creator"},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정');
+    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scope":"creator"},"EVENT_DUE_SOON":{"enabled":true,"scope":"creator"},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정');
 
 -- ========================================
 -- 7. 세션 테이블 (JWT 대신 사용 가능)

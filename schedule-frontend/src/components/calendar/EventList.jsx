@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ChevronDown, MessageCircle } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { getStatusColor, getStatusText, norm } from '../../utils/eventHelpers';
+import { getStatusColor, getStatusText, getDisplayStatus, norm } from '../../utils/eventHelpers';
 
 const EventList = React.memo(function EventList({
   events, allEventsCount, selectedDay, selectedTab, onTabChange, onClearSelection, onEventClick, userId
@@ -184,13 +184,13 @@ const EventList = React.memo(function EventList({
                     fontSize: '11px',
                     padding: '3px 10px',
                     borderRadius: '12px',
-                    backgroundColor: getStatusColor(event.status) + '30',
-                    color: getStatusColor(event.status),
+                    backgroundColor: getStatusColor(getDisplayStatus(event)) + '30',
+                    color: getStatusColor(getDisplayStatus(event)),
                     fontWeight: '600',
                     whiteSpace: 'nowrap',
                     flexShrink: 0
                   }}>
-                    {getStatusText(event.status)}
+                    {getStatusText(getDisplayStatus(event))}
                   </div>
                 </div>
                 <div style={{ fontSize: '14px', color: secondaryTextColor }}>

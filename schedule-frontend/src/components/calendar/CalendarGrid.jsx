@@ -1,6 +1,6 @@
 import React from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { getStatusColor } from '../../utils/eventHelpers';
+import { getStatusColor, getDisplayStatus } from '../../utils/eventHelpers';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getMultiDayEventsForWeek, getSingleDayEventsForDate, assignLanes } from './calendarHelpers';
 
@@ -129,7 +129,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                   {visibleLanes.map((lane, laneIdx) =>
                     lane.map(bar => {
                       const isOwn = bar.event.creator?.id === userId;
-                      const barColor = isOwn ? getStatusColor(bar.event.status) : '#94a3b8';
+                      const barColor = isOwn ? getStatusColor(getDisplayStatus(bar.event)) : '#94a3b8';
                       const colWidth = 100 / 7;
                       const left = (bar.startCol - 1) * colWidth;
                       const width = (bar.endCol - bar.startCol + 1) * colWidth;
@@ -177,7 +177,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
                     return singles.slice(0, emptyLanes.length).map((ev, idx) => {
                       const laneIdx = emptyLanes[idx];
                       const isOwn = ev.creator?.id === userId;
-                      const barColor = isOwn ? getStatusColor(ev.status) : '#94a3b8';
+                      const barColor = isOwn ? getStatusColor(getDisplayStatus(ev)) : '#94a3b8';
                       return (
                         <div
                           key={ev.id}

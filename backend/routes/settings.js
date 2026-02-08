@@ -53,11 +53,12 @@ router.put('/', async (req, res, next) => {
       invalidateTransporterCache();
     }
 
-    // reminder_times 변경 시 모든 리마인더 재스케줄링
-    if (Object.keys(updates).includes('reminder_times')) {
+    // reminder_times 또는 due_soon_threshold 변경 시 모든 리마인더 재스케줄링
+    const needsReschedule = ['reminder_times', 'due_soon_threshold'].some(k => Object.keys(updates).includes(k));
+    if (needsReschedule) {
       try {
         await rescheduleAllReminders();
-        console.log('[Settings] Reminder times changed, rescheduled all reminders');
+        console.log('[Settings] Reminder/due-soon times changed, rescheduled all reminders');
       } catch (err) {
         console.error('[Settings] Failed to reschedule reminders:', err.message);
       }

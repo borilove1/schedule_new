@@ -224,6 +224,17 @@ exports.getEvents = async (req, res) => {
       }
     }
 
+    // 8-2. 마감임박 기준 조회
+    const THRESHOLD_MINUTES = { '30min': 30, '1hour': 60, '3hour': 180 };
+    let dueSoonMaxMinutes = 0;
+    try {
+      const dsResult = await query("SELECT value FROM system_settings WHERE key = 'due_soon_threshold'");
+      const dsValue = dsResult.rows[0]?.value;
+      const dsArray = Array.isArray(dsValue) ? dsValue : [];
+      dueSoonMaxMinutes = Math.max(0, ...dsArray.map(t => THRESHOLD_MINUTES[t] || 0));
+    } catch (_) { /* ignore */ }
+    const now = new Date();
+
     // 9. 필드명 camelCase로 변환 (프론트엔드 호환)
     const formattedEvents = allEvents.map(event => {
       const sharedOffices = sharedMap[`event_${event.id}`]
@@ -232,6 +243,13 @@ exports.getEvents = async (req, res) => {
       const commentCount = commentCountMap[`event_${event.id}`]
         || commentCountMap[`series_${event.series_id}`]
         || 0;
+      // 마감임박 판정: PENDING + 시작시간이 현재~threshold 이내
+      const eventStart = new Date(event.start_at);
+      const isDueSoon = event.status !== 'DONE'
+        && dueSoonMaxMinutes > 0
+        && eventStart > now
+        && (eventStart.getTime() - now.getTime()) <= dueSoonMaxMinutes * 60 * 1000;
+
       return {
         id: event.id,
         title: event.title,
@@ -248,6 +266,7 @@ exports.getEvents = async (req, res) => {
         originalSeriesId: event.original_series_id,
         isGenerated: event.is_generated,
         isRecurring: event.is_recurring || !!event.series_id,
+        isDueSoon,
         creator: {
           id: event.creator_id,
           name: event.creator_name

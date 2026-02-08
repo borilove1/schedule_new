@@ -2,6 +2,7 @@ export const getStatusColor = (status) => {
   switch (status) {
     case 'DONE': return '#10B981';
     case 'OVERDUE': return '#ef4444';
+    case 'DUE_SOON': return '#F59E0B';
     default: return '#3B82F6';
   }
 };
@@ -10,8 +11,18 @@ export const getStatusText = (status) => {
   switch (status) {
     case 'DONE': return '완료';
     case 'OVERDUE': return '지연';
+    case 'DUE_SOON': return '마감임박';
     default: return '진행중';
   }
+};
+
+/**
+ * 이벤트의 표시용 상태 계산 (isDueSoon 플래그 반영)
+ */
+export const getDisplayStatus = (event) => {
+  if (event.status === 'DONE') return 'DONE';
+  if (event.isDueSoon) return 'DUE_SOON';
+  return event.status;
 };
 
 export const getRecurrenceDescription = (ev) => {

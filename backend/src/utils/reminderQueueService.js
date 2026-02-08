@@ -39,46 +39,69 @@ async function getReminderTimes() {
 }
 
 /**
- * 단일 이벤트에 대한 리마인더 스케줄링
+ * 시스템 설정에서 due_soon_threshold 조회
+ * @returns {string[]} 예: ['3hour']
+ */
+async function getDueSoonTimes() {
+  try {
+    const result = await query(
+      "SELECT value FROM system_settings WHERE key = 'due_soon_threshold'"
+    );
+    if (result.rows.length === 0) return [];
+    const value = result.rows[0].value;
+    return Array.isArray(value) ? value : [];
+  } catch (error) {
+    console.error('[ReminderQueue] Failed to get due_soon_threshold setting:', error.message);
+    return [];
+  }
+}
+
+/**
+ * 단일 이벤트에 대한 리마인더 + 마감임박 스케줄링
  */
 async function scheduleEventReminder(eventId, startAt, creatorId) {
   if (!boss) return;
 
-  const reminderTimes = await getReminderTimes();
-  if (reminderTimes.length === 0) return;
-
   const now = new Date();
   const eventStart = new Date(startAt);
 
+  // 1) 일정 시작 알림 (EVENT_REMINDER)
+  const reminderTimes = await getReminderTimes();
   for (const timeKey of reminderTimes) {
     const minutes = REMINDER_MINUTES[timeKey];
     if (!minutes) continue;
-
     const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
-
-    // 이미 지난 알림은 스케줄링하지 않음
     if (alertAt <= now) continue;
-
     const jobKey = `reminder-event-${eventId}-${timeKey}`;
-
     try {
       await boss.send('event-reminder', {
-        eventId,
-        seriesId: null,
-        occurrenceDate: null,
-        creatorId,
-        reminderMinutes: minutes,
-        timeKey,
-      }, {
-        startAfter: alertAt,
-        singletonKey: jobKey,
-        retryLimit: 2,
-        expireInMinutes: 60,
-      });
-
-      console.log(`[ReminderQueue] Scheduled: event ${eventId}, ${timeKey} before (at ${alertAt.toISOString()})`);
+        eventId, seriesId: null, occurrenceDate: null, creatorId,
+        reminderMinutes: minutes, timeKey, notificationType: 'EVENT_REMINDER',
+      }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
+      console.log(`[ReminderQueue] Scheduled reminder: event ${eventId}, ${timeKey} before`);
     } catch (error) {
       console.error(`[ReminderQueue] Failed to schedule event ${eventId}:`, error.message);
+    }
+  }
+
+  // 2) 마감임박 알림 (EVENT_DUE_SOON)
+  const dueSoonTimes = await getDueSoonTimes();
+  for (const timeKey of dueSoonTimes) {
+    const minutes = REMINDER_MINUTES[timeKey];
+    if (!minutes) continue;
+    const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
+    if (alertAt <= now) continue;
+    const jobKey = `duesoon-event-${eventId}-${timeKey}`;
+    try {
+      await boss.send('event-reminder', {
+        eventId, seriesId: null, occurrenceDate: null, creatorId,
+        reminderMinutes: minutes, timeKey, notificationType: 'EVENT_DUE_SOON',
+      }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
+      console.log(`[ReminderQueue] Scheduled due-soon: event ${eventId}, ${timeKey} before`);
+    } catch (error) {
+      if (!error.message?.includes('singleton')) {
+        console.error(`[ReminderQueue] Failed to schedule due-soon event ${eventId}:`, error.message);
+      }
     }
   }
 }
@@ -90,13 +113,13 @@ async function cancelEventReminders(eventId) {
   if (!boss) return;
 
   try {
-    // pg-boss v9 cancel()은 jobId만 받으므로 직접 SQL로 삭제
+    // reminder + duesoon 모두 취소
     await query(`
       DELETE FROM pgboss.job
       WHERE name = 'event-reminder'
       AND state = 'created'
-      AND singletonkey LIKE $1
-    `, [`reminder-event-${eventId}-%`]);
+      AND (singletonkey LIKE $1 OR singletonkey LIKE $2)
+    `, [`reminder-event-${eventId}-%`, `duesoon-event-${eventId}-%`]);
 
     console.log(`[ReminderQueue] Cancelled reminders for event ${eventId}`);
   } catch (error) {
@@ -132,7 +155,12 @@ async function scheduleSeriesReminders() {
   if (!boss) return;
 
   const reminderTimes = await getReminderTimes();
-  if (reminderTimes.length === 0) return;
+  const dueSoonTimes = await getDueSoonTimes();
+  const allTimes = [
+    ...reminderTimes.map(t => ({ timeKey: t, type: 'EVENT_REMINDER', prefix: 'reminder' })),
+    ...dueSoonTimes.map(t => ({ timeKey: t, type: 'EVENT_DUE_SOON', prefix: 'duesoon' })),
+  ];
+  if (allTimes.length === 0) return;
 
   const now = new Date();
   const futureLimit = new Date(now.getTime() + 48 * 60 * 60 * 1000);
@@ -183,15 +211,15 @@ async function scheduleSeriesReminders() {
         if (eventStart <= now) continue;
         if (eventStart > futureLimit) continue;
 
-        // 각 알림 시간에 대해 스케줄링
-        for (const timeKey of reminderTimes) {
+        // 각 알림 시간에 대해 스케줄링 (reminder + due_soon)
+        for (const { timeKey, type, prefix } of allTimes) {
           const minutes = REMINDER_MINUTES[timeKey];
           if (!minutes) continue;
 
           const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
           if (alertAt <= now) continue;
 
-          const jobKey = `reminder-series-${series.id}-${checkDateStr}-${timeKey}`;
+          const jobKey = `${prefix}-series-${series.id}-${checkDateStr}-${timeKey}`;
 
           try {
             await boss.send('event-reminder', {
@@ -201,6 +229,7 @@ async function scheduleSeriesReminders() {
               creatorId: series.creator_id,
               reminderMinutes: minutes,
               timeKey,
+              notificationType: type,
             }, {
               startAfter: alertAt,
               singletonKey: jobKey,
@@ -294,7 +323,8 @@ async function rescheduleAllReminders() {
  * 이벤트 리마인더 워커 (pg-boss가 정확한 시간에 호출)
  */
 async function processEventReminder(job) {
-  const { eventId, seriesId, occurrenceDate, creatorId, reminderMinutes, timeKey } = job.data;
+  const { eventId, seriesId, occurrenceDate, creatorId, reminderMinutes, timeKey, notificationType } = job.data;
+  const notiType = notificationType || 'EVENT_REMINDER';
 
   try {
     let eventTitle = null;
@@ -343,14 +373,14 @@ async function processEventReminder(job) {
     const duplicateCheck = await query(`
       SELECT id FROM notifications
       WHERE user_id = $1
-      AND type = 'EVENT_REMINDER'
+      AND type = $6
       AND created_at > NOW() - INTERVAL '4 hours'
       AND (
         ($2::integer IS NOT NULL AND related_event_id = $2)
         OR ($3::integer IS NOT NULL AND metadata->>'seriesId' = $3::text AND metadata->>'occurrenceDate' = $4)
       )
       AND metadata->>'timeKey' = $5
-    `, [targetUserId, eventId, seriesId, occurrenceDate, timeKey]);
+    `, [targetUserId, eventId, seriesId, occurrenceDate, timeKey, notiType]);
 
     if (duplicateCheck.rows.length > 0) return;
 
@@ -362,7 +392,7 @@ async function processEventReminder(job) {
       timeMessage = `${reminderMinutes}분 후`;
     }
 
-    // 알림 생성
+    // 알림 생성 (타입에 따라 제목/메시지 분기)
     const metadata = { timeKey };
     if (seriesId) {
       metadata.seriesId = seriesId;
@@ -370,7 +400,12 @@ async function processEventReminder(job) {
       metadata.compositeId = `series-${seriesId}-${new Date(occurrenceDate).getTime()}`;
     }
 
-    await notifyByScope('EVENT_REMINDER', '일정 알림', `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`, {
+    const title = notiType === 'EVENT_DUE_SOON' ? '마감임박' : '일정 알림';
+    const message = notiType === 'EVENT_DUE_SOON'
+      ? `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다. (마감임박)`
+      : `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
+
+    await notifyByScope(notiType, title, message, {
       actorId: null,
       creatorId: targetUserId,
       relatedEventId: eventId,

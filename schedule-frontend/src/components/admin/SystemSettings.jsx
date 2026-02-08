@@ -7,7 +7,8 @@ import api from '../../utils/api';
 
 // 알림 타입별 메타데이터
 const NOTIFICATION_TYPES = {
-  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator'] },
+  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
+  EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
@@ -29,9 +30,13 @@ const SETTING_CONFIG = {
   // ===== 일반 설정 =====
   due_soon_threshold: {
     label: '마감임박 기준 시간',
-    description: '일정이 마감 임박으로 표시되는 기준 시간 (시간 단위)',
-    type: 'number',
-    unit: '시간',
+    description: '일정 시작 전 마감임박 뱃지 표시 및 알림을 보낼 시간 (복수 선택 가능)',
+    type: 'multiSelect',
+    options: [
+      { value: '30min', label: '30분 전' },
+      { value: '1hour', label: '1시간 전' },
+      { value: '3hour', label: '3시간 전' },
+    ],
   },
   max_events_per_month: {
     label: '월 최대 일정 수',
