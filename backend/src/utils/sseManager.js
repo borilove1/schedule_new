@@ -13,6 +13,8 @@ function handleSSEConnection(req, res) {
     return res.status(401).json({ success: false, error: { message: '인증 필요' } });
   }
 
+  console.log(`[SSE] 연결: userId=${userId}, 총 연결=${getConnectionCount() + 1}`);
+
   // SSE 헤더 설정
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
@@ -45,6 +47,7 @@ function handleSSEConnection(req, res) {
         clients.delete(userId);
       }
     }
+    console.log(`[SSE] 해제: userId=${userId}, 남은 연결=${getConnectionCount()}`);
   });
 }
 
@@ -56,6 +59,7 @@ function handleSSEConnection(req, res) {
  */
 function broadcast(eventType, data = {}, excludeUserId = null) {
   const message = JSON.stringify({ type: eventType, ...data });
+  let sentCount = 0;
 
   for (const [userId, userClients] of clients) {
     if (excludeUserId && userId === excludeUserId) continue;
@@ -63,11 +67,13 @@ function broadcast(eventType, data = {}, excludeUserId = null) {
     for (const res of userClients) {
       try {
         res.write(`data: ${message}\n\n`);
+        sentCount++;
       } catch {
         userClients.delete(res);
       }
     }
   }
+  console.log(`[SSE] broadcast: ${eventType} → ${sentCount}명 전송 (제외: userId=${excludeUserId})`);
 }
 
 /**
