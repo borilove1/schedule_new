@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../utils/api';
-import { checkPushSupport, subscribeToPush, isSubscribedToPush } from '../utils/pushHelper';
+import { subscribeToPush, isSubscribedToPush } from '../utils/pushHelper';
 
 const NotificationContext = createContext();
 
