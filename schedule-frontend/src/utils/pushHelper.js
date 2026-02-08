@@ -36,16 +36,32 @@ export function getPushPermissionState() {
  * 4. 백엔드에 구독 정보 전송
  */
 export async function subscribeToPush() {
-  if (!isPushSupported()) return false;
+  if (!isPushSupported()) {
+    console.warn('[Push] 브라우저 미지원');
+    return false;
+  }
 
   try {
-    const { vapidPublicKey } = await api.getVapidPublicKey();
-    if (!vapidPublicKey) return false;
+    const result = await api.getVapidPublicKey();
+    const vapidPublicKey = result?.vapidPublicKey;
+    if (!vapidPublicKey) {
+      console.error('[Push] VAPID 키를 가져올 수 없음');
+      return false;
+    }
 
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return false;
+    if (permission !== 'granted') {
+      console.warn('[Push] 알림 권한 거부:', permission);
+      return false;
+    }
 
     const registration = await navigator.serviceWorker.ready;
+
+    // 기존 구독이 있으면 해제 후 재구독 (VAPID 키 변경 대응)
+    const existing = await registration.pushManager.getSubscription();
+    if (existing) {
+      await existing.unsubscribe();
+    }
 
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
@@ -64,7 +80,7 @@ export async function subscribeToPush() {
     console.log('[Push] 구독 완료');
     return true;
   } catch (error) {
-    console.error('[Push] 구독 실패:', error);
+    console.error('[Push] 구독 실패:', error.message || error);
     return false;
   }
 }

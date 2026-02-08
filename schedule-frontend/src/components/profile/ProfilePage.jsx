@@ -134,6 +134,8 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, colors,
 export default function ProfilePage({ onBack }) {
   const { user, updateProfile } = useAuth();
   const { pushSupported, pushSubscribed, setPushSubscribed } = useNotification();
+  const [pushLoading, setPushLoading] = useState(false);
+  const [pushError, setPushError] = useState('');
   const colors = useThemeColors();
   const { isDarkMode, cardBg, textColor, secondaryTextColor, borderColor } = colors;
   const { inputStyle, labelStyle } = useCommonStyles();
@@ -694,61 +696,105 @@ export default function ProfilePage({ onBack }) {
       </div>
 
       {/* 푸시 알림 설정 */}
-      {pushSupported && (
-        <div style={sectionStyle}>
-          <div style={sectionTitleStyle}>
-            <Bell size={18} /> 푸시 알림
-          </div>
-
-          <div style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <div>
-              <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>푸시 알림 받기</div>
-              <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
-                앱이 닫혀있어도 실시간 알림을 받을 수 있습니다.
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={async () => {
-                if (pushSubscribed) {
-                  const success = await unsubscribeFromPush();
-                  if (success) setPushSubscribed(false);
-                } else {
-                  const success = await subscribeToPush();
-                  setPushSubscribed(success);
-                }
-              }}
-              style={{
-                width: '48px', height: '26px', borderRadius: '13px',
-                border: 'none', cursor: 'pointer', position: 'relative',
-                backgroundColor: pushSubscribed ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
-                transition: 'background-color 0.2s', flexShrink: 0,
-              }}
-            >
-              <div style={{
-                width: '20px', height: '20px', borderRadius: '50%',
-                backgroundColor: '#fff', position: 'absolute', top: '3px',
-                left: pushSubscribed ? '25px' : '3px',
-                transition: 'left 0.2s',
-              }} />
-            </button>
-          </div>
-
-          {getPushPermissionState() === 'denied' && (
-            <div style={{
-              marginTop: '12px', padding: '10px 14px', borderRadius: '8px',
-              fontSize: '12px', lineHeight: '1.5',
-              backgroundColor: isDarkMode ? '#1e293b' : '#fef2f2',
-              border: `1px solid ${isDarkMode ? '#374151' : '#fecaca'}`,
-              color: isDarkMode ? '#fca5a5' : '#dc2626',
-            }}>
-              브라우저에서 알림이 차단되었습니다. 브라우저 설정에서 이 사이트의 알림을 허용해주세요.
-            </div>
-          )}
+      <div style={{ ...sectionStyle, opacity: pushSupported ? 1 : 0.7 }}>
+        <div style={sectionTitleStyle}>
+          <Bell size={18} /> 푸시 알림
         </div>
-      )}
+
+        {!pushSupported ? (
+          <div style={{
+            padding: '14px 16px', borderRadius: '8px', fontSize: '13px', lineHeight: '1.5',
+            backgroundColor: isDarkMode ? '#1e293b' : '#f8fafc',
+            border: `1px solid ${borderColor}`,
+            color: secondaryTextColor,
+            display: 'flex', alignItems: 'center', gap: '10px',
+          }}>
+            <Bell size={18} style={{ flexShrink: 0, opacity: 0.5 }} />
+            <span>이 브라우저에서는 푸시 알림을 지원하지 않습니다. Chrome, Edge, Firefox 등의 브라우저를 사용하거나 홈 화면에 앱을 추가한 뒤 이용해주세요.</span>
+          </div>
+        ) : (
+          <>
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            }}>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>푸시 알림 받기</div>
+                <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
+                  앱이 닫혀있어도 실시간 알림을 받을 수 있습니다.
+                </div>
+              </div>
+              <button
+                type="button"
+                disabled={pushLoading}
+                onClick={async () => {
+                  if (pushLoading) return;
+                  setPushLoading(true);
+                  setPushError('');
+                  try {
+                    if (pushSubscribed) {
+                      const success = await unsubscribeFromPush();
+                      if (success) setPushSubscribed(false);
+                    } else {
+                      const success = await subscribeToPush();
+                      setPushSubscribed(success);
+                      if (!success) {
+                        const perm = getPushPermissionState();
+                        if (perm === 'denied') {
+                          setPushError('브라우저에서 알림이 차단되었습니다. 브라우저 설정에서 이 사이트의 알림을 허용해주세요.');
+                        } else {
+                          setPushError('푸시 알림 등록에 실패했습니다. 잠시 후 다시 시도해주세요.');
+                        }
+                      }
+                    }
+                  } catch {
+                    setPushError('푸시 알림 처리 중 오류가 발생했습니다.');
+                  } finally {
+                    setPushLoading(false);
+                  }
+                }}
+                style={{
+                  width: '48px', height: '26px', borderRadius: '13px',
+                  border: 'none', cursor: pushLoading ? 'wait' : 'pointer', position: 'relative',
+                  backgroundColor: pushSubscribed ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                  transition: 'background-color 0.2s', flexShrink: 0,
+                  opacity: pushLoading ? 0.6 : 1,
+                }}
+              >
+                <div style={{
+                  width: '20px', height: '20px', borderRadius: '50%',
+                  backgroundColor: '#fff', position: 'absolute', top: '3px',
+                  left: pushSubscribed ? '25px' : '3px',
+                  transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+
+            {pushError && (
+              <div style={{
+                marginTop: '12px', padding: '10px 14px', borderRadius: '8px',
+                fontSize: '12px', lineHeight: '1.5',
+                backgroundColor: isDarkMode ? '#1e293b' : '#fef2f2',
+                border: `1px solid ${isDarkMode ? '#374151' : '#fecaca'}`,
+                color: isDarkMode ? '#fca5a5' : '#dc2626',
+              }}>
+                {pushError}
+              </div>
+            )}
+
+            {!pushError && getPushPermissionState() === 'denied' && (
+              <div style={{
+                marginTop: '12px', padding: '10px 14px', borderRadius: '8px',
+                fontSize: '12px', lineHeight: '1.5',
+                backgroundColor: isDarkMode ? '#1e293b' : '#fef2f2',
+                border: `1px solid ${isDarkMode ? '#374151' : '#fecaca'}`,
+                color: isDarkMode ? '#fca5a5' : '#dc2626',
+              }}>
+                브라우저에서 알림이 차단되었습니다. 브라우저 설정에서 이 사이트의 알림을 허용해주세요.
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
