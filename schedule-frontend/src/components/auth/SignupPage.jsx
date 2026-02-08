@@ -356,7 +356,7 @@ export default function SignupPage({ onBackClick }) {
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>본부 *</label>
+            <label style={labelStyle}>1차 사업소 *</label>
             <select
               name="division"
               value={formData.division}
@@ -365,7 +365,7 @@ export default function SignupPage({ onBackClick }) {
               disabled={loadingOrgs}
               style={inputStyle}
             >
-              <option value="">선택하세요</option>
+              <option value="">소속 사업소를 선택하세요</option>
               {organizations.divisions.map(division => {
                 const name = typeof division === 'string' ? division : division.name;
                 return <option key={name} value={name}>{name}</option>;
@@ -374,7 +374,7 @@ export default function SignupPage({ onBackClick }) {
           </div>
 
           <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>처 *</label>
+            <label style={labelStyle}>2차 사업소 *</label>
             <select
               name="office"
               value={formData.office}
@@ -383,17 +383,12 @@ export default function SignupPage({ onBackClick }) {
               disabled={!formData.division || loadingOrgs}
               style={inputStyle}
             >
-              <option value="">선택하세요</option>
+              <option value="">소속 사업소를 선택하세요</option>
               {availableOffices.map(office => {
                 const name = typeof office === 'string' ? office : office.name;
                 return <option key={name} value={name}>{name}</option>;
               })}
             </select>
-            {!formData.division && (
-              <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '4px' }}>
-                먼저 본부를 선택하세요
-              </div>
-            )}
           </div>
 
           <div style={{ marginBottom: '18px' }}>
@@ -406,17 +401,12 @@ export default function SignupPage({ onBackClick }) {
               disabled={!formData.office || loadingOrgs || availableDepartments.length === 0}
               style={inputStyle}
             >
-              <option value="">{availableDepartments.length > 0 ? '선택하세요' : '해당 없음'}</option>
+              <option value="">{availableDepartments.length > 0 ? '소속 부서를 선택하세요' : '해당 없음'}</option>
               {availableDepartments.map(department => {
                 const name = typeof department === 'string' ? department : department.name;
                 return <option key={name} value={name}>{name}</option>;
               })}
             </select>
-            {!formData.office && (
-              <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '4px' }}>
-                먼저 처를 선택하세요
-              </div>
-            )}
           </div>
 
           <ErrorAlert message={error} />
