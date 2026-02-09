@@ -49,41 +49,6 @@ const SETTING_CONFIG = {
       { value: '3hour', label: '3시간 전' },
     ],
   },
-  max_events_per_month: {
-    label: '월 최대 일정 수',
-    description: '사용자당 월별 최대 일정 생성 가능 수',
-    type: 'number',
-    unit: '개',
-  },
-  allow_past_events: {
-    label: '과거 일정 생성 허용',
-    description: '과거 날짜에 일정을 생성할 수 있도록 허용',
-    type: 'boolean',
-  },
-  default_alert: {
-    label: '기본 알림 시간',
-    description: '새 일정 생성 시 기본 알림 설정',
-    type: 'select',
-    options: [
-      { value: 'none', label: '없음' },
-      { value: '30min', label: '30분 전' },
-      { value: '1hour', label: '1시간 전' },
-      { value: '3hour', label: '3시간 전' },
-      { value: '1day', label: '1일 전' },
-    ],
-  },
-  password_min_length: {
-    label: '비밀번호 최소 길이',
-    description: '회원가입 시 비밀번호 최소 길이 제한',
-    type: 'number',
-    unit: '자',
-  },
-  session_timeout: {
-    label: '세션 타임아웃',
-    description: '비활동 시 자동 로그아웃되는 시간 (분 단위)',
-    type: 'number',
-    unit: '분',
-  },
 
   // ===== 이메일 설정 =====
   email_enabled: {

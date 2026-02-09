@@ -308,11 +308,6 @@ CREATE TABLE system_settings (
 -- 기본 설정 데이터 삽입
 INSERT INTO system_settings (key, value, description) VALUES
     ('due_soon_threshold', '["3hour"]', '마감임박 기준 시간 (복수 선택 가능: 30min, 1hour, 3hour)'),
-    ('max_events_per_month', '100', '월 최대 일정 수'),
-    ('allow_past_events', 'false', '과거 일정 생성 허용'),
-    ('default_alert', '"1hour"', '기본 알림 시간'),
-    ('password_min_length', '4', '비밀번호 최소 길이'),
-    ('session_timeout', '60', '세션 타임아웃 (분)'),
     ('reminder_times', '["1hour"]', '일정 시작 전 알림 시간 (복수 선택 가능: 30min, 1hour, 3hour)'),
     ('email_enabled', 'false', '이메일 알림 활성화 여부'),
     ('smtp_auth_type', '"LOGIN"', 'SMTP 인증 방식 (LOGIN, NONE, API_KEY)'),
