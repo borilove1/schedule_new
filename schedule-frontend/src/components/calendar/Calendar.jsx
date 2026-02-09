@@ -172,6 +172,16 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     setShowDetailModal(true);
   }, []);
 
+  const handleSearchEventClick = useCallback((eventId, startAt) => {
+    if (startAt) {
+      const d = new Date(startAt);
+      setCurrentDate(new Date(d.getFullYear(), d.getMonth()));
+      setSelectedDay(d);
+    }
+    setSelectedEventId(eventId);
+    setShowDetailModal(true);
+  }, []);
+
   const handleDayClick = useCallback((day) => {
     const scrollY = window.scrollY;
     setSelectedDay(day);
@@ -297,7 +307,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
       <EventSearchModal
         isOpen={showSearchModal}
         onClose={handleSearchClose}
-        onEventClick={handleEventClick}
+        onEventClick={handleSearchEventClick}
       />
 
       {/* 모바일 FAB - 모달 열려있을 때 숨김 */}

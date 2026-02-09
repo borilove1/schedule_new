@@ -99,7 +99,7 @@ export default function EventSearchModal({ isOpen, onClose, onEventClick }) {
   };
 
   const handleResultClick = (event) => {
-    onEventClick(event.id);
+    onEventClick(event.id, event.startAt);
     onClose();
   };
 
