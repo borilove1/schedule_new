@@ -3,6 +3,7 @@
 
 const { query } = require('../../config/database');
 const { notifyByScope } = require('../controllers/notificationController');
+const { broadcast } = require('./sseManager');
 
 // pg-boss 인스턴스 (server.js에서 주입)
 let boss = null;
@@ -515,6 +516,17 @@ async function processEventReminder(job) {
       relatedEventId: eventId,
       metadata,
     });
+
+    // 마감임박/지연 알림 시 SSE broadcast로 캘린더 갱신 트리거
+    if (notiType === 'EVENT_DUE_SOON' || notiType === 'EVENT_OVERDUE') {
+      broadcast('event_changed', {
+        action: 'status_changed',
+        eventId: eventId || null,
+        seriesId: seriesId || null,
+        occurrenceDate: occurrenceDate || null,
+        statusType: notiType,
+      });
+    }
 
     console.log(`[ReminderQueue] Notification sent: "${eventTitle}" (${timeKey})`);
   } catch (error) {

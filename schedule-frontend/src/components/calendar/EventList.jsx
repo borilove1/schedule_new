@@ -114,7 +114,7 @@ const EventList = React.memo(function EventList({
                   borderRadius: '10px',
                   backgroundColor: cardBg,
                   border: `1px solid ${borderColor}`,
-                  borderLeft: `4px solid ${isOwnEvent ? getStatusColor(event.status) : '#94a3b8'}`,
+                  borderLeft: `4px solid ${isOwnEvent ? getStatusColor(getDisplayStatus(event)) : '#94a3b8'}`,
                   cursor: 'pointer',
                   transition: 'transform 0.15s ease, box-shadow 0.15s ease',
                   transform: hoveredId === event.id ? 'translateY(-1px)' : 'translateY(0)',
