@@ -106,8 +106,8 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
     // 일정 시작이 이미 지났으면 스킵
     if (eventStart <= now) continue;
     const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
-    // 알림 시간이 과거면 즉시(10초 후) 스케줄링, 미래면 해당 시간에 스케줄링
-    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 10 * 1000);
+    // 알림 시간이 과거면 즉시(1초 후) 스케줄링, 미래면 해당 시간에 스케줄링
+    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 1000);
     const jobKey = `reminder-event-${eventId}-${timeKey}`;
     try {
       await boss.send('event-reminder', {
@@ -128,8 +128,8 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
     // 일정 종료가 이미 지났으면 스킵
     if (eventEnd <= now) continue;
     const alertAt = new Date(eventEnd.getTime() - minutes * 60 * 1000);
-    // 알림 시간이 과거면 즉시(10초 후) 스케줄링, 미래면 해당 시간에 스케줄링
-    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 10 * 1000);
+    // 알림 시간이 과거면 즉시(1초 후) 스케줄링, 미래면 해당 시간에 스케줄링
+    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 1000);
     const jobKey = `duesoon-event-${eventId}-${timeKey}`;
     try {
       await boss.send('event-reminder', {
@@ -517,16 +517,14 @@ async function processEventReminder(job) {
       metadata,
     });
 
-    // 마감임박/지연 알림 시 SSE broadcast로 캘린더 갱신 트리거
-    if (notiType === 'EVENT_DUE_SOON' || notiType === 'EVENT_OVERDUE') {
-      broadcast('event_changed', {
-        action: 'status_changed',
-        eventId: eventId || null,
-        seriesId: seriesId || null,
-        occurrenceDate: occurrenceDate || null,
-        statusType: notiType,
-      });
-    }
+    // 알림 발송 시 SSE broadcast로 클라이언트 즉시 갱신
+    broadcast('event_changed', {
+      action: notiType === 'EVENT_REMINDER' ? 'reminder_sent' : 'status_changed',
+      eventId: eventId || null,
+      seriesId: seriesId || null,
+      occurrenceDate: occurrenceDate || null,
+      statusType: notiType,
+    });
 
     console.log(`[ReminderQueue] Notification sent: "${eventTitle}" (${timeKey})`);
   } catch (error) {

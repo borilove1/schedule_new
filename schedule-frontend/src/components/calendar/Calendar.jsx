@@ -103,6 +103,37 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadEvents]);
 
+  // 마감임박 자동 갱신: 일정이 마감임박 상태로 전환되는 시점에 자동 새로고침
+  useEffect(() => {
+    if (events.length === 0) return;
+
+    const now = new Date();
+    const dueSoonThresholdMs = 30 * 60 * 1000; // 30분 (시스템 설정 기본값)
+
+    // PENDING 상태이고 아직 마감임박이 아닌 일정들 중 가장 빨리 마감임박 상태가 되는 시점 계산
+    let nextDueSoonTime = null;
+    for (const event of events) {
+      if (event.status === 'DONE' || event.isDueSoon || event.status === 'OVERDUE') continue;
+      const endTime = new Date(event.endAt);
+      const dueSoonBoundary = new Date(endTime.getTime() - dueSoonThresholdMs);
+      if (dueSoonBoundary > now) {
+        if (!nextDueSoonTime || dueSoonBoundary < nextDueSoonTime) {
+          nextDueSoonTime = dueSoonBoundary;
+        }
+      }
+    }
+
+    if (!nextDueSoonTime) return;
+
+    const msUntilDueSoon = nextDueSoonTime.getTime() - now.getTime();
+    // 1초 버퍼 추가하여 정확한 시점 이후에 갱신
+    const timerId = setTimeout(() => {
+      loadEvents(true);
+    }, msUntilDueSoon + 1000);
+
+    return () => clearTimeout(timerId);
+  }, [events, loadEvents]);
+
   // 알림에서 일정 클릭 시 해당 일정 상세 모달 열기
   useEffect(() => {
     if (pendingEventId) {
