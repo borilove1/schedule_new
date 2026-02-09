@@ -4,7 +4,7 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import NotificationModal from './NotificationModal';
 import { useNotification } from '../../contexts/NotificationContext';
 
-export default function NotificationBell() {
+export default function NotificationBell({ onEventClick }) {
   const [showModal, setShowModal] = useState(false);
   const { unreadCount, loadUnreadCount } = useNotification();
   const { textColor } = useThemeColors();
@@ -13,6 +13,15 @@ export default function NotificationBell() {
   const handleModalClose = () => {
     setShowModal(false);
     loadUnreadCount();
+  };
+
+  // 알림에서 일정 클릭 시
+  const handleEventClick = (eventId) => {
+    setShowModal(false);
+    loadUnreadCount();
+    if (onEventClick) {
+      onEventClick(eventId);
+    }
   };
 
   return (
@@ -63,6 +72,7 @@ export default function NotificationBell() {
       <NotificationModal
         isOpen={showModal}
         onClose={handleModalClose}
+        onEventClick={handleEventClick}
       />
     </>
   );

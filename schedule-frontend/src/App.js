@@ -18,6 +18,7 @@ function AppContent() {
   const [calendarKey, setCalendarKey] = useState(0);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [cachedEvents, setCachedEvents] = useState([]);
+  const [pendingEventId, setPendingEventId] = useState(null);
   const countdownRef = React.useRef(null);
 
   // 로그아웃 시 로그인 페이지로 리셋
@@ -54,6 +55,12 @@ function AppContent() {
     setCalendarKey(k => k + 1);
   };
 
+  // 알림에서 일정 클릭 시 해당 일정으로 이동
+  const handleEventNavigate = (eventId) => {
+    setPendingEventId(eventId);
+    setCurrentPage('calendar');
+  };
+
   const { bgColor, textColor } = useThemeColors();
 
   if (loading) {
@@ -82,7 +89,7 @@ function AppContent() {
   // 인증된 경우
   return (
     <NotificationProvider>
-      <MainLayout currentPage={currentPage} onNavigate={setCurrentPage} onGoHome={handleGoHome}>
+      <MainLayout currentPage={currentPage} onNavigate={setCurrentPage} onGoHome={handleGoHome} onEventNavigate={handleEventNavigate}>
         {currentPage === 'admin' && user.role === 'ADMIN' ? (
           <AdminPage />
         ) : currentPage === 'profile' ? (
@@ -94,6 +101,8 @@ function AppContent() {
             onRateLimitStart={startRateLimitCountdown}
             cachedEvents={cachedEvents}
             onEventsLoaded={setCachedEvents}
+            pendingEventId={pendingEventId}
+            onEventOpened={() => setPendingEventId(null)}
           />
         )}
       </MainLayout>

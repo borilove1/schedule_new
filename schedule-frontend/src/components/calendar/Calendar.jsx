@@ -16,7 +16,7 @@ import { connectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
-export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cachedEvents = [], onEventsLoaded }) {
+export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cachedEvents = [], onEventsLoaded, pendingEventId, onEventOpened }) {
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
@@ -127,6 +127,15 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     }, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  // 알림에서 일정 클릭 시 해당 일정 상세 모달 열기
+  useEffect(() => {
+    if (pendingEventId) {
+      setSelectedEventId(pendingEventId);
+      setShowDetailModal(true);
+      if (onEventOpened) onEventOpened();
+    }
+  }, [pendingEventId, onEventOpened]);
 
   // --- Computed ---
   const days = useMemo(() => getCalendarDays(currentDate), [currentDate]);

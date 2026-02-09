@@ -6,7 +6,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { Sun, Moon, LogOut, Shield, User } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 
-export default function MainLayout({ children, currentPage, onNavigate, onGoHome }) {
+export default function MainLayout({ children, currentPage, onNavigate, onGoHome, onEventNavigate }) {
   const { user, logout } = useAuth();
   const { toggleDarkMode } = useTheme();
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
@@ -109,7 +109,7 @@ export default function MainLayout({ children, currentPage, onNavigate, onGoHome
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
 
-          <NotificationBell />
+          <NotificationBell onEventClick={onEventNavigate} />
 
           {user && user.role === 'ADMIN' && (
             <button

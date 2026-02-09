@@ -7,7 +7,7 @@ import ErrorAlert from '../common/ErrorAlert';
 import LoadingSpinner from '../common/LoadingSpinner';
 import api from '../../utils/api';
 
-export default function NotificationModal({ isOpen, onClose }) {
+export default function NotificationModal({ isOpen, onClose, onEventClick }) {
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -138,6 +138,10 @@ export default function NotificationModal({ isOpen, onClose }) {
   const handleNotificationClick = (notification) => {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
+    }
+    // 관련 일정이 있으면 해당 일정으로 이동
+    if (notification.relatedEventId && onEventClick) {
+      onEventClick(notification.relatedEventId);
     }
   };
 
