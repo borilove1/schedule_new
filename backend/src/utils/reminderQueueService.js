@@ -143,12 +143,12 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
     }
   }
 
-  // 3) 일정 지연 알림 (EVENT_OVERDUE) - 일정 시작 시간에 체크
+  // 3) 일정 지연 알림 (EVENT_OVERDUE) - 일정 종료 시간에 체크
   const overdueEnabled = await isOverdueEnabled();
   if (overdueEnabled) {
     const jobKey = `overdue-event-${eventId}`;
-    // 이미 시작 시간이 지났으면 1분 후에 체크, 아니면 시작 시간에 체크
-    const overdueCheckAt = eventStart > now ? eventStart : new Date(now.getTime() + 60 * 1000);
+    // 이미 종료 시간이 지났으면 1분 후에 체크, 아니면 종료 시간에 체크
+    const overdueCheckAt = eventEnd > now ? eventEnd : new Date(now.getTime() + 60 * 1000);
     try {
       await boss.send('event-reminder', {
         eventId, seriesId: null, occurrenceDate: null, creatorId,
@@ -500,10 +500,10 @@ async function processEventReminder(job) {
     let title, message;
     if (notiType === 'EVENT_OVERDUE') {
       title = '일정 지연';
-      message = `"${eventTitle}" 일정이 시작 시간이 지났으나 완료되지 않았습니다.`;
+      message = `"${eventTitle}" 일정의 종료시간이 지났으나 완료처리 되지 않았습니다.`;
     } else if (notiType === 'EVENT_DUE_SOON') {
       title = '마감임박';
-      message = `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다. (마감임박)`;
+      message = `"${eventTitle}" 일정이 ${timeMessage}에 종료됩니다.`;
     } else {
       title = '일정 알림';
       message = `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
