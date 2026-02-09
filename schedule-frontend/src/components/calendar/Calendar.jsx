@@ -196,8 +196,9 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const handleSearchOpen = useCallback(() => setShowSearchModal(true), []);
   const handleSearchClose = useCallback(() => setShowSearchModal(false), []);
 
-  // 모바일 스와이프로 월 이동
+  // 모바일 스와이프로 월 이동 (슬라이드 애니메이션)
   const touchRef = useRef(null);
+  const [slideStyle, setSlideStyle] = useState({});
   const handleTouchStart = useCallback((e) => {
     if (!isMobile) return;
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -208,8 +209,19 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     const dy = e.changedTouches[0].clientY - touchRef.current.y;
     touchRef.current = null;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx > 0) handlePrevMonth();
-    else handleNextMonth();
+    const goLeft = dx < 0;
+    const exitX = goLeft ? '-30%' : '30%';
+    const enterX = goLeft ? '30%' : '-30%';
+    setSlideStyle({ transform: `translateX(${exitX})`, opacity: 0, transition: 'transform 0.2s ease, opacity 0.2s ease' });
+    setTimeout(() => {
+      if (goLeft) handleNextMonth(); else handlePrevMonth();
+      setSlideStyle({ transform: `translateX(${enterX})`, opacity: 0, transition: 'none' });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSlideStyle({ transform: 'translateX(0)', opacity: 1, transition: 'transform 0.2s ease, opacity 0.2s ease' });
+        });
+      });
+    }, 200);
   }, [isMobile, handlePrevMonth, handleNextMonth]);
 
   return (
@@ -224,8 +236,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         isMobile={isMobile}
       />
 
-      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
-        <CalendarGrid
+      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ overflow: 'hidden' }}>
+        <CalendarGrid style={slideStyle}
           weeks={weeks}
           events={events}
           currentDate={currentDate}

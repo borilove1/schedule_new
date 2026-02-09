@@ -5,7 +5,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { getMultiDayEventsForWeek, getSingleDayEventsForDate, assignLanes } from './calendarHelpers';
 
 const CalendarGrid = React.memo(function CalendarGrid({
-  weeks, events, currentDate, selectedDay, onDayClick, onDayDoubleClick, onEventClick, userId
+  weeks, events, currentDate, selectedDay, onDayClick, onDayDoubleClick, onEventClick, userId, style
 }) {
   const { isDarkMode, textColor, secondaryTextColor, borderColor } = useThemeColors();
   const isMobile = useIsMobile();
@@ -14,7 +14,7 @@ const CalendarGrid = React.memo(function CalendarGrid({
   const curMonth = currentDate.getMonth();
 
   return (
-    <div>
+    <div style={style}>
       {/* Day Headers (Mon start) */}
       <div style={{
         display: 'grid',
