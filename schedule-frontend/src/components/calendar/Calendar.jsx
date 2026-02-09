@@ -210,6 +210,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
 
   // 모바일 스와이프로 월 이동 (슬라이드 애니메이션)
   const touchRef = useRef(null);
+  const swipeContainerRef = useRef(null);
   const [slideStyle, setSlideStyle] = useState({});
   const handleTouchStart = useCallback((e) => {
     if (!isMobileOrTablet) return;
@@ -237,6 +238,23 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     }, 200);
   }, [isMobileOrTablet, handlePrevMonth, handleNextMonth]);
 
+  // 스와이프 중 세로 스크롤 방지 (가로 이동이 세로보다 클 때)
+  useEffect(() => {
+    if (!isMobileOrTablet) return;
+    const el = swipeContainerRef.current;
+    if (!el) return;
+    const handleTouchMove = (e) => {
+      if (!touchRef.current) return;
+      const dx = Math.abs(e.touches[0].clientX - touchRef.current.x);
+      const dy = Math.abs(e.touches[0].clientY - touchRef.current.y);
+      if (dx > dy && dx > 10) {
+        e.preventDefault();
+      }
+    };
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => el.removeEventListener('touchmove', handleTouchMove);
+  }, [isMobileOrTablet]);
+
   return (
     <div style={{ color: textColor, fontFamily: FONT_FAMILY }}>
       <CalendarHeader
@@ -249,7 +267,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         isMobile={isMobile}
       />
 
-      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ overflow: 'hidden' }}>
+      <div ref={swipeContainerRef} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ overflow: 'hidden' }}>
         <div style={slideStyle}>
           <CalendarGrid
             weeks={weeks}
