@@ -201,12 +201,19 @@ const EventList = React.memo(function EventList({
                       {endDate.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                     </>
                   ) : (
-                    startDate.toLocaleString('ko-KR', {
-                      month: 'long',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
+                    <>
+                      {startDate.toLocaleString('ko-KR', {
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                      {' ~ '}
+                      {endDate.toLocaleTimeString('ko-KR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </>
                   )}
                 </div>
                 {event.content && (
