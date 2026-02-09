@@ -104,8 +104,8 @@ schedule/
 │       │   │   ├── EventEditForm.jsx   # 일정 수정 폼 (반복/공유 설정 포함)
 │       │   │   └── EventSearchModal.jsx # 일정 검색 모달 (디바운스 검색/페이징/결과 클릭)
 │       │   ├── notifications/
-│       │   │   ├── NotificationBell.jsx # 헤더 알림 벨 아이콘 + 뱃지 (99+)
-│       │   │   └── NotificationModal.jsx # 알림 목록 모달 (전체/읽지않음 탭)
+│       │   │   ├── NotificationBell.jsx # 헤더 알림 벨 아이콘 + 뱃지 (99+) + 알림→일정 이동
+│       │   │   └── NotificationModal.jsx # 알림 목록 모달 (전체/읽지않음 탭, 읽은 알림 삭제, 일정 이동)
 │       │   ├── admin/
 │       │   │   ├── AdminPage.jsx        # 관리자 탭 (사용자/조직/설정)
 │       │   │   ├── UserManagement.jsx   # 사용자 목록/검색/역할/상태 필터/승인/페이징
@@ -254,17 +254,19 @@ schedule/
 
 ### 마감임박 시스템 (Due Soon)
 - **시스템 설정**: `due_soon_threshold` (복수 선택: 30min/1hour/3hour)
-- **판정 로직**: `getEvents()`에서 각 일정의 시작 시간이 현재~threshold 이내 + PENDING 상태 → `isDueSoon: true`
+- **판정 로직**: `getEvents()`에서 각 일정의 **종료 시간**이 현재~threshold 이내 + PENDING 상태 → `isDueSoon: true`
 - **캘린더 표시**: 앰버(amber) 색상 뱃지로 마감임박 일정 강조
 - **알림**: `EVENT_DUE_SOON` 타입으로 별도 알림 발송 (pg-boss 큐, `duesoon-*` singletonKey)
-- **스케줄링**: `scheduleEventReminder()`에서 리마인더와 마감임박 알림을 동시 스케줄링
+- **스케줄링**: `scheduleEventReminder()`에서 리마인더와 마감임박 알림을 동시 스케줄링 (**종료 시간 기준**)
+- **알림 메시지**: "○○○ 일정이 N분 후에 종료됩니다."
 
 ### 일정 지연 시스템 (Overdue)
 - **시스템 설정**: `notification_config.EVENT_OVERDUE` (활성화 토글 + 수신 범위)
-- **판정 로직**: 일정 시작 시간에 pg-boss 작업 실행 → 해당 일정이 여전히 PENDING 상태면 알림 발송
+- **판정 로직**: 일정 **종료 시간**에 pg-boss 작업 실행 → 해당 일정이 여전히 PENDING 상태면 알림 발송
 - **알림**: `EVENT_OVERDUE` 타입으로 알림 발송 (pg-boss 큐, `overdue-*` singletonKey)
-- **스케줄링**: `scheduleEventReminder()`에서 시작 시간에 지연 체크 작업 스케줄링
+- **스케줄링**: `scheduleEventReminder()`에서 **종료 시간**에 지연 체크 작업 스케줄링
 - **취소**: 일정 완료/삭제 시 `cancelEventReminders()`에서 overdue 작업도 함께 취소
+- **알림 메시지**: "○○○ 일정의 종료시간이 지났으나 완료처리 되지 않았습니다."
 
 ### 타임존 처리
 - Docker(UTC) 환경에서 PG가 나이브 문자열을 UTC로 저장
@@ -421,6 +423,7 @@ schedule/
 - `admin`: ADMIN 역할 전용 관리자 페이지
 - `profile`: 내 정보 수정 페이지
 - Context Provider 순서: ThemeProvider → AuthProvider → NotificationProvider
+- **알림→일정 이동**: `pendingEventId` state로 알림 클릭 시 해당 일정 상세 모달 자동 오픈
 
 ### 프론트엔드 공통 컴포넌트
 - `Button`: primary/secondary/danger/success/ghost 변형, loading 상태
@@ -510,6 +513,7 @@ schedule/
 | GET | /unread-count | O | 읽지 않은 알림 수 |
 | PATCH | /:id/read | O | 알림 읽음 처리 |
 | POST | /read-all | O | 전체 읽음 처리 |
+| DELETE | /read | O | 읽은 알림 전체 삭제 |
 | DELETE | /:id | O | 알림 삭제 |
 | POST | /check-reminders | O | 수동 리마인더 체크 (기존 이벤트 + 시리즈 재스케줄링) |
 
@@ -875,6 +879,9 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 16. SSE 실시간 동기화 구현: 일정/댓글 CRUD 시 전체 클라이언트에 broadcast → 스켈레톤 없이 즉시 UI 갱신, 알림 카운트 실시간 갱신
 17. 이메일 알림 구현: nodemailer + SMTP 설정 (3가지 인증 방식) + 사용자별 수신 설정 + HTML 템플릿
 18. 일정 검색 기능 구현: 이벤트+시리즈 통합 검색 + 스코프 필터 + 페이지네이션 + 프론트엔드 검색 모달
+19. 마감임박/일정지연 알림 기준 변경: 시작 시간 → 종료 시간 기준으로 변경, 알림 메시지도 "종료" 용어로 수정
+20. 알림 모달 UX 개선: 읽은 알림 전체 삭제 버튼 추가, 헤더/푸터 고정 (flexShrink: 0)
+21. 알림 클릭 시 일정 이동: relatedEventId가 있는 알림 클릭 → 해당 일정 상세 모달 자동 오픈
 
 ## 알려진 이슈 및 남은 작업
 
