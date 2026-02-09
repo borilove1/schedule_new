@@ -50,13 +50,18 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(request).then(cached => {
       if (cached) return cached;
-      return fetch(request).then(response => {
-        if (response.ok && url.pathname.match(/\.(js|css|png|jpg|svg|woff2?)$/)) {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
-        }
-        return response;
-      });
+      return fetch(request)
+        .then(response => {
+          if (response.ok && url.pathname.match(/\.(js|css|png|jpg|svg|woff2?)$/)) {
+            const cloned = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
+          }
+          return response;
+        })
+        .catch(() => {
+          // 네트워크 에러 시 빈 응답 반환 (favicon 등)
+          return new Response('', { status: 404, statusText: 'Not Found' });
+        });
     })
   );
 });
