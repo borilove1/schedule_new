@@ -273,11 +273,21 @@ async function scheduleExistingEvents() {
   if (!boss) return;
 
   const reminderTimes = await getReminderTimes();
-  if (reminderTimes.length === 0) return;
+  const dueSoonTimes = await getDueSoonTimes();
+  const allMinutes = [
+    ...reminderTimes.map(t => REMINDER_MINUTES[t] || 0),
+    ...dueSoonTimes.map(t => REMINDER_MINUTES[t] || 0),
+  ];
+  if (allMinutes.length === 0) return;
 
   const now = new Date();
-  const maxMinutes = Math.max(...reminderTimes.map(t => REMINDER_MINUTES[t] || 0));
+  const maxMinutes = Math.max(...allMinutes);
   const futureLimit = new Date(now.getTime() + (maxMinutes + 60) * 60 * 1000);
+
+  // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로,
+  // 쿼리 시 현재 시간에 KST 오프셋을 더해서 비교해야 함
+  const nowForQuery = new Date(now.getTime() + KST_OFFSET_MS);
+  const futureLimitForQuery = new Date(futureLimit.getTime() + KST_OFFSET_MS);
 
   try {
     const result = await query(`
@@ -286,7 +296,7 @@ async function scheduleExistingEvents() {
       AND start_at > $1
       AND start_at <= $2
       AND series_id IS NULL
-    `, [now.toISOString(), futureLimit.toISOString()]);
+    `, [nowForQuery.toISOString(), futureLimitForQuery.toISOString()]);
 
     for (const event of result.rows) {
       await scheduleEventReminder(event.id, event.start_at, event.creator_id);
