@@ -61,6 +61,7 @@ const EventList = React.memo(function EventList({
         {[
           { key: 'all', label: '전체' },
           { key: 'ongoing', label: '진행중' },
+          { key: 'due_soon', label: '마감임박' },
           { key: 'completed', label: '완료' },
           { key: 'overdue', label: '지연' }
         ].map(tab => (

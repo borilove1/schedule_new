@@ -113,6 +113,7 @@ export const assignLanes = (multiDayBars) => {
 export const filterEventsByTab = (list, tab) => {
   switch (tab) {
     case 'ongoing': return list.filter(e => e.status === 'PENDING' || e.status === 'IN_PROGRESS');
+    case 'due_soon': return list.filter(e => e.isDueSoon);
     case 'completed': return list.filter(e => e.status === 'DONE');
     case 'overdue': return list.filter(e => e.status === 'OVERDUE');
     default: return list;
