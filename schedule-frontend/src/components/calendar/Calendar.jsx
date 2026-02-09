@@ -16,43 +16,25 @@ import { connectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
-export default function Calendar() {
+export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, onRateLimitClear, cachedEvents = [], onEventsLoaded }) {
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
 
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [events, setEvents] = useState([]);
-  const [eventsLoading, setEventsLoading] = useState(true);
+  const [events, setEvents] = useState(cachedEvents);
+  const [eventsLoading, setEventsLoading] = useState(cachedEvents.length === 0);
   const [selectedDate, setSelectedDate] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
   const [selectedTab, setSelectedTab] = useState('all');
-  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [showSearchModal, setShowSearchModal] = useState(false);
-  const countdownRef = useRef(null);
 
   const startCountdown = useCallback((seconds) => {
-    // 이미 카운트다운 진행 중이면 리셋하지 않음
-    if (countdownRef.current) return;
-    setRateLimitCountdown(seconds);
-    countdownRef.current = setInterval(() => {
-      setRateLimitCountdown(prev => {
-        if (prev <= 1) {
-          clearInterval(countdownRef.current);
-          countdownRef.current = null;
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  }, []);
-
-  useEffect(() => {
-    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
-  }, []);
+    if (onRateLimitStart) onRateLimitStart(seconds);
+  }, [onRateLimitStart]);
 
   const loadEventsRef = useRef(false);
   const loadEvents = useCallback(async (silent = false) => {
@@ -86,8 +68,8 @@ export default function Calendar() {
         return ev;
       });
       setEvents(loaded);
-      setRateLimitCountdown(0);
-      if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+      if (onEventsLoaded) onEventsLoaded(loaded);
+      if (onRateLimitClear) onRateLimitClear();
     } catch (err) {
       console.error('Failed to load events:', err);
       const msg = err.message || '';

@@ -16,6 +16,9 @@ function AppContent() {
   const [authPage, setAuthPage] = useState('login');
   const [currentPage, setCurrentPage] = useState('calendar');
   const [calendarKey, setCalendarKey] = useState(0);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  const [cachedEvents, setCachedEvents] = useState([]);
+  const countdownRef = React.useRef(null);
 
   // 로그아웃 시 로그인 페이지로 리셋
   React.useEffect(() => {
@@ -24,6 +27,34 @@ function AppContent() {
       setCurrentPage('calendar');
     }
   }, [user, loading]);
+
+  // Rate limit 카운트다운 정리
+  React.useEffect(() => {
+    return () => { if (countdownRef.current) clearInterval(countdownRef.current); };
+  }, []);
+
+  const startRateLimitCountdown = React.useCallback((seconds) => {
+    if (countdownRef.current) return;
+    setRateLimitCountdown(seconds);
+    countdownRef.current = setInterval(() => {
+      setRateLimitCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  }, []);
+
+  const clearRateLimitCountdown = React.useCallback(() => {
+    setRateLimitCountdown(0);
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+  }, []);
 
   // 홈으로 이동 (캘린더 + 이번 달로 리셋)
   const handleGoHome = () => {
@@ -65,7 +96,14 @@ function AppContent() {
         ) : currentPage === 'profile' ? (
           <ProfilePage onBack={() => setCurrentPage('calendar')} />
         ) : (
-          <Calendar key={calendarKey} />
+          <Calendar
+            key={calendarKey}
+            rateLimitCountdown={rateLimitCountdown}
+            onRateLimitStart={startRateLimitCountdown}
+            onRateLimitClear={clearRateLimitCountdown}
+            cachedEvents={cachedEvents}
+            onEventsLoaded={setCachedEvents}
+          />
         )}
       </MainLayout>
     </NotificationProvider>
