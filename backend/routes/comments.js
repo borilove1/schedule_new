@@ -47,16 +47,16 @@ router.get('/series/:seriesId', async (req, res, next) => {
 
     let result;
     if (occurrenceDate) {
-      // 특정 회차 날짜의 댓글만 조회
+      // 특정 회차 날짜의 댓글 + 날짜 없는 기존 댓글 (하위호환)
       result = await query(`
         SELECT id, content, event_id, series_id, occurrence_date,
                author_name, author_id, is_edited, created_at, updated_at
         FROM v_comments_with_details
-        WHERE series_id = $1 AND occurrence_date = $2
+        WHERE series_id = $1 AND (occurrence_date = $2 OR occurrence_date IS NULL)
         ORDER BY created_at ASC
       `, [seriesId, occurrenceDate]);
     } else {
-      // 전체 시리즈 댓글 조회 (하위호환)
+      // 전체 시리즈 댓글 조회
       result = await query(`
         SELECT id, content, event_id, series_id, occurrence_date,
                author_name, author_id, is_edited, created_at, updated_at
