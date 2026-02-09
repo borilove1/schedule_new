@@ -196,6 +196,22 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const handleSearchOpen = useCallback(() => setShowSearchModal(true), []);
   const handleSearchClose = useCallback(() => setShowSearchModal(false), []);
 
+  // 모바일 스와이프로 월 이동
+  const touchRef = useRef(null);
+  const handleTouchStart = useCallback((e) => {
+    if (!isMobile) return;
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, [isMobile]);
+  const handleTouchEnd = useCallback((e) => {
+    if (!isMobile || !touchRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    touchRef.current = null;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0) handlePrevMonth();
+    else handleNextMonth();
+  }, [isMobile, handlePrevMonth, handleNextMonth]);
+
   return (
     <div style={{ color: textColor, fontFamily: FONT_FAMILY }}>
       <CalendarHeader
@@ -208,16 +224,18 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         isMobile={isMobile}
       />
 
-      <CalendarGrid
-        weeks={weeks}
-        events={events}
-        currentDate={currentDate}
-        selectedDay={selectedDay}
-        onDayClick={handleDayClick}
-        onDayDoubleClick={handleNewEvent}
-        onEventClick={handleEventClick}
-        userId={user?.id}
-      />
+      <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+        <CalendarGrid
+          weeks={weeks}
+          events={events}
+          currentDate={currentDate}
+          selectedDay={selectedDay}
+          onDayClick={handleDayClick}
+          onDayDoubleClick={handleNewEvent}
+          onEventClick={handleEventClick}
+          userId={user?.id}
+        />
+      </div>
 
 
 
