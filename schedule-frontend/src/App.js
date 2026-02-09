@@ -48,14 +48,6 @@ function AppContent() {
     }, 1000);
   }, []);
 
-  const clearRateLimitCountdown = React.useCallback(() => {
-    setRateLimitCountdown(0);
-    if (countdownRef.current) {
-      clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    }
-  }, []);
-
   // 홈으로 이동 (캘린더 + 이번 달로 리셋)
   const handleGoHome = () => {
     setCurrentPage('calendar');
@@ -100,7 +92,6 @@ function AppContent() {
             key={calendarKey}
             rateLimitCountdown={rateLimitCountdown}
             onRateLimitStart={startRateLimitCountdown}
-            onRateLimitClear={clearRateLimitCountdown}
             cachedEvents={cachedEvents}
             onEventsLoaded={setCachedEvents}
           />

@@ -16,7 +16,7 @@ import { connectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
-export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, onRateLimitClear, cachedEvents = [], onEventsLoaded }) {
+export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cachedEvents = [], onEventsLoaded }) {
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
@@ -69,7 +69,6 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, onR
       });
       setEvents(loaded);
       if (onEventsLoaded) onEventsLoaded(loaded);
-      if (onRateLimitClear) onRateLimitClear();
     } catch (err) {
       console.error('Failed to load events:', err);
       const msg = err.message || '';
