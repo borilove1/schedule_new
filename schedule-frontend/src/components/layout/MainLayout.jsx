@@ -149,7 +149,7 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
 
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1300px', margin: '0 auto' }}>
           {children}
         </div>
       </main>
