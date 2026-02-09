@@ -147,23 +147,6 @@ export default function MainLayout({ children, currentPage, onNavigate, onGoHome
         </div>
       </header>
 
-      {/* Mobile User Info */}
-      {isMobile && user && (
-        <div style={{
-          padding: '6px 16px',
-          backgroundColor: cardBg,
-          borderBottom: `1px solid ${borderColor}`,
-          fontSize: '13px'
-        }}>
-          <div style={{ fontWeight: '500' }}>
-            {user.division} {user.office}
-          </div>
-          <div style={{ color: secondaryTextColor }}>
-            {user.department} {user.position} {user.name}님
-          </div>
-        </div>
-      )}
-
       {/* Main Content */}
       <main style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
