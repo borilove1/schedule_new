@@ -75,7 +75,7 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
     const { eventId } = req.params;
     const { content } = req.body;
 
-    // 일정 존재 확인
+    // 일정 존재 확인 + 공유 처/실 정보 조회
     const eventResult = await query('SELECT * FROM events WHERE id = $1', [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({
@@ -83,6 +83,13 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
         error: { code: 'EVENT_001', message: '일정을 찾을 수 없습니다.' }
       });
     }
+
+    // 공유 처/실 조회
+    const sharedResult = await query(
+      'SELECT office_id FROM event_shared_offices WHERE event_id = $1',
+      [eventId]
+    );
+    const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
 
     // 일정 조회 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
     const eventRow = eventResult.rows[0];
@@ -92,6 +99,7 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       officeId: eventRow.office_id,
       divisionId: eventRow.division_id,
       creatorId: eventRow.creator_id,
+      sharedOfficeIds,
     };
     if (!canViewEvent(req.user, eventForAuth)) {
       return res.status(403).json({
@@ -154,7 +162,7 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
     const { seriesId } = req.params;
     const { content } = req.body;
 
-    // 시리즈 존재 확인
+    // 시리즈 존재 확인 + 공유 처/실 정보 조회
     const seriesResult = await query('SELECT * FROM event_series WHERE id = $1', [seriesId]);
     if (seriesResult.rows.length === 0) {
       return res.status(404).json({
@@ -162,6 +170,13 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
         error: { code: 'EVENT_001', message: '반복 일정을 찾을 수 없습니다.' }
       });
     }
+
+    // 공유 처/실 조회
+    const sharedResult = await query(
+      'SELECT office_id FROM event_shared_offices WHERE series_id = $1',
+      [seriesId]
+    );
+    const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
 
     // 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
     const seriesRow = seriesResult.rows[0];
@@ -171,6 +186,7 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       officeId: seriesRow.office_id,
       divisionId: seriesRow.division_id,
       creatorId: seriesRow.creator_id,
+      sharedOfficeIds,
     };
     if (!canViewEvent(req.user, seriesForAuth)) {
       return res.status(403).json({

@@ -140,6 +140,7 @@ const authorize = (...roles) => {
 };
 
 // 일정 조회 권한 체크
+// event.sharedOfficeIds: 공유된 처/실 ID 배열 (optional)
 const canViewEvent = (user, event) => {
   // ADMIN은 모든 일정 조회 가능
   if (user.role === 'ADMIN') return true;
@@ -150,15 +151,23 @@ const canViewEvent = (user, event) => {
       return event.divisionId === user.divisionId;
     }
     if (user.scope === 'OFFICE') {
-      return event.officeId === user.officeId && event.divisionId === user.divisionId;
+      if (event.officeId === user.officeId && event.divisionId === user.divisionId) return true;
+      // 공유된 처/실 확인
+      if (event.sharedOfficeIds && event.sharedOfficeIds.includes(user.officeId)) return true;
+      return false;
     }
     if (user.scope === 'DEPARTMENT') {
-      return event.departmentId === user.departmentId;
+      if (event.departmentId === user.departmentId) return true;
+      // 공유된 처/실 확인
+      if (event.sharedOfficeIds && event.sharedOfficeIds.includes(user.officeId)) return true;
+      return false;
     }
   }
 
-  // USER는 같은 부서만 조회
-  return event.departmentId === user.departmentId;
+  // USER는 같은 부서 또는 공유된 처/실 일정 조회
+  if (event.departmentId === user.departmentId) return true;
+  if (event.sharedOfficeIds && event.sharedOfficeIds.includes(user.officeId)) return true;
+  return false;
 };
 
 // 일정 수정/삭제 권한 체크

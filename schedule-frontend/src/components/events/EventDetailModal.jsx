@@ -270,7 +270,10 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         width: '100%',
         maxWidth: isMobile ? '100%' : '600px',
         maxHeight: isMobile ? '92vh' : '90vh',
-        overflowY: 'auto', fontFamily: FONT_FAMILY,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        fontFamily: FONT_FAMILY,
         transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
         opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
         transition: isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease',
@@ -281,9 +284,10 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
           </div>
         )}
         <div style={{
-          padding: isMobile ? '12px 20px' : '24px',
+          padding: isMobile ? '12px 20px' : '16px 24px',
           borderBottom: `1px solid ${borderColor}`,
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          flexShrink: 0
         }}>
           <h2 id="event-detail-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>
             {isEditing ? (editType === 'all' ? '반복 일정 수정' : '일정 수정') : '일정 상세'}
@@ -294,9 +298,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         </div>
 
         {loading && !event ? (
-          <div style={{ padding: '40px', textAlign: 'center', color: secondaryTextColor }}>로딩 중...</div>
+          <div style={{ flex: 1, padding: '40px', textAlign: 'center', color: secondaryTextColor }}>로딩 중...</div>
         ) : event ? (
-          <div style={{ padding: isMobile ? '16px 20px' : '24px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 20px' : '24px' }}>
             {!isEditing ? (
               <EventDetailView
                 event={event}
@@ -332,7 +336,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
             )}
           </div>
         ) : (
-          <div style={{ padding: '40px', textAlign: 'center', color: secondaryTextColor }}>일정을 찾을 수 없습니다.</div>
+          <div style={{ flex: 1, padding: '40px', textAlign: 'center', color: secondaryTextColor }}>일정을 찾을 수 없습니다.</div>
         )}
       </div>
 
