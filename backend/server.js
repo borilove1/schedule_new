@@ -97,11 +97,11 @@ if (process.env.NODE_ENV === 'development') {
 
 // Rate Limiting
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
+  windowMs: 1 * 60 * 1000,
   max: 10,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, error: { code: 'RATE_LIMIT', message: '로그인 시도가 너무 많습니다. 15분 후 다시 시도해주세요.' } }
+  message: { success: false, error: { code: 'RATE_LIMIT', message: '로그인 시도가 너무 많습니다. 1분 후 다시 시도해주세요.' } }
 });
 app.use('/api/v1/auth/login', loginLimiter);
 
