@@ -215,6 +215,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     setSlideStyle({ transform: `translateX(${exitX})`, opacity: 0, transition: 'transform 0.2s ease, opacity 0.2s ease' });
     setTimeout(() => {
       if (goLeft) handleNextMonth(); else handlePrevMonth();
+      setSelectedDay(null);
       setSlideStyle({ transform: `translateX(${enterX})`, opacity: 0, transition: 'none' });
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
