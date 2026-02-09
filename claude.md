@@ -883,3 +883,4 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 3. DEPT_LEAD 스코프별 일정 조회 실제 테스트 필요
 4. 보안 Phase 2: JWT 토큰 블랙리스트(로그아웃 무효화), Refresh Token 패턴
 5. 보안 Phase 3: 로그인 계정 잠금(N회 실패 시), 비밀번호 이력 관리, 세션 관리 강화
+6. Rate limit 카운트다운 페이지 새로고침(F5) 시 리셋됨 → localStorage/sessionStorage 저장 필요
