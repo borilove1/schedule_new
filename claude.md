@@ -89,7 +89,7 @@ schedule/
 │       │   │   ├── LoginPage.jsx       # 로그인 폼 (비밀번호 토글, 다크모드 토글)
 │       │   │   └── SignupPage.jsx      # 회원가입 폼 (조직 구조 연동, 승인 필요 안내)
 │       │   ├── layout/
-│       │   │   └── MainLayout.jsx      # 헤더(사용자정보/다크모드/알림벨/관리자/로그아웃) + 컨텐츠
+│       │   │   └── MainLayout.jsx      # 헤더(사용자정보/다크모드/알림벨/관리자/로그아웃) + 컨텐츠 (PC maxWidth: 1200px)
 │       │   ├── calendar/
 │       │   │   ├── Calendar.jsx        # 월간 캘린더 뷰 (메인 컨테이너, SSE 연동, 검색 모달)
 │       │   │   ├── CalendarHeader.jsx  # 월/년 표시, 이전/다음 월, TODAY, 검색, + 버튼
@@ -697,7 +697,7 @@ DB_USER=scheduleuser
 DB_PASSWORD=<강력한 비밀번호>
 JWT_SECRET=<64자 이상 랜덤 문자열>
 JWT_EXPIRES_IN=24h
-CORS_ORIGIN=https://1.215.38.118
+CORS_ORIGIN=https://teamschedule.mywire.org
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 VAPID_PUBLIC_KEY=<VAPID 공개키>
@@ -801,7 +801,7 @@ DELETE FROM push_subscriptions WHERE updated_at < NOW() - INTERVAL '90 days';
 ### 이메일 알림 디버깅
 ```bash
 # SMTP 연결 테스트 (관리자 로그인 후)
-curl -X POST https://1.215.38.118/api/v1/settings/test-email -H "Authorization: Bearer <token>"
+curl -X POST https://teamschedule.mywire.org/api/v1/settings/test-email -H "Authorization: Bearer <token>"
 ```
 ```sql
 -- 이메일 설정 확인
