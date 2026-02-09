@@ -280,8 +280,9 @@ class ApiClient {
     return this.request(`/comments/events/${eventId}`);
   }
 
-  async getSeriesComments(seriesId) {
-    return this.request(`/comments/series/${seriesId}`);
+  async getSeriesComments(seriesId, occurrenceDate) {
+    const query = occurrenceDate ? `?occurrenceDate=${occurrenceDate}` : '';
+    return this.request(`/comments/series/${seriesId}${query}`);
   }
 
   async addEventComment(eventId, content) {
@@ -291,10 +292,10 @@ class ApiClient {
     });
   }
 
-  async addSeriesComment(seriesId, content) {
+  async addSeriesComment(seriesId, content, occurrenceDate) {
     return this.request(`/comments/series/${seriesId}`, {
       method: 'POST',
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, occurrenceDate }),
     });
   }
 

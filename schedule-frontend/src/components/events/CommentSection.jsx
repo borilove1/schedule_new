@@ -21,9 +21,13 @@ export default function CommentSection({ eventId, currentUser, canEdit, rateLimi
   const { isDarkMode, textColor, secondaryTextColor, inputBg, borderColor, hoverBg, errorColor } = useThemeColors();
   const actionGuard = useActionGuard();
 
-  // series-* 형식에서 seriesId 추출
+  // series-* 형식에서 seriesId와 occurrenceDate 추출
+  // 예: series-42-1707523200000 → seriesId=42, timestamp=1707523200000
   const isSeriesEvent = String(eventId).startsWith('series-');
   const seriesId = isSeriesEvent ? String(eventId).split('-')[1] : null;
+  const occurrenceDate = isSeriesEvent
+    ? new Date(parseInt(String(eventId).split('-')[2], 10)).toISOString().split('T')[0]
+    : null;
 
   const loadComments = useCallback(async () => {
     if (!eventId) return;
@@ -32,7 +36,7 @@ export default function CommentSection({ eventId, currentUser, canEdit, rateLimi
     try {
       let data;
       if (isSeriesEvent) {
-        data = await api.getSeriesComments(seriesId);
+        data = await api.getSeriesComments(seriesId, occurrenceDate);
       } else {
         data = await api.getEventComments(eventId);
       }
@@ -43,7 +47,7 @@ export default function CommentSection({ eventId, currentUser, canEdit, rateLimi
     } finally {
       setLoading(false);
     }
-  }, [eventId, isSeriesEvent, seriesId]);
+  }, [eventId, isSeriesEvent, seriesId, occurrenceDate]);
 
   useEffect(() => {
     loadComments();
@@ -57,7 +61,7 @@ export default function CommentSection({ eventId, currentUser, canEdit, rateLimi
       setError('');
       try {
         if (isSeriesEvent) {
-          await api.addSeriesComment(seriesId, newComment.trim());
+          await api.addSeriesComment(seriesId, newComment.trim(), occurrenceDate);
         } else {
           await api.addEventComment(eventId, newComment.trim());
         }

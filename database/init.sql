@@ -264,18 +264,21 @@ CREATE INDEX idx_notifications_user_unread ON notifications(user_id, is_read) WH
 CREATE TABLE comments (
     id SERIAL PRIMARY KEY,
     content TEXT NOT NULL,
-    
+
     -- 관계
     event_id INTEGER REFERENCES events(id) ON DELETE CASCADE, -- 단일 일정 댓글
     series_id INTEGER REFERENCES event_series(id) ON DELETE CASCADE, -- 반복 일정 시리즈 댓글
     author_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
+
+    -- 반복 일정 회차별 날짜 (series_id와 함께 사용)
+    occurrence_date DATE,
+
     -- 수정 여부
     is_edited BOOLEAN DEFAULT false,
-    
+
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- 제약 조건: 단일 일정 또는 시리즈 중 하나에만 댓글
     CONSTRAINT check_comment_target CHECK (
         (event_id IS NOT NULL AND series_id IS NULL) OR
@@ -515,11 +518,12 @@ LEFT JOIN divisions div ON e.division_id = div.id;
 
 -- 댓글 전체 정보 뷰
 CREATE VIEW v_comments_with_details AS
-SELECT 
+SELECT
     c.id,
     c.content,
     c.event_id,
     c.series_id,
+    c.occurrence_date,
     u.name AS author_name,
     u.id AS author_id,
     c.is_edited,

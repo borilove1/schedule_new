@@ -43,14 +43,28 @@ router.get('/events/:eventId', async (req, res, next) => {
 router.get('/series/:seriesId', async (req, res, next) => {
   try {
     const { seriesId } = req.params;
+    const { occurrenceDate } = req.query;
 
-    const result = await query(`
-      SELECT id, content, event_id, series_id,
-             author_name, author_id, is_edited, created_at, updated_at
-      FROM v_comments_with_details
-      WHERE series_id = $1
-      ORDER BY created_at ASC
-    `, [seriesId]);
+    let result;
+    if (occurrenceDate) {
+      // 특정 회차 날짜의 댓글만 조회
+      result = await query(`
+        SELECT id, content, event_id, series_id, occurrence_date,
+               author_name, author_id, is_edited, created_at, updated_at
+        FROM v_comments_with_details
+        WHERE series_id = $1 AND occurrence_date = $2
+        ORDER BY created_at ASC
+      `, [seriesId, occurrenceDate]);
+    } else {
+      // 전체 시리즈 댓글 조회 (하위호환)
+      result = await query(`
+        SELECT id, content, event_id, series_id, occurrence_date,
+               author_name, author_id, is_edited, created_at, updated_at
+        FROM v_comments_with_details
+        WHERE series_id = $1
+        ORDER BY created_at ASC
+      `, [seriesId]);
+    }
 
     res.json({
       success: true,
@@ -160,7 +174,7 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
     }
 
     const { seriesId } = req.params;
-    const { content } = req.body;
+    const { content, occurrenceDate } = req.body;
 
     // 시리즈 존재 확인 + 공유 처/실 정보 조회
     const seriesResult = await query('SELECT * FROM event_series WHERE id = $1', [seriesId]);
@@ -195,12 +209,12 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       });
     }
 
-    // 댓글 추가
+    // 댓글 추가 (회차별 날짜 저장)
     const result = await query(`
-      INSERT INTO comments (content, series_id, author_id)
-      VALUES ($1, $2, $3)
-      RETURNING id, content, is_edited, created_at
-    `, [content, seriesId, req.user.id]);
+      INSERT INTO comments (content, series_id, author_id, occurrence_date)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, content, is_edited, created_at, occurrence_date
+    `, [content, seriesId, req.user.id, occurrenceDate || null]);
 
     // 시리즈 작성자에게 알림 (notifyByScope가 actorId 필터로 자기 댓글 제외)
     const series = seriesResult.rows[0];
