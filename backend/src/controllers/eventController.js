@@ -244,7 +244,10 @@ exports.getEvents = async (req, res) => {
         || commentCountMap[`series_${event.series_id}`]
         || 0;
       // 마감임박 판정: PENDING + 종료시간이 현재~threshold 이내
-      const eventEnd = new Date(event.end_at);
+      // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
+      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+      const storedEndTime = new Date(event.end_at);
+      const eventEnd = new Date(storedEndTime.getTime() - KST_OFFSET_MS);
       const isDueSoon = event.status !== 'DONE'
         && dueSoonMaxMinutes > 0
         && eventEnd > now
@@ -1140,8 +1143,11 @@ exports.getEventById = async (req, res) => {
       const seriesSharedOffices = seriesSharedResult.rows.map(r => ({ id: r.office_id, name: r.office_name }));
 
       // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
+      // 문자열로 만든 시간은 KST 의도이지만 서버(UTC)에서는 UTC로 해석됨 → 9시간 보정
+      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
       const endAtStr = `${occurrenceDateStr}T${endTimeStr}:00`;
-      const seriesEndTime = new Date(endAtStr);
+      const seriesEndTimeParsed = new Date(endAtStr);
+      const seriesEndTime = new Date(seriesEndTimeParsed.getTime() - KST_OFFSET_MS);
       const isOverdue = status !== 'DONE' && seriesEndTime < new Date();
 
       // 필드명 camelCase로 변환
@@ -1221,7 +1227,10 @@ exports.getEventById = async (req, res) => {
     const eventSharedOffices = eventSharedResult.rows.map(r => ({ id: r.office_id, name: r.office_name }));
 
     // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
-    const eventEndTime = new Date(event.end_at);
+    // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+    const eventEndTimeParsed = new Date(event.end_at);
+    const eventEndTime = new Date(eventEndTimeParsed.getTime() - KST_OFFSET_MS);
     const isEventOverdue = event.status !== 'DONE' && eventEndTime < new Date();
 
     // 필드명 camelCase로 변환
@@ -1684,6 +1693,8 @@ exports.searchEvents = async (req, res) => {
     }
 
     // 포맷 변환
+    // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
+    const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
     const now = new Date();
     const formattedEvents = results.map(row => {
       if (row._type === 'series') {
@@ -1694,7 +1705,9 @@ exports.searchEvents = async (req, res) => {
         const ts = new Date(`${firstDate}T${startTime}`).getTime();
         const endAtStr = row.end_time ? `${firstDate}T${row.end_time}` : null;
         const seriesStatus = row.status || 'PENDING';
-        const isOverdue = seriesStatus !== 'DONE' && endAtStr && new Date(endAtStr) < now;
+        // 문자열로 만든 시간은 KST 의도이지만 서버(UTC)에서는 UTC로 해석됨 → 9시간 보정
+        const seriesEndTime = endAtStr ? new Date(new Date(endAtStr).getTime() - KST_OFFSET_MS) : null;
+        const isOverdue = seriesStatus !== 'DONE' && seriesEndTime && seriesEndTime < now;
         return {
           id: `series-${row.id}-${ts}`,
           title: row.title,
@@ -1710,7 +1723,9 @@ exports.searchEvents = async (req, res) => {
           createdAt: toNaiveDateTimeString(row.created_at),
         };
       } else {
-        const isEventOverdue = row.status !== 'DONE' && row.end_at && new Date(row.end_at) < now;
+        // DB에서 가져온 TIMESTAMPTZ도 KST가 UTC로 잘못 해석된 상태 → 9시간 보정
+        const eventEndTime = row.end_at ? new Date(new Date(row.end_at).getTime() - KST_OFFSET_MS) : null;
+        const isEventOverdue = row.status !== 'DONE' && eventEndTime && eventEndTime < now;
         return {
           id: row.id,
           title: row.title,
