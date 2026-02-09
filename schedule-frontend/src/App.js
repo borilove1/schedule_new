@@ -15,6 +15,7 @@ function AppContent() {
   const { user, loading } = useAuth();
   const [authPage, setAuthPage] = useState('login');
   const [currentPage, setCurrentPage] = useState('calendar');
+  const [calendarKey, setCalendarKey] = useState(0);
 
   // 로그아웃 시 로그인 페이지로 리셋
   React.useEffect(() => {
@@ -23,6 +24,12 @@ function AppContent() {
       setCurrentPage('calendar');
     }
   }, [user, loading]);
+
+  // 홈으로 이동 (캘린더 + 이번 달로 리셋)
+  const handleGoHome = () => {
+    setCurrentPage('calendar');
+    setCalendarKey(k => k + 1);
+  };
 
   const { bgColor, textColor } = useThemeColors();
 
@@ -52,13 +59,13 @@ function AppContent() {
   // 인증된 경우
   return (
     <NotificationProvider>
-      <MainLayout currentPage={currentPage} onNavigate={setCurrentPage}>
+      <MainLayout currentPage={currentPage} onNavigate={setCurrentPage} onGoHome={handleGoHome}>
         {currentPage === 'admin' && user.role === 'ADMIN' ? (
           <AdminPage />
         ) : currentPage === 'profile' ? (
           <ProfilePage onBack={() => setCurrentPage('calendar')} />
         ) : (
-          <Calendar />
+          <Calendar key={calendarKey} />
         )}
       </MainLayout>
     </NotificationProvider>

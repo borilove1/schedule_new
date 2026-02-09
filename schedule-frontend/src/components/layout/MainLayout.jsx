@@ -6,7 +6,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { Sun, Moon, LogOut, Shield, User } from 'lucide-react';
 import NotificationBell from '../notifications/NotificationBell';
 
-export default function MainLayout({ children, currentPage, onNavigate }) {
+export default function MainLayout({ children, currentPage, onNavigate, onGoHome }) {
   const { user, logout } = useAuth();
   const { toggleDarkMode } = useTheme();
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
@@ -24,12 +24,29 @@ export default function MainLayout({ children, currentPage, onNavigate }) {
         alignItems: 'center',
         flexShrink: 0
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
-          <span style={{ fontSize: isMobile ? '20px' : '28px', lineHeight: 1 }}>📅</span>
-          <h1 style={{ fontSize: isMobile ? '16px' : '20px', fontWeight: '600', margin: 0 }}>
+        <button
+          onClick={onGoHome}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '8px' : '12px',
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 8px',
+            marginLeft: '-8px',
+            borderRadius: '8px',
+            transition: 'background-color 0.2s',
+          }}
+          onMouseEnter={e => e.currentTarget.style.backgroundColor = isDarkMode ? '#374151' : '#f3f4f6'}
+          onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          title="이번 달로 이동"
+        >
+          <span style={{ fontSize: isMobile ? '20px' : '24px', lineHeight: 1 }}>📅</span>
+          <span style={{ fontSize: isMobile ? '16px' : '18px', fontWeight: '600', color: textColor }}>
             업무일정 관리
-          </h1>
-        </div>
+          </span>
+        </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '16px' }}>
           {!isMobile && user && (
