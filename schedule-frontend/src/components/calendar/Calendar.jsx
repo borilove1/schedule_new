@@ -237,45 +237,45 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
       />
 
       <div onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ overflow: 'hidden' }}>
-        <CalendarGrid style={slideStyle}
-          weeks={weeks}
-          events={events}
-          currentDate={currentDate}
-          selectedDay={selectedDay}
-          onDayClick={handleDayClick}
-          onDayDoubleClick={handleNewEvent}
-          onEventClick={handleEventClick}
-          userId={user?.id}
-        />
-      </div>
+        <div style={slideStyle}>
+          <CalendarGrid
+            weeks={weeks}
+            events={events}
+            currentDate={currentDate}
+            selectedDay={selectedDay}
+            onDayClick={handleDayClick}
+            onDayDoubleClick={handleNewEvent}
+            onEventClick={handleEventClick}
+            userId={user?.id}
+          />
 
-
-
-      {eventsLoading ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
-          {[1, 2, 3].map(i => (
-            <div key={i} style={{
-              padding: '16px', borderRadius: '10px',
-              backgroundColor: cardBg, border: `1px solid ${borderColor}`,
-              borderLeft: '4px solid transparent',
-            }}>
-              <Skeleton width="60%" height="18px" style={{ marginBottom: '8px' }} />
-              <Skeleton width="40%" height="14px" />
+          {eventsLoading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '16px' }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{
+                  padding: '16px', borderRadius: '10px',
+                  backgroundColor: cardBg, border: `1px solid ${borderColor}`,
+                  borderLeft: '4px solid transparent',
+                }}>
+                  <Skeleton width="60%" height="18px" style={{ marginBottom: '8px' }} />
+                  <Skeleton width="40%" height="14px" />
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <EventList
+              events={filteredListEvents}
+              allEventsCount={events.length}
+              selectedDay={selectedDay}
+              selectedTab={selectedTab}
+              onTabChange={setSelectedTab}
+              onClearSelection={() => setSelectedDay(null)}
+              onEventClick={handleEventClick}
+              userId={user?.id}
+            />
+          )}
         </div>
-      ) : (
-        <EventList
-          events={filteredListEvents}
-          allEventsCount={events.length}
-          selectedDay={selectedDay}
-          selectedTab={selectedTab}
-          onTabChange={setSelectedTab}
-          onClearSelection={() => setSelectedDay(null)}
-          onEventClick={handleEventClick}
-          userId={user?.id}
-        />
-      )}
+      </div>
 
       <EventModal
         isOpen={showModal}
