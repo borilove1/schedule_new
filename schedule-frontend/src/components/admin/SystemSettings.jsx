@@ -29,6 +29,16 @@ const SCOPE_LABELS = {
 
 const SETTING_CONFIG = {
   // ===== 일반 설정 =====
+  reminder_times: {
+    label: '일정 시작 알림',
+    description: '일정 시작 전 알림을 보낼 시간을 선택하세요 (복수 선택 가능)',
+    type: 'multiSelect',
+    options: [
+      { value: '30min', label: '30분 전' },
+      { value: '1hour', label: '1시간 전' },
+      { value: '3hour', label: '3시간 전' },
+    ],
+  },
   due_soon_threshold: {
     label: '마감임박 기준 시간',
     description: '일정 종료 전 마감임박 뱃지 표시 및 알림을 보낼 시간 (복수 선택 가능)',
@@ -73,16 +83,6 @@ const SETTING_CONFIG = {
     description: '비활동 시 자동 로그아웃되는 시간 (분 단위)',
     type: 'number',
     unit: '분',
-  },
-  reminder_times: {
-    label: '일정 시작 알림',
-    description: '일정 시작 전 알림을 보낼 시간을 선택하세요 (복수 선택 가능)',
-    type: 'multiSelect',
-    options: [
-      { value: '30min', label: '30분 전' },
-      { value: '1hour', label: '1시간 전' },
-      { value: '3hour', label: '3시간 전' },
-    ],
   },
 
   // ===== 이메일 설정 =====
