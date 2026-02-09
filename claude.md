@@ -15,7 +15,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **실시간**: SSE (Server-Sent Events) 브로드캐스트 + Service Worker
 - **배포**: Docker Compose (3 컨테이너: backend, frontend, database)
 - **배포 경로**: `/var/www/schedule-app`
-- **프로덕션 URL**: `https://teamschedule.duckdns.org`
+- **프로덕션 URL**: `https://teamschedule.mywire.org`
 
 ## 프로젝트 구조
 
