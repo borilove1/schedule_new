@@ -3,6 +3,7 @@ import { Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import { useResponsive } from '../../hooks/useResponsive';
 import EventModal from '../events/EventModal';
 import EventDetailModal from '../events/EventDetailModal';
 import EventSearchModal from '../events/EventSearchModal';
@@ -20,6 +21,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
+  const { isMobileOrTablet } = useResponsive();
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState(cachedEvents);
@@ -210,11 +212,11 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const touchRef = useRef(null);
   const [slideStyle, setSlideStyle] = useState({});
   const handleTouchStart = useCallback((e) => {
-    if (!isMobile) return;
+    if (!isMobileOrTablet) return;
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, [isMobile]);
+  }, [isMobileOrTablet]);
   const handleTouchEnd = useCallback((e) => {
-    if (!isMobile || !touchRef.current) return;
+    if (!isMobileOrTablet || !touchRef.current) return;
     const dx = e.changedTouches[0].clientX - touchRef.current.x;
     const dy = e.changedTouches[0].clientY - touchRef.current.y;
     touchRef.current = null;
@@ -233,7 +235,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         });
       });
     }, 200);
-  }, [isMobile, handlePrevMonth, handleNextMonth]);
+  }, [isMobileOrTablet, handlePrevMonth, handleNextMonth]);
 
   return (
     <div style={{ color: textColor, fontFamily: FONT_FAMILY }}>
