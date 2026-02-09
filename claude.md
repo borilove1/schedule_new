@@ -262,9 +262,10 @@ schedule/
 
 ### 일정 지연 시스템 (Overdue)
 - **시스템 설정**: `notification_config.EVENT_OVERDUE` (활성화 토글 + 수신 범위)
-- **판정 로직**: 일정 **종료 시간**에 pg-boss 작업 실행 → 해당 일정이 여전히 PENDING 상태면 알림 발송
-- **알림**: `EVENT_OVERDUE` 타입으로 알림 발송 (pg-boss 큐, `overdue-*` singletonKey)
-- **스케줄링**: `scheduleEventReminder()`에서 **종료 시간**에 지연 체크 작업 스케줄링
+- **판정 로직 (API)**: `getEvents()`, `getEventById()`, `searchEvents()`에서 **종료 시간** < 현재 시간 + PENDING 상태 → `status: 'OVERDUE'` 반환
+- **캘린더 표시**: 빨간색(#ef4444) 뱃지로 지연 일정 강조
+- **알림 발송**: 일정 **종료 시간**에 pg-boss 작업 실행 → 해당 일정이 여전히 PENDING 상태면 `EVENT_OVERDUE` 알림 발송
+- **스케줄링**: `scheduleEventReminder()`에서 **종료 시간**에 지연 체크 작업 스케줄링 (`overdue-*` singletonKey)
 - **취소**: 일정 완료/삭제 시 `cancelEventReminders()`에서 overdue 작업도 함께 취소
 - **알림 메시지**: "○○○ 일정의 종료시간이 지났으나 완료처리 되지 않았습니다."
 
@@ -882,6 +883,7 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 19. 마감임박/일정지연 알림 기준 변경: 시작 시간 → 종료 시간 기준으로 변경, 알림 메시지도 "종료" 용어로 수정
 20. 알림 모달 UX 개선: 읽은 알림 전체 삭제 버튼 추가, 헤더/푸터 고정 (flexShrink: 0)
 21. 알림 클릭 시 일정 이동: relatedEventId가 있는 알림 클릭 → 해당 일정 상세 모달 자동 오픈
+22. OVERDUE 상태 서버 계산: 클라이언트 10초 폴링 제거 → 서버 API(getEvents/getEventById/searchEvents)에서 isOverdue 판정 후 status='OVERDUE' 반환
 
 ## 알려진 이슈 및 남은 작업
 

@@ -61,9 +61,6 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
       setError('');
       const data = await api.getEvent(eventId);
       if (data && data.id) {
-        if (data.status === 'PENDING' && data.endAt && new Date(data.endAt) < new Date()) {
-          data.status = 'OVERDUE';
-        }
         setEvent(data);
         const start = formatDateTimeForInput(data.startAt);
         const end = formatDateTimeForInput(data.endAt);

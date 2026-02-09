@@ -250,13 +250,16 @@ exports.getEvents = async (req, res) => {
         && eventEnd > now
         && (eventEnd.getTime() - now.getTime()) <= dueSoonMaxMinutes * 60 * 1000;
 
+      // 지연 판정: PENDING + 종료시간이 이미 지남
+      const isOverdue = event.status !== 'DONE' && eventEnd < now;
+
       return {
         id: event.id,
         title: event.title,
         content: event.content,
         startAt: toNaiveDateTimeString(event.start_at),
         endAt: toNaiveDateTimeString(event.end_at),
-        status: event.status,
+        status: isOverdue ? 'OVERDUE' : event.status,
         completedAt: toNaiveDateTimeString(event.completed_at),
         alert: event.alert,
         priority: event.priority,
@@ -267,6 +270,7 @@ exports.getEvents = async (req, res) => {
         isGenerated: event.is_generated,
         isRecurring: event.is_recurring || !!event.series_id,
         isDueSoon,
+        isOverdue,
         creator: {
           id: event.creator_id,
           name: event.creator_name
@@ -1135,14 +1139,19 @@ exports.getEventById = async (req, res) => {
       );
       const seriesSharedOffices = seriesSharedResult.rows.map(r => ({ id: r.office_id, name: r.office_name }));
 
+      // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
+      const endAtStr = `${occurrenceDateStr}T${endTimeStr}:00`;
+      const seriesEndTime = new Date(endAtStr);
+      const isOverdue = status !== 'DONE' && seriesEndTime < new Date();
+
       // 필드명 camelCase로 변환
       const formattedEvent = {
         id: id,
         title: series.title,
         content: series.content,
         startAt: `${occurrenceDateStr}T${startTimeStr}:00`,
-        endAt: `${occurrenceDateStr}T${endTimeStr}:00`,
-        status: status,
+        endAt: endAtStr,
+        status: isOverdue ? 'OVERDUE' : status,
         completedAt: completedAt,
         alert: series.alert,
         seriesId: series.id,
@@ -1211,6 +1220,10 @@ exports.getEventById = async (req, res) => {
     );
     const eventSharedOffices = eventSharedResult.rows.map(r => ({ id: r.office_id, name: r.office_name }));
 
+    // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
+    const eventEndTime = new Date(event.end_at);
+    const isEventOverdue = event.status !== 'DONE' && eventEndTime < new Date();
+
     // 필드명 camelCase로 변환
     const formattedEvent = {
       id: event.id,
@@ -1218,7 +1231,7 @@ exports.getEventById = async (req, res) => {
       content: event.content,
       startAt: toNaiveDateTimeString(event.start_at),
       endAt: toNaiveDateTimeString(event.end_at),
-      status: event.status,
+      status: isEventOverdue ? 'OVERDUE' : event.status,
       completedAt: toNaiveDateTimeString(event.completed_at),
       alert: event.alert,
       priority: event.priority,
@@ -1671,6 +1684,7 @@ exports.searchEvents = async (req, res) => {
     }
 
     // 포맷 변환
+    const now = new Date();
     const formattedEvents = results.map(row => {
       if (row._type === 'series') {
         const startTime = row.start_time || '09:00:00';
@@ -1678,13 +1692,16 @@ exports.searchEvents = async (req, res) => {
           ? new Date(row.first_occurrence_date).toISOString().split('T')[0]
           : new Date(row.created_at).toISOString().split('T')[0];
         const ts = new Date(`${firstDate}T${startTime}`).getTime();
+        const endAtStr = row.end_time ? `${firstDate}T${row.end_time}` : null;
+        const seriesStatus = row.status || 'PENDING';
+        const isOverdue = seriesStatus !== 'DONE' && endAtStr && new Date(endAtStr) < now;
         return {
           id: `series-${row.id}-${ts}`,
           title: row.title,
           content: row.content,
           startAt: `${firstDate}T${startTime}`,
-          endAt: row.end_time ? `${firstDate}T${row.end_time}` : null,
-          status: row.status || 'PENDING',
+          endAt: endAtStr,
+          status: isOverdue ? 'OVERDUE' : seriesStatus,
           isRecurring: true,
           recurrenceType: row.recurrence_type,
           creator: { id: row.creator_id, name: row.creator_name },
@@ -1693,13 +1710,14 @@ exports.searchEvents = async (req, res) => {
           createdAt: toNaiveDateTimeString(row.created_at),
         };
       } else {
+        const isEventOverdue = row.status !== 'DONE' && row.end_at && new Date(row.end_at) < now;
         return {
           id: row.id,
           title: row.title,
           content: row.content,
           startAt: toNaiveDateTimeString(row.start_at),
           endAt: toNaiveDateTimeString(row.end_at),
-          status: row.status,
+          status: isEventOverdue ? 'OVERDUE' : row.status,
           isRecurring: false,
           creator: { id: row.creator_id, name: row.creator_name },
           isOwner: row.creator_id === userId,

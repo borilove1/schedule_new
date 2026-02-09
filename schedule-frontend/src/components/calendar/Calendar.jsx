@@ -60,13 +60,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         endDate: endDate.toISOString().split('T')[0]
       });
 
-      const now = new Date();
-      const loaded = (data.data?.events || data.events || []).map(ev => {
-        if (ev.status === 'PENDING' && ev.endAt && new Date(ev.endAt) < now) {
-          return { ...ev, status: 'OVERDUE' };
-        }
-        return ev;
-      });
+      const loaded = data.data?.events || data.events || [];
       setEvents(loaded);
       if (onEventsLoaded) onEventsLoaded(loaded);
     } catch (err) {
@@ -108,25 +102,6 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [loadEvents]);
-
-  // 10초마다 OVERDUE 상태 재계산 (API 호출 없이 로컬 상태만 갱신)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEvents(prev => {
-        const now = new Date();
-        let changed = false;
-        const updated = prev.map(ev => {
-          if (ev.status === 'PENDING' && ev.endAt && new Date(ev.endAt) < now) {
-            changed = true;
-            return { ...ev, status: 'OVERDUE' };
-          }
-          return ev;
-        });
-        return changed ? updated : prev;
-      });
-    }, 10000);
-    return () => clearInterval(timer);
-  }, []);
 
   // 알림에서 일정 클릭 시 해당 일정 상세 모달 열기
   useEffect(() => {
