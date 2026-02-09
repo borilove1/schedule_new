@@ -40,6 +40,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [priorityFocusedIdx, setPriorityFocusedIdx] = useState(-1);
   const [officeFocusedIdx, setOfficeFocusedIdx] = useState(-1);
+  const [priorityIsFocused, setPriorityIsFocused] = useState(false);
+  const [officeIsFocused, setOfficeIsFocused] = useState(false);
   const officeDropdownRef = useRef(null);
   const priorityDropdownRef = useRef(null);
 
@@ -290,6 +292,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                   else if (e.key === 'ArrowUp') { e.preventDefault(); if (!showPriorityDropdown) { setShowPriorityDropdown(true); const idx = opts.findIndex(o => o.value === formData.priority); setPriorityFocusedIdx(idx >= 0 ? idx : 0); } else { setPriorityFocusedIdx(prev => Math.max(prev - 1, 0)); } }
                   else if (e.key === 'Tab') { if (showPriorityDropdown) setShowPriorityDropdown(false); }
                 }}
+                onFocus={() => setPriorityIsFocused(true)}
+                onBlur={() => setPriorityIsFocused(false)}
                 style={{
                   ...uniformInputStyle,
                   cursor: 'pointer',
@@ -298,8 +302,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                   justifyContent: 'space-between',
                   paddingRight: '36px',
                   position: 'relative',
-                  borderColor: showPriorityDropdown ? '#3B82F6' : borderColor,
-                  boxShadow: showPriorityDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                  borderColor: (showPriorityDropdown || priorityIsFocused) ? '#3B82F6' : borderColor,
+                  boxShadow: (showPriorityDropdown || priorityIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                   outline: 'none',
                 }}
               >
@@ -361,6 +365,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                     else if (e.key === 'ArrowUp') { e.preventDefault(); if (!showOfficeDropdown) { setShowOfficeDropdown(true); setOfficeFocusedIdx(0); } else { setOfficeFocusedIdx(prev => Math.max(prev - 1, 0)); } }
                     else if (e.key === 'Tab') { if (showOfficeDropdown) setShowOfficeDropdown(false); }
                   }}
+                  onFocus={() => setOfficeIsFocused(true)}
+                  onBlur={() => setOfficeIsFocused(false)}
                   style={{
                     ...uniformInputStyle,
                     cursor: 'pointer',
@@ -372,8 +378,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                     position: 'relative',
                     flexWrap: 'wrap',
                     gap: '4px',
-                    borderColor: showOfficeDropdown ? '#3B82F6' : borderColor,
-                    boxShadow: showOfficeDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                    borderColor: (showOfficeDropdown || officeIsFocused) ? '#3B82F6' : borderColor,
+                    boxShadow: (showOfficeDropdown || officeIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                     outline: 'none',
                   }}
                 >
