@@ -7,6 +7,11 @@ const { notifyByScope } = require('../controllers/notificationController');
 // pg-boss 인스턴스 (server.js에서 주입)
 let boss = null;
 
+// KST 오프셋 (9시간 in milliseconds)
+// DB에 저장된 시간은 나이브 datetime이지만 PostgreSQL이 UTC로 해석함
+// 실제로는 KST 시간이므로 9시간을 빼서 실제 UTC로 변환해야 함
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
 const REMINDER_MINUTES = {
   '30min': 30,
   '1hour': 60,
@@ -63,7 +68,9 @@ async function scheduleEventReminder(eventId, startAt, creatorId) {
   if (!boss) return;
 
   const now = new Date();
-  const eventStart = new Date(startAt);
+  // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
+  const storedTime = new Date(startAt);
+  const eventStart = new Date(storedTime.getTime() - KST_OFFSET_MS);
 
   // 1) 일정 시작 알림 (EVENT_REMINDER)
   const reminderTimes = await getReminderTimes();
@@ -202,10 +209,12 @@ async function scheduleSeriesReminders() {
         `, [series.id, checkDateStr]);
         if (completedResult.rows.length > 0) continue;
 
-        // 시작 시간 계산
+        // 시작 시간 계산 (KST 기준으로 저장된 시간을 실제 UTC로 변환)
         const [startHour, startMin] = series.start_time.split(':');
-        const eventStart = new Date(checkDate);
-        eventStart.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
+        const eventStartKST = new Date(checkDate);
+        eventStartKST.setHours(parseInt(startHour), parseInt(startMin), 0, 0);
+        // KST 시간을 실제 UTC로 변환 (9시간 빼기)
+        const eventStart = new Date(eventStartKST.getTime() - KST_OFFSET_MS);
 
         // 이미 지난 이벤트는 스킵
         if (eventStart <= now) continue;
