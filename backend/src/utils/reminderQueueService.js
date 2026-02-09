@@ -81,16 +81,23 @@ async function isOverdueEnabled() {
 
 /**
  * 단일 이벤트에 대한 리마인더 + 마감임박 스케줄링
+ * @param {number} eventId - 이벤트 ID
+ * @param {string} startAt - 시작 시간 (리마인더용)
+ * @param {string} endAt - 종료 시간 (마감임박용)
+ * @param {number} creatorId - 작성자 ID
  */
-async function scheduleEventReminder(eventId, startAt, creatorId) {
+async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
   if (!boss) return;
 
   const now = new Date();
   // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
-  const storedTime = new Date(startAt);
-  const eventStart = new Date(storedTime.getTime() - KST_OFFSET_MS);
+  const storedStartTime = new Date(startAt);
+  const eventStart = new Date(storedStartTime.getTime() - KST_OFFSET_MS);
 
-  // 1) 일정 시작 알림 (EVENT_REMINDER)
+  const storedEndTime = new Date(endAt);
+  const eventEnd = new Date(storedEndTime.getTime() - KST_OFFSET_MS);
+
+  // 1) 일정 시작 알림 (EVENT_REMINDER) - 시작 시간 기준
   const reminderTimes = await getReminderTimes();
   for (const timeKey of reminderTimes) {
     const minutes = REMINDER_MINUTES[timeKey];
@@ -103,18 +110,18 @@ async function scheduleEventReminder(eventId, startAt, creatorId) {
         eventId, seriesId: null, occurrenceDate: null, creatorId,
         reminderMinutes: minutes, timeKey, notificationType: 'EVENT_REMINDER',
       }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
-      console.log(`[ReminderQueue] Scheduled reminder: event ${eventId}, ${timeKey} before`);
+      console.log(`[ReminderQueue] Scheduled reminder: event ${eventId}, ${timeKey} before start`);
     } catch (error) {
       console.error(`[ReminderQueue] Failed to schedule event ${eventId}:`, error.message);
     }
   }
 
-  // 2) 마감임박 알림 (EVENT_DUE_SOON)
+  // 2) 마감임박 알림 (EVENT_DUE_SOON) - 종료 시간 기준
   const dueSoonTimes = await getDueSoonTimes();
   for (const timeKey of dueSoonTimes) {
     const minutes = REMINDER_MINUTES[timeKey];
     if (!minutes) continue;
-    const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
+    const alertAt = new Date(eventEnd.getTime() - minutes * 60 * 1000);
     if (alertAt <= now) continue;
     const jobKey = `duesoon-event-${eventId}-${timeKey}`;
     try {
@@ -122,7 +129,7 @@ async function scheduleEventReminder(eventId, startAt, creatorId) {
         eventId, seriesId: null, occurrenceDate: null, creatorId,
         reminderMinutes: minutes, timeKey, notificationType: 'EVENT_DUE_SOON',
       }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
-      console.log(`[ReminderQueue] Scheduled due-soon: event ${eventId}, ${timeKey} before`);
+      console.log(`[ReminderQueue] Scheduled due-soon: event ${eventId}, ${timeKey} before end`);
     } catch (error) {
       if (!error.message?.includes('singleton')) {
         console.error(`[ReminderQueue] Failed to schedule due-soon event ${eventId}:`, error.message);
@@ -337,7 +344,7 @@ async function scheduleExistingEvents() {
     // 1) 미래 일정에 대한 리마인더/마감임박 스케줄링
     if (allMinutes.length > 0) {
       const result = await query(`
-        SELECT id, start_at, creator_id FROM events
+        SELECT id, start_at, end_at, creator_id FROM events
         WHERE status != 'DONE'
         AND start_at > $1
         AND start_at <= $2
@@ -345,7 +352,7 @@ async function scheduleExistingEvents() {
       `, [nowForQuery.toISOString(), futureLimitForQuery.toISOString()]);
 
       for (const event of result.rows) {
-        await scheduleEventReminder(event.id, event.start_at, event.creator_id);
+        await scheduleEventReminder(event.id, event.start_at, event.end_at, event.creator_id);
       }
 
       console.log(`[ReminderQueue] Bootstrapped ${result.rows.length} future events`);
@@ -354,14 +361,14 @@ async function scheduleExistingEvents() {
     // 2) 이미 시작 시간이 지났지만 PENDING인 일정에 대해 overdue 체크 스케줄링
     if (overdueEnabled) {
       const overdueResult = await query(`
-        SELECT id, start_at, creator_id FROM events
+        SELECT id, start_at, end_at, creator_id FROM events
         WHERE status = 'PENDING'
         AND start_at <= $1
         AND series_id IS NULL
       `, [nowForQuery.toISOString()]);
 
       for (const event of overdueResult.rows) {
-        await scheduleEventReminder(event.id, event.start_at, event.creator_id);
+        await scheduleEventReminder(event.id, event.start_at, event.end_at, event.creator_id);
       }
 
       console.log(`[ReminderQueue] Bootstrapped ${overdueResult.rows.length} overdue events`);

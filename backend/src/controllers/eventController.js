@@ -243,12 +243,12 @@ exports.getEvents = async (req, res) => {
       const commentCount = commentCountMap[`event_${event.id}`]
         || commentCountMap[`series_${event.series_id}`]
         || 0;
-      // 마감임박 판정: PENDING + 시작시간이 현재~threshold 이내
-      const eventStart = new Date(event.start_at);
+      // 마감임박 판정: PENDING + 종료시간이 현재~threshold 이내
+      const eventEnd = new Date(event.end_at);
       const isDueSoon = event.status !== 'DONE'
         && dueSoonMaxMinutes > 0
-        && eventStart > now
-        && (eventStart.getTime() - now.getTime()) <= dueSoonMaxMinutes * 60 * 1000;
+        && eventEnd > now
+        && (eventEnd.getTime() - now.getTime()) <= dueSoonMaxMinutes * 60 * 1000;
 
       return {
         id: event.id,
@@ -418,7 +418,7 @@ exports.createEvent = async (req, res) => {
 
       // 큐에 리마인더 스케줄링
       try {
-        await scheduleEventReminder(newEvent.id, newEvent.start_at, userId);
+        await scheduleEventReminder(newEvent.id, newEvent.start_at, newEvent.end_at, userId);
       } catch (qErr) {
         console.error('[Queue] Failed to schedule reminder:', qErr.message);
       }
@@ -538,7 +538,7 @@ exports.updateEvent = async (req, res) => {
 
         // 큐에 리마인더 스케줄링 (새 예외 이벤트)
         try {
-          await scheduleEventReminder(updatedEvent.id, updatedEvent.start_at, userId);
+          await scheduleEventReminder(updatedEvent.id, updatedEvent.start_at, updatedEvent.end_at, userId);
         } catch (qErr) {
           console.error('[Queue] Failed to schedule reminder:', qErr.message);
         }
@@ -834,7 +834,7 @@ exports.updateEvent = async (req, res) => {
       // 큐 리마인더 재스케줄링
       try {
         await cancelEventReminders(id);
-        await scheduleEventReminder(id, updatedEvent.start_at, userId);
+        await scheduleEventReminder(id, updatedEvent.start_at, updatedEvent.end_at, userId);
       } catch (qErr) {
         console.error('[Queue] Failed to reschedule reminder:', qErr.message);
       }
@@ -1528,7 +1528,7 @@ exports.uncompleteEvent = async (req, res) => {
 
     // 완료 취소된 이벤트에 리마인더 재스케줄링
     try {
-      await scheduleEventReminder(event.id, event.start_at, event.creator_id);
+      await scheduleEventReminder(event.id, event.start_at, event.end_at, event.creator_id);
     } catch (qErr) {
       console.error('[Queue] Failed to reschedule reminder:', qErr.message);
     }

@@ -31,7 +31,7 @@ const SETTING_CONFIG = {
   // ===== 일반 설정 =====
   due_soon_threshold: {
     label: '마감임박 기준 시간',
-    description: '일정 시작 전 마감임박 뱃지 표시 및 알림을 보낼 시간 (복수 선택 가능)',
+    description: '일정 종료 전 마감임박 뱃지 표시 및 알림을 보낼 시간 (복수 선택 가능)',
     type: 'multiSelect',
     options: [
       { value: '30min', label: '30분 전' },
