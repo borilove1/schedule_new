@@ -269,10 +269,33 @@ schedule/
 - **취소**: 일정 완료/삭제 시 `cancelEventReminders()`에서 overdue 작업도 함께 취소
 - **알림 메시지**: "○○○ 일정의 종료시간이 지났으나 완료처리 되지 않았습니다."
 
-### 타임존 처리
-- Docker(UTC) 환경에서 PG가 나이브 문자열을 UTC로 저장
-- 읽을 때 `toNaiveDateTimeString()`으로 getUTC*를 사용하여 원래 입력값 복원
-- 프론트엔드에 타임존 없는 `YYYY-MM-DDTHH:mm:ss` 문자열로 전달
+### 타임존 처리 (KST 보정)
+
+**문제 상황:**
+- 사용자가 KST(한국시간)로 17:30 입력 → 프론트엔드가 `2026-02-09T17:30:00` 전송
+- Docker(UTC) 환경의 PostgreSQL이 이를 UTC 17:30으로 해석하여 저장
+- 실제 의도는 KST 17:30 = UTC 08:30이지만, DB에는 UTC 17:30으로 저장됨 (9시간 차이)
+
+**해결 방법:**
+- `KST_OFFSET_MS = 9 * 60 * 60 * 1000` (9시간 밀리초)
+- DB에서 읽은 시간에서 9시간을 빼서 실제 UTC로 변환 후 비교
+- 예: DB 17:30 → `new Date(storedTime).getTime() - KST_OFFSET_MS` → UTC 08:30
+
+**적용 위치:**
+| 파일 | 함수 | 용도 |
+|------|------|------|
+| `eventController.js` | `getEvents()` | isDueSoon/isOverdue 판정 |
+| `eventController.js` | `getEventById()` | 단일 일정 isOverdue 판정 |
+| `eventController.js` | `searchEvents()` | 검색 결과 isOverdue 판정 |
+| `reminderQueueService.js` | `scheduleEventReminder()` | 알림 스케줄링 시간 계산 |
+
+**프론트엔드 전달:**
+- `toNaiveDateTimeString()`으로 getUTC*를 사용하여 원래 입력값 복원
+- 타임존 없는 `YYYY-MM-DDTHH:mm:ss` 문자열로 전달 (프론트엔드에서 로컬 시간으로 표시)
+
+**주의사항:**
+- 시간 비교 시 반드시 KST 오프셋 보정 필요 (isDueSoon, isOverdue, 알림 스케줄링)
+- DB 저장/조회는 기존 방식 유지 (나이브 문자열)
 
 ### SSE 실시간 동기화
 
