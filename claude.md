@@ -259,6 +259,13 @@ schedule/
 - **알림**: `EVENT_DUE_SOON` 타입으로 별도 알림 발송 (pg-boss 큐, `duesoon-*` singletonKey)
 - **스케줄링**: `scheduleEventReminder()`에서 리마인더와 마감임박 알림을 동시 스케줄링
 
+### 일정 지연 시스템 (Overdue)
+- **시스템 설정**: `notification_config.EVENT_OVERDUE` (활성화 토글 + 수신 범위)
+- **판정 로직**: 일정 시작 시간에 pg-boss 작업 실행 → 해당 일정이 여전히 PENDING 상태면 알림 발송
+- **알림**: `EVENT_OVERDUE` 타입으로 알림 발송 (pg-boss 큐, `overdue-*` singletonKey)
+- **스케줄링**: `scheduleEventReminder()`에서 시작 시간에 지연 체크 작업 스케줄링
+- **취소**: 일정 완료/삭제 시 `cancelEventReminders()`에서 overdue 작업도 함께 취소
+
 ### 타임존 처리
 - Docker(UTC) 환경에서 PG가 나이브 문자열을 UTC로 저장
 - 읽을 때 `toNaiveDateTimeString()`으로 getUTC*를 사용하여 원래 입력값 복원
@@ -311,6 +318,7 @@ schedule/
 |------|-----------|------|
 | `EVENT_REMINDER` | creator | 일정 시작 전 리마인더 |
 | `EVENT_DUE_SOON` | creator | 마감임박 알림 |
+| `EVENT_OVERDUE` | creator | 일정 지연 알림 |
 | `EVENT_UPDATED` | creator | 일정 수정 알림 |
 | `EVENT_COMPLETED` | dept_leads | 일정 완료 알림 |
 | `EVENT_DELETED` | creator | 일정 삭제 알림 |
@@ -331,8 +339,9 @@ schedule/
 - **반복 일정**: daily scheduler가 48시간 이내 occurrence를 스캔 → 작업 등록
 - **알림 시간**: 시스템 설정 `reminder_times`에서 읽음 (기본: `["1hour"]`, 옵션: 30min/1hour/3hour)
 - **마감임박**: 시스템 설정 `due_soon_threshold`에서 읽음 → `duesoon-*` singletonKey로 별도 스케줄링
+- **일정 지연**: `notification_config.EVENT_OVERDUE.enabled`가 true면 시작 시간에 `overdue-*` 작업 스케줄링
 - **관리자 설정 변경**: `rescheduleAllReminders()` → 기존 대기 작업 전체 삭제 후 재스케줄링
-- **중복 방지**: `singletonKey`로 작업 고유성 보장 (예: `reminder-event-123-1hour`, `duesoon-event-123-3hour`)
+- **중복 방지**: `singletonKey`로 작업 고유성 보장 (예: `reminder-event-123-1hour`, `duesoon-event-123-3hour`, `overdue-event-123`)
 
 **큐 연동 포인트 (eventController.js):**
 | 액션 | 큐 호출 |

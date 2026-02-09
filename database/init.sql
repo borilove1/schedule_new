@@ -321,7 +321,7 @@ INSERT INTO system_settings (key, value, description) VALUES
     ('smtp_api_key', '""', 'SMTP API 키 (SendGrid/Mailgun)'),
     ('smtp_from_email', '""', '발신 이메일 주소'),
     ('smtp_from_name', '"업무일정 관리 시스템"', '발신자 이름'),
-    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scope":"creator"},"EVENT_DUE_SOON":{"enabled":true,"scope":"creator"},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정');
+    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scope":"creator"},"EVENT_DUE_SOON":{"enabled":true,"scope":"creator"},"EVENT_OVERDUE":{"enabled":true,"scope":"creator"},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정');
 
 -- ========================================
 -- 7. 세션 테이블 (JWT 대신 사용 가능)

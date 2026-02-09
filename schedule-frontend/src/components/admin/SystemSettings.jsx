@@ -9,6 +9,7 @@ import api from '../../utils/api';
 const NOTIFICATION_TYPES = {
   EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
+  EVENT_OVERDUE:    { label: '일정 지연 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
   EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_leads', 'office'] },

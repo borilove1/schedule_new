@@ -62,6 +62,24 @@ async function getDueSoonTimes() {
 }
 
 /**
+ * 시스템 설정에서 EVENT_OVERDUE 알림 활성화 여부 조회
+ * @returns {boolean}
+ */
+async function isOverdueEnabled() {
+  try {
+    const result = await query(
+      "SELECT value FROM system_settings WHERE key = 'notification_config'"
+    );
+    if (result.rows.length === 0) return false;
+    const config = result.rows[0].value;
+    return config?.EVENT_OVERDUE?.enabled === true;
+  } catch (error) {
+    console.error('[ReminderQueue] Failed to get overdue setting:', error.message);
+    return false;
+  }
+}
+
+/**
  * 단일 이벤트에 대한 리마인더 + 마감임박 스케줄링
  */
 async function scheduleEventReminder(eventId, startAt, creatorId) {
@@ -111,6 +129,23 @@ async function scheduleEventReminder(eventId, startAt, creatorId) {
       }
     }
   }
+
+  // 3) 일정 지연 알림 (EVENT_OVERDUE) - 일정 시작 시간에 체크
+  const overdueEnabled = await isOverdueEnabled();
+  if (overdueEnabled && eventStart > now) {
+    const jobKey = `overdue-event-${eventId}`;
+    try {
+      await boss.send('event-reminder', {
+        eventId, seriesId: null, occurrenceDate: null, creatorId,
+        reminderMinutes: 0, timeKey: 'overdue', notificationType: 'EVENT_OVERDUE',
+      }, { startAfter: eventStart, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
+      console.log(`[ReminderQueue] Scheduled overdue check: event ${eventId}`);
+    } catch (error) {
+      if (!error.message?.includes('singleton')) {
+        console.error(`[ReminderQueue] Failed to schedule overdue event ${eventId}:`, error.message);
+      }
+    }
+  }
 }
 
 /**
@@ -120,13 +155,13 @@ async function cancelEventReminders(eventId) {
   if (!boss) return;
 
   try {
-    // reminder + duesoon 모두 취소
+    // reminder + duesoon + overdue 모두 취소
     await query(`
       DELETE FROM pgboss.job
       WHERE name = 'event-reminder'
       AND state = 'created'
-      AND (singletonkey LIKE $1 OR singletonkey LIKE $2)
-    `, [`reminder-event-${eventId}-%`, `duesoon-event-${eventId}-%`]);
+      AND (singletonkey LIKE $1 OR singletonkey LIKE $2 OR singletonkey = $3)
+    `, [`reminder-event-${eventId}-%`, `duesoon-event-${eventId}-%`, `overdue-event-${eventId}`]);
 
     console.log(`[ReminderQueue] Cancelled reminders for event ${eventId}`);
   } catch (error) {
@@ -163,10 +198,15 @@ async function scheduleSeriesReminders() {
 
   const reminderTimes = await getReminderTimes();
   const dueSoonTimes = await getDueSoonTimes();
+  const overdueEnabled = await isOverdueEnabled();
   const allTimes = [
-    ...reminderTimes.map(t => ({ timeKey: t, type: 'EVENT_REMINDER', prefix: 'reminder' })),
-    ...dueSoonTimes.map(t => ({ timeKey: t, type: 'EVENT_DUE_SOON', prefix: 'duesoon' })),
+    ...reminderTimes.map(t => ({ timeKey: t, type: 'EVENT_REMINDER', prefix: 'reminder', minutes: REMINDER_MINUTES[t] || 0 })),
+    ...dueSoonTimes.map(t => ({ timeKey: t, type: 'EVENT_DUE_SOON', prefix: 'duesoon', minutes: REMINDER_MINUTES[t] || 0 })),
   ];
+  // 지연 알림은 시작 시간에 체크 (minutes = 0)
+  if (overdueEnabled) {
+    allTimes.push({ timeKey: 'overdue', type: 'EVENT_OVERDUE', prefix: 'overdue', minutes: 0 });
+  }
   if (allTimes.length === 0) return;
 
   const now = new Date();
@@ -220,12 +260,14 @@ async function scheduleSeriesReminders() {
         if (eventStart <= now) continue;
         if (eventStart > futureLimit) continue;
 
-        // 각 알림 시간에 대해 스케줄링 (reminder + due_soon)
-        for (const { timeKey, type, prefix } of allTimes) {
-          const minutes = REMINDER_MINUTES[timeKey];
-          if (!minutes) continue;
+        // 각 알림 시간에 대해 스케줄링 (reminder + due_soon + overdue)
+        for (const { timeKey, type, prefix, minutes } of allTimes) {
+          // overdue는 minutes=0, 나머지는 REMINDER_MINUTES에서 조회
+          const actualMinutes = minutes !== undefined ? minutes : (REMINDER_MINUTES[timeKey] || 0);
+          // reminder/duesoon은 알림시간 분값이 필수, overdue는 0분(시작시간)
+          if (type !== 'EVENT_OVERDUE' && actualMinutes === 0) continue;
 
-          const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
+          const alertAt = new Date(eventStart.getTime() - actualMinutes * 60 * 1000);
           if (alertAt <= now) continue;
 
           const jobKey = `${prefix}-series-${series.id}-${checkDateStr}-${timeKey}`;
@@ -236,7 +278,7 @@ async function scheduleSeriesReminders() {
               seriesId: series.id,
               occurrenceDate: checkDateStr,
               creatorId: series.creator_id,
-              reminderMinutes: minutes,
+              reminderMinutes: actualMinutes,
               timeKey,
               notificationType: type,
             }, {
@@ -407,8 +449,10 @@ async function processEventReminder(job) {
     let timeMessage;
     if (reminderMinutes >= 60) {
       timeMessage = `${Math.round(reminderMinutes / 60)}시간 후`;
-    } else {
+    } else if (reminderMinutes > 0) {
       timeMessage = `${reminderMinutes}분 후`;
+    } else {
+      timeMessage = '지금';
     }
 
     // 알림 생성 (타입에 따라 제목/메시지 분기)
@@ -419,10 +463,17 @@ async function processEventReminder(job) {
       metadata.compositeId = `series-${seriesId}-${new Date(occurrenceDate).getTime()}`;
     }
 
-    const title = notiType === 'EVENT_DUE_SOON' ? '마감임박' : '일정 알림';
-    const message = notiType === 'EVENT_DUE_SOON'
-      ? `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다. (마감임박)`
-      : `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
+    let title, message;
+    if (notiType === 'EVENT_OVERDUE') {
+      title = '일정 지연';
+      message = `"${eventTitle}" 일정이 시작 시간이 지났으나 완료되지 않았습니다.`;
+    } else if (notiType === 'EVENT_DUE_SOON') {
+      title = '마감임박';
+      message = `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다. (마감임박)`;
+    } else {
+      title = '일정 알림';
+      message = `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
+    }
 
     await notifyByScope(notiType, title, message, {
       actorId: null,

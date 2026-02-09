@@ -9,6 +9,8 @@
  */
 export const NOTIFICATION_TYPES = {
   EVENT_REMINDER: 'EVENT_REMINDER',
+  EVENT_DUE_SOON: 'EVENT_DUE_SOON',
+  EVENT_OVERDUE: 'EVENT_OVERDUE',
   EVENT_COMPLETED: 'EVENT_COMPLETED',
   EVENT_UPDATED: 'EVENT_UPDATED',
   EVENT_DELETED: 'EVENT_DELETED',
@@ -168,6 +170,10 @@ export const getNotificationIcon = (type) => {
   switch (type) {
     case NOTIFICATION_TYPES.EVENT_REMINDER:
       return 'Clock';
+    case NOTIFICATION_TYPES.EVENT_DUE_SOON:
+      return 'AlertTriangle';
+    case NOTIFICATION_TYPES.EVENT_OVERDUE:
+      return 'AlertCircle';
     case NOTIFICATION_TYPES.EVENT_COMPLETED:
       return 'CheckCircle';
     case NOTIFICATION_TYPES.EVENT_UPDATED:
