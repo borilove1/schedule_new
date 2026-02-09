@@ -123,6 +123,18 @@ export default function NotificationModal({ isOpen, onClose }) {
     });
   };
 
+  const handleDeleteReadNotifications = async () => {
+    await execute(async () => {
+      try {
+        await api.deleteReadNotifications();
+        setNotifications(prev => prev.filter(n => !n.isRead));
+      } catch (err) {
+        console.error('Failed to delete read notifications:', err);
+        setError(err.message || '읽은 알림 삭제에 실패했습니다.');
+      }
+    });
+  };
+
   const handleNotificationClick = (notification) => {
     if (!notification.isRead) {
       handleMarkAsRead(notification.id);
@@ -172,14 +184,16 @@ export default function NotificationModal({ isOpen, onClose }) {
             : '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
         }}
       >
-        {/* Header */}
+        {/* Header - fixed */}
         <div style={{
           padding: '16px 20px',
           borderBottom: `1px solid ${borderColor}`,
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          gap: '12px'
+          gap: '12px',
+          flexShrink: 0,
+          backgroundColor: cardBg
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <h2 id="notification-modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: textColor }}>알림</h2>
@@ -298,24 +312,47 @@ export default function NotificationModal({ isOpen, onClose }) {
           )}
         </div>
 
-        {/* Footer */}
-        {!loading && notifications.filter(n => !n.isRead).length > 0 && (
+        {/* Footer - fixed */}
+        {!loading && notifications.length > 0 && (
           <div style={{
             padding: '12px 20px',
             borderTop: `1px solid ${borderColor}`,
-            display: 'flex', justifyContent: 'flex-end'
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: '8px',
+            flexShrink: 0,
+            backgroundColor: cardBg
           }}>
+            {/* 읽은 알림 삭제 버튼 */}
             <button
-              onClick={handleMarkAllAsRead}
-              disabled={inProgress}
+              onClick={handleDeleteReadNotifications}
+              disabled={inProgress || notifications.filter(n => n.isRead).length === 0}
               style={{
                 padding: '8px 16px', borderRadius: '6px',
                 border: `1px solid ${borderColor}`, backgroundColor: 'transparent',
-                color: textColor, cursor: inProgress ? 'not-allowed' : 'pointer',
+                color: notifications.filter(n => n.isRead).length === 0 ? secondaryTextColor : '#ef4444',
+                cursor: (inProgress || notifications.filter(n => n.isRead).length === 0) ? 'not-allowed' : 'pointer',
                 fontSize: '13px', fontWeight: '500', transition: 'all 0.2s',
-                opacity: inProgress ? 0.6 : 1
+                opacity: (inProgress || notifications.filter(n => n.isRead).length === 0) ? 0.5 : 1
               }}
-              onMouseEnter={(e) => { if (!inProgress) e.currentTarget.style.backgroundColor = hoverBg; }}
+              onMouseEnter={(e) => { if (!inProgress && notifications.filter(n => n.isRead).length > 0) e.currentTarget.style.backgroundColor = hoverBg; }}
+              onMouseLeave={(e) => { if (!inProgress) e.currentTarget.style.backgroundColor = 'transparent'; }}
+            >
+              읽은 알림 삭제 ({notifications.filter(n => n.isRead).length})
+            </button>
+            {/* 모두 읽음 처리 버튼 */}
+            <button
+              onClick={handleMarkAllAsRead}
+              disabled={inProgress || notifications.filter(n => !n.isRead).length === 0}
+              style={{
+                padding: '8px 16px', borderRadius: '6px',
+                border: `1px solid ${borderColor}`, backgroundColor: 'transparent',
+                color: textColor,
+                cursor: (inProgress || notifications.filter(n => !n.isRead).length === 0) ? 'not-allowed' : 'pointer',
+                fontSize: '13px', fontWeight: '500', transition: 'all 0.2s',
+                opacity: (inProgress || notifications.filter(n => !n.isRead).length === 0) ? 0.5 : 1
+              }}
+              onMouseEnter={(e) => { if (!inProgress && notifications.filter(n => !n.isRead).length > 0) e.currentTarget.style.backgroundColor = hoverBg; }}
               onMouseLeave={(e) => { if (!inProgress) e.currentTarget.style.backgroundColor = 'transparent'; }}
             >
               모두 읽음 처리

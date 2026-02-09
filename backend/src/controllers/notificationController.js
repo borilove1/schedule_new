@@ -167,6 +167,33 @@ exports.deleteNotification = async (req, res) => {
 };
 
 /**
+ * Delete all read notifications
+ * DELETE /api/v1/notifications/read
+ */
+exports.deleteReadNotifications = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const deleteQuery = `
+      DELETE FROM notifications
+      WHERE user_id = $1 AND is_read = true
+      RETURNING id
+    `;
+
+    const result = await query(deleteQuery, [userId]);
+
+    res.json({
+      success: true,
+      message: 'Read notifications deleted',
+      data: { deletedCount: result.rows.length }
+    });
+  } catch (error) {
+    console.error('Delete read notifications error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete read notifications' });
+  }
+};
+
+/**
  * 알림 타입 설정에 따라 수신자를 결정하고 알림 발송
  * @param {string} type - 알림 타입 (EVENT_UPDATED, EVENT_COMPLETED 등)
  * @param {string} title - 알림 제목

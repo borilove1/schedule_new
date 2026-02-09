@@ -359,6 +359,12 @@ class ApiClient {
     });
   }
 
+  async deleteReadNotifications() {
+    return this.request('/notifications/read', {
+      method: 'DELETE',
+    });
+  }
+
   // Push Notifications
   async getVapidPublicKey() {
     return this.request('/push/vapid-public-key');

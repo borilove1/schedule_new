@@ -13,6 +13,9 @@ router.get('/unread-count', notificationController.getUnreadCount);
 // Mark all as read
 router.post('/read-all', notificationController.markAllAsRead);
 
+// Delete all read notifications
+router.delete('/read', notificationController.deleteReadNotifications);
+
 // Check and create reminders for upcoming events
 router.post('/check-reminders', notificationController.checkReminders);
 
