@@ -10,7 +10,8 @@
       "Bash(git stash:*)",
       "Bash(git restore:*)",
       "Bash(dir:*)",
-      "Bash(ssh -p 33893 root@1.215.38.118 \"cd /var/www/schedule-app && docker-compose exec -T database psql -U scheduleuser -d schedule_management -c \"\"SELECT key, value FROM system_settings WHERE key IN \\(''reminder_times'', ''due_soon_threshold'', ''notification_config''\\);\"\"\")"
+      "Bash(ssh -p 33893 root@1.215.38.118 \"cd /var/www/schedule-app && docker-compose exec -T database psql -U scheduleuser -d schedule_management -c \"\"SELECT key, value FROM system_settings WHERE key IN \\(''reminder_times'', ''due_soon_threshold'', ''notification_config''\\);\"\"\")",
+      "Bash(find:*)"
     ]
   }
 }
