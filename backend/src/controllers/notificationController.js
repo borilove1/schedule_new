@@ -295,8 +295,26 @@ async function resolveRecipients(scope, context) {
         [context.officeId]
       )).rows.map(r => r.id);
     case 'shared_offices':
-      // 공유된 처/실의 모든 사용자
+      // 공유된 처/실의 사용자 (직급 필터 적용 가능)
       if (!context.sharedOfficeIds || context.sharedOfficeIds.length === 0) return [];
+      // sharedPositions가 있으면 해당 직급만, 없거나 빈 배열이면 전체
+      if (context.sharedPositions && context.sharedPositions.length > 0) {
+        // 'staff', 'chief' 등을 실제 직급으로 변환
+        const expandedPositions = [];
+        for (const pos of context.sharedPositions) {
+          if (pos === 'staff') {
+            expandedPositions.push('사원', '대리', '과장');
+          } else if (pos === 'chief') {
+            expandedPositions.push('처장', '실장');
+          } else {
+            expandedPositions.push(pos);
+          }
+        }
+        return (await query(
+          'SELECT id FROM users WHERE office_id = ANY($1) AND position = ANY($2) AND is_active = true AND approved_at IS NOT NULL',
+          [context.sharedOfficeIds, expandedPositions]
+        )).rows.map(r => r.id);
+      }
       return (await query(
         'SELECT id FROM users WHERE office_id = ANY($1) AND is_active = true AND approved_at IS NOT NULL',
         [context.sharedOfficeIds]
@@ -305,7 +323,40 @@ async function resolveRecipients(scope, context) {
       return (await query(
         "SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true"
       )).rows.map(r => r.id);
+    case 'staff':
+      // 직원 (사원, 대리, 과장) - 같은 부서 내
+      if (!context.departmentId) return [];
+      return (await query(
+        "SELECT id FROM users WHERE department_id = $1 AND position IN ('사원', '대리', '과장') AND is_active = true AND approved_at IS NOT NULL",
+        [context.departmentId]
+      )).rows.map(r => r.id);
+    case 'chief':
+      // 처/실장 - 같은 처/실 내
+      if (!context.officeId) return [];
+      return (await query(
+        "SELECT id FROM users WHERE office_id = $1 AND position IN ('처장', '실장') AND is_active = true AND approved_at IS NOT NULL",
+        [context.officeId]
+      )).rows.map(r => r.id);
     default:
+      // 개별 직급 (차장, 부장, 본부장) - 같은 부서/처/본부 내
+      const positionScopes = ['차장', '부장', '본부장'];
+      if (positionScopes.includes(scope)) {
+        if (scope === '본부장') {
+          // 본부장은 같은 본부 내
+          if (!context.divisionId) return [];
+          return (await query(
+            'SELECT id FROM users WHERE division_id = $1 AND position = $2 AND is_active = true AND approved_at IS NOT NULL',
+            [context.divisionId, scope]
+          )).rows.map(r => r.id);
+        } else {
+          // 차장, 부장은 같은 부서 내
+          if (!context.departmentId) return [];
+          return (await query(
+            'SELECT id FROM users WHERE department_id = $1 AND position = $2 AND is_active = true AND approved_at IS NOT NULL',
+            [context.departmentId, scope]
+          )).rows.map(r => r.id);
+        }
+      }
       return context.creatorId ? [context.creatorId] : [];
   }
 }

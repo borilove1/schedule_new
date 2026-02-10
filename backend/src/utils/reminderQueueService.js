@@ -598,6 +598,11 @@ async function processEventReminder(job) {
           sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
         }
 
+        // 직급 필터 (positionFilterEnabled가 true이고 positions 배열이 있으면 해당 직급만)
+        const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
+          ? sharedSettings.positions
+          : [];
+
         await notifyByScope(notiType, sharedTitle, sharedMessage, {
           actorId: targetUserId, // 작성자 제외 (중복 방지)
           creatorId: null, // creator scope 사용 안 함
@@ -605,6 +610,7 @@ async function processEventReminder(job) {
           officeId: null,
           divisionId: null,
           sharedOfficeIds,
+          sharedPositions,
           relatedEventId: eventId,
           metadata: { ...metadata, isShared: true },
         });

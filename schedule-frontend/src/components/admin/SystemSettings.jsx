@@ -7,25 +7,26 @@ import api from '../../utils/api';
 
 // 알림 타입별 메타데이터 (EVENT_SHARED는 공유 일정 알림 설정 섹션에서 별도 관리)
 const NOTIFICATION_TYPES = {
-  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_OVERDUE:    { label: '일정 지연 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
-  EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division'] },
+  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_OVERDUE:    { label: '일정 지연 알림', scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
+  EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'staff', '차장', '부장', 'chief', '본부장', 'department', 'office'] },
   USER_REGISTERED:  { label: '신규 가입 요청', scopes: ['admins'] },
   ACCOUNT_APPROVED: { label: '계정 승인',     scopes: ['target'] },
 };
 
 const SCOPE_LABELS = {
-  creator: '작성자만',
+  creator: '작성자',
+  staff: '직원',
+  '차장': '차장',
+  '부장': '부장',
+  chief: '처/실장',
+  '본부장': '본부장',
   department: '같은 부서',
-  dept_lead_department: '부장',
-  dept_lead_office: '처장/실장',
-  dept_lead_division: '본부장',
   office: '같은 처/실',
-  shared_offices: '공유된 처/실',
   admins: '전체 관리자',
   target: '해당 사용자',
 };
@@ -551,14 +552,13 @@ export default function SystemSettings() {
                 { key: 'EVENT_DUE_SOON', label: '마감임박 알림', description: '공유받은 사용자에게 마감임박 알림을 발송합니다.' },
                 { key: 'EVENT_OVERDUE', label: '일정 지연 알림', description: '공유받은 사용자에게 일정 지연 알림을 발송합니다.' },
                 { key: 'EVENT_COMMENTED', label: '댓글 알림', description: '공유받은 사용자에게 새 댓글 알림을 발송합니다.' },
-              ].map((item, index, arr) => {
+              ].map((item) => {
                 const isEnabled = sharedConfig[item.key] === true;
-                const isLast = index === arr.length - 1;
 
                 return (
                   <div key={item.key} style={{
                     padding: '14px 24px 14px 40px',
-                    borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+                    borderBottom: `1px solid ${borderColor}`,
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
                     backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
                   }}>
@@ -587,6 +587,86 @@ export default function SystemSettings() {
                   </div>
                 );
               })}
+
+              {/* 수신 직급 선택 - 토글 + 드롭다운 */}
+              {isSharedEnabled && (() => {
+                const positionOptions = [
+                  { value: 'staff', label: '직원' },
+                  { value: '차장', label: '차장' },
+                  { value: '부장', label: '부장' },
+                  { value: 'chief', label: '처/실장' },
+                  { value: '본부장', label: '본부장' },
+                ];
+                const selectedPositions = Array.isArray(sharedConfig.positions) ? sharedConfig.positions : [];
+                const isPositionFilterEnabled = sharedConfig.positionFilterEnabled === true;
+
+                return (
+                  <div style={{
+                    padding: '14px 24px 14px 40px',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                  }}>
+                    {/* 직급 필터 토글 */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: textColor }}>직급별 수신</div>
+                        <div style={{ fontSize: '11px', color: secondaryTextColor, marginTop: '2px' }}>
+                          특정 직급에게만 알림을 발송합니다.
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          handleChange('shared_event_notifications', {
+                            ...sharedConfig,
+                            positionFilterEnabled: !isPositionFilterEnabled,
+                            positions: !isPositionFilterEnabled ? [] : sharedConfig.positions
+                          });
+                        }}
+                        style={{
+                          width: '44px', height: '24px', borderRadius: '12px',
+                          border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                          backgroundColor: isPositionFilterEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                          transition: 'background-color 0.2s',
+                        }}
+                      >
+                        <div style={{
+                          width: '18px', height: '18px', borderRadius: '50%',
+                          backgroundColor: '#fff', position: 'absolute', top: '3px',
+                          left: isPositionFilterEnabled ? '23px' : '3px', transition: 'left 0.2s',
+                        }} />
+                      </button>
+                    </div>
+
+                    {/* 직급 선택 드롭다운 (토글 켜진 경우만) */}
+                    {isPositionFilterEnabled && (
+                      <div style={{ marginTop: '12px' }}>
+                        <select
+                          multiple
+                          value={selectedPositions}
+                          onChange={(e) => {
+                            const selected = Array.from(e.target.selectedOptions, opt => opt.value);
+                            handleChange('shared_event_notifications', { ...sharedConfig, positions: selected });
+                          }}
+                          style={{
+                            ...inputStyle,
+                            width: '100%',
+                            fontSize: '13px',
+                            height: 'auto',
+                            minHeight: '80px',
+                            padding: '6px 10px',
+                          }}
+                        >
+                          {positionOptions.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                        <div style={{ fontSize: '11px', color: secondaryTextColor, marginTop: '6px' }}>
+                          Ctrl/Cmd 키를 누른 채 클릭하면 복수 선택 가능
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           );
         })()}

@@ -197,6 +197,9 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       if (sharedOfficeIds.length > 0) {
         const sharedSettings = await getSharedEventNotifications();
         if (sharedSettings.EVENT_COMMENTED === true) {
+          const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
+            ? sharedSettings.positions
+            : [];
           await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${event.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
             actorId: req.user.id,
             creatorId: null,
@@ -204,6 +207,7 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
             officeId: null,
             divisionId: null,
             sharedOfficeIds,
+            sharedPositions,
             relatedEventId: parseInt(eventId),
             metadata: { commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
           });
@@ -333,6 +337,9 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       if (sharedOfficeIds.length > 0) {
         const sharedSettings = await getSharedEventNotifications();
         if (sharedSettings.EVENT_COMMENTED === true) {
+          const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
+            ? sharedSettings.positions
+            : [];
           await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${series.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
             actorId: req.user.id,
             creatorId: null,
@@ -340,6 +347,7 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
             officeId: null,
             divisionId: null,
             sharedOfficeIds,
+            sharedPositions,
             metadata: { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
           });
         }
