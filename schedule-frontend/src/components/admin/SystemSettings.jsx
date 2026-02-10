@@ -606,40 +606,165 @@ export default function SystemSettings() {
         <Mail size={18} /> 이메일 알림 설정
       </div>
       <div style={cardStyle}>
-        {emailEntries.map(([key, config], index) =>
-          renderSettingRow(key, config, index === emailEntries.length - 1)
-        )}
-      </div>
+        {(() => {
+          const isEmailEnabled = settings.email_enabled === true;
+          // email_enabled를 제외한 나머지 이메일 설정들
+          const subEmailEntries = emailEntries.filter(([key]) => key !== 'email_enabled');
 
-      {/* 테스트 이메일 */}
-      {settings.email_enabled && (
-        <div style={{ marginTop: '12px' }}>
-          <button
-            onClick={handleTestEmail}
-            disabled={testingEmail || !settings.smtp_host}
-            style={{
-              display: 'flex', alignItems: 'center', gap: '6px',
-              padding: '8px 20px', border: `1px solid ${borderColor}`, borderRadius: '6px',
-              backgroundColor: 'transparent',
-              color: (testingEmail || !settings.smtp_host) ? secondaryTextColor : textColor,
-              cursor: (testingEmail || !settings.smtp_host) ? 'not-allowed' : 'pointer',
-              fontSize: '14px',
-              opacity: (testingEmail || !settings.smtp_host) ? 0.5 : 1,
-            }}
-          >
-            <Send size={16} /> {testingEmail ? '발송 중...' : '테스트 이메일 발송'}
-          </button>
-          {testResult && (
-            <div style={{
-              marginTop: '8px', padding: '10px 16px', borderRadius: '6px', fontSize: '13px',
-              backgroundColor: testResult.success ? '#10b98120' : '#ef444420',
-              color: testResult.success ? '#10b981' : '#ef4444',
-            }}>
-              {testResult.message}
-            </div>
-          )}
-        </div>
-      )}
+          return (
+            <>
+              {/* 마스터 토글: 이메일 알림 활성화 */}
+              <div style={{
+                padding: '16px 24px',
+                borderBottom: isEmailEnabled ? `1px solid ${borderColor}` : 'none',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>이메일 알림 활성화</div>
+                  <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
+                    이메일 알림 기능을 활성화합니다. SMTP 설정이 필요합니다.
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleChange('email_enabled', !isEmailEnabled)}
+                  style={{
+                    width: '48px', height: '26px', borderRadius: '13px',
+                    border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                    backgroundColor: isEmailEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    backgroundColor: '#fff', position: 'absolute', top: '3px',
+                    left: isEmailEnabled ? '25px' : '3px', transition: 'left 0.2s',
+                  }} />
+                </button>
+              </div>
+
+              {/* 하위 설정: 이메일 활성화 시에만 표시 */}
+              {isEmailEnabled && subEmailEntries.map(([key, config], index) => {
+                const value = settings[key];
+                const isLast = index === subEmailEntries.length - 1;
+
+                return (
+                  <div key={key} style={{
+                    padding: '14px 24px 14px 40px',
+                    borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: textColor }}>{config.label}</div>
+                      <div style={{ fontSize: '11px', color: secondaryTextColor, marginTop: '2px' }}>{config.description}</div>
+                    </div>
+                    <div style={{ minWidth: '160px', display: 'flex', alignItems: 'center', gap: '8px', justifyContent: 'flex-end' }}>
+                      {config.type === 'boolean' && (
+                        <button
+                          onClick={() => handleChange(key, !value)}
+                          style={{
+                            width: '44px', height: '24px', borderRadius: '12px',
+                            border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                            backgroundColor: value ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                            transition: 'background-color 0.2s',
+                          }}
+                        >
+                          <div style={{
+                            width: '18px', height: '18px', borderRadius: '50%',
+                            backgroundColor: '#fff', position: 'absolute', top: '3px',
+                            left: value ? '23px' : '3px', transition: 'left 0.2s',
+                          }} />
+                        </button>
+                      )}
+                      {config.type === 'select' && (
+                        <select
+                          value={value ?? ''}
+                          onChange={e => handleChange(key, e.target.value)}
+                          style={{ ...inputStyle, minWidth: '120px', fontSize: '13px' }}
+                        >
+                          {config.options.map(opt => (
+                            <option key={opt.value} value={opt.value}>{opt.label}</option>
+                          ))}
+                        </select>
+                      )}
+                      {config.type === 'text' && (
+                        <input
+                          type="text" value={value ?? ''}
+                          onChange={e => handleChange(key, e.target.value)}
+                          placeholder={config.placeholder || ''}
+                          style={{ ...inputStyle, width: '200px', fontSize: '13px' }}
+                        />
+                      )}
+                      {config.type === 'number' && (
+                        <input
+                          type="number" value={value ?? ''}
+                          onChange={e => handleChange(key, parseInt(e.target.value) || 0)}
+                          style={{ ...inputStyle, width: '80px', textAlign: 'right', fontSize: '13px' }} min={0}
+                        />
+                      )}
+                      {config.type === 'password' && (
+                        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                          <input
+                            type={visiblePasswords[key] ? 'text' : 'password'}
+                            value={value ?? ''}
+                            onChange={e => handleChange(key, e.target.value)}
+                            style={{ ...inputStyle, width: '200px', paddingRight: '36px', fontSize: '13px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(key)}
+                            style={{
+                              position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)',
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: secondaryTextColor, padding: '2px', display: 'flex',
+                            }}
+                          >
+                            {visiblePasswords[key] ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* 테스트 이메일 버튼 */}
+              {isEmailEnabled && (
+                <div style={{
+                  padding: '14px 24px 14px 40px',
+                  borderTop: `1px solid ${borderColor}`,
+                  backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                }}>
+                  <button
+                    onClick={handleTestEmail}
+                    disabled={testingEmail || !settings.smtp_host}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', border: `1px solid ${borderColor}`, borderRadius: '6px',
+                      backgroundColor: 'transparent',
+                      color: (testingEmail || !settings.smtp_host) ? secondaryTextColor : textColor,
+                      cursor: (testingEmail || !settings.smtp_host) ? 'not-allowed' : 'pointer',
+                      fontSize: '13px',
+                      opacity: (testingEmail || !settings.smtp_host) ? 0.5 : 1,
+                    }}
+                  >
+                    <Send size={14} /> {testingEmail ? '발송 중...' : '테스트 이메일 발송'}
+                  </button>
+                  {testResult && (
+                    <div style={{
+                      marginTop: '8px', padding: '10px 16px', borderRadius: '6px', fontSize: '12px',
+                      backgroundColor: testResult.success ? '#10b98120' : '#ef444420',
+                      color: testResult.success ? '#10b981' : '#ef4444',
+                    }}>
+                      {testResult.message}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          );
+        })()}
+      </div>
 
       {/* 저장 / 초기화 버튼 */}
       <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '20px' }}>
