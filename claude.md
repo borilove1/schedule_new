@@ -925,6 +925,9 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 26. 공유 일정 알림 (EVENT_SHARED): 일정 생성 시 공유된 처/실에 알림 발송, `shared_offices` scope 추가
 27. 상위관리자 직급별 분리: `dept_lead_department`(부장), `dept_lead_office`(처장/실장), `dept_lead_division`(본부장) 개별 scope로 분리
 28. 로그인/회원가입 페이지 스크롤: `position: fixed`로 body `overflow: hidden`과 독립적으로 스크롤 가능
+29. 부서 선택 필수화: 부서가 있는 처 선택 시 부서를 선택해야 직급 드롭다운 활성화 (회원가입/프로필 수정)
+30. 일정 공유 직급 옵션 개선: 직할 부서 선택 시에만 실장/처장/지사장 표시, 부서 전체/일반 부서는 부장/차장/직원만
+31. 드롭다운 탭 포커스 glow 효과: 모든 CustomSelect 및 일정 공유 드롭다운에 키보드 탭 이동 시 파란색 glow 효과 추가
 
 ## 알려진 이슈 및 남은 작업
 
