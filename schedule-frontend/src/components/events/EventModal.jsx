@@ -29,15 +29,26 @@ const getInitialFormData = (selectedDate) => {
   };
 };
 
-// 직급 옵션 (본부장 > 처장 > 실장 > 부장 > 차장 > 직원)
-const POSITION_OPTIONS = [
-  { value: '본부장', label: '본부장' },
-  { value: '처장', label: '처장' },
-  { value: '실장', label: '실장' },
-  { value: '부장', label: '부장' },
-  { value: '차장', label: '차장' },
-  { value: 'staff', label: '직원', includes: ['사원', '대리', '과장'] },
-];
+// 직급 옵션 - 부서 선택 여부에 따라 다름
+// 처/실만 선택: 처장/실장, 부장, 차장, 직원
+// 부서 선택: 부장, 차장, 직원
+const getPositionOptions = (hasDepartment) => {
+  const baseOptions = [
+    { value: '부장', label: '부장' },
+    { value: '차장', label: '차장' },
+    { value: 'staff', label: '직원', includes: ['사원', '대리', '과장'] },
+  ];
+
+  if (!hasDepartment) {
+    // 처/실만 선택한 경우 처장/실장 추가
+    return [
+      { value: 'chief', label: '처/실장', includes: ['처장', '실장'] },
+      ...baseOptions,
+    ];
+  }
+
+  return baseOptions;
+};
 
 export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, rateLimitCountdown = 0, onRateLimitStart }) {
   const { user } = useAuth();
@@ -108,6 +119,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }
   }, [shareOfficeId]);
 
+  // 부서 선택 시 처장/실장이 선택되어 있으면 제거 (부서에는 처장/실장이 없으므로)
+  useEffect(() => {
+    if (shareDepartmentId) {
+      setSharePositions(prev => prev.filter(p => !['처장', '실장'].includes(p)));
+    }
+  }, [shareDepartmentId]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target)) {
@@ -165,11 +183,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     setSharedTargets(sharedTargets.filter((_, i) => i !== index));
   };
 
-  // 직급 토글 (직원 선택 시 사원/대리/과장 한꺼번에 토글)
+  // 현재 직급 옵션 (부서 선택 여부에 따라 동적)
+  const positionOptions = getPositionOptions(!!shareDepartmentId);
+
+  // 직급 토글 (직원/처/실장 선택 시 포함된 직급 한꺼번에 토글)
   const toggleSharePosition = (position) => {
-    const opt = POSITION_OPTIONS.find(o => o.value === position);
+    const opt = positionOptions.find(o => o.value === position);
     if (opt?.includes) {
-      // 직원(staff) - 사원/대리/과장 모두 토글
       const allIncluded = opt.includes.every(p => sharePositions.includes(p));
       if (allIncluded) {
         setSharePositions(prev => prev.filter(p => !opt.includes.includes(p)));
@@ -183,25 +203,30 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }
   };
 
-  // 직급이 선택되었는지 확인 (직원은 사원/대리/과장 모두 선택 시 체크)
+  // 직급이 선택되었는지 확인
   const isPositionSelected = (position) => {
-    const opt = POSITION_OPTIONS.find(o => o.value === position);
+    const opt = positionOptions.find(o => o.value === position);
     if (opt?.includes) {
       return opt.includes.every(p => sharePositions.includes(p));
     }
     return sharePositions.includes(position);
   };
 
-  // 표시용 직급 문자열 (사원/대리/과장 모두 선택 시 '직원'으로 표시)
+  // 표시용 직급 문자열
   const getDisplayPositions = () => {
     if (sharePositions.length === 0) return '직급 전체';
     const staffPositions = ['사원', '대리', '과장'];
+    const chiefPositions = ['처장', '실장'];
     const hasAllStaff = staffPositions.every(p => sharePositions.includes(p));
-    const nonStaff = sharePositions.filter(p => !staffPositions.includes(p));
-    if (hasAllStaff) {
-      return nonStaff.length > 0 ? [...nonStaff, '직원'].join(', ') : '직원';
-    }
-    return sharePositions.join(', ');
+    const hasAllChief = chiefPositions.every(p => sharePositions.includes(p));
+
+    let display = sharePositions.filter(p => !staffPositions.includes(p) && !chiefPositions.includes(p));
+    if (hasAllChief) display.push('처/실장');
+    else display.push(...sharePositions.filter(p => chiefPositions.includes(p)));
+    if (hasAllStaff) display.push('직원');
+    else display.push(...sharePositions.filter(p => staffPositions.includes(p)));
+
+    return display.join(', ');
   };
 
   // 모달 애니메이션
@@ -663,7 +688,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                         backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
                         maxHeight: '160px', overflowY: 'auto',
                       }}>
-                        {POSITION_OPTIONS.map((pos) => {
+                        {positionOptions.map((pos) => {
                           const selected = isPositionSelected(pos.value);
                           return (
                             <div key={pos.value}
