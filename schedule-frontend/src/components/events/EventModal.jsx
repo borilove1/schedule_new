@@ -191,6 +191,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         justifyContent: 'center',
         zIndex: 1000,
         padding: isMobile ? 0 : '5px',
+        paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : '5px',
         transition: 'background-color 0.2s ease',
       }}
     >
@@ -199,7 +200,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         borderRadius: isMobile ? '20px 20px 0 0' : '16px',
         width: '100%',
         maxWidth: isMobile ? '100%' : '600px',
-        maxHeight: isMobile ? '92vh' : 'calc(100vh - 10px)',
+        maxHeight: isMobile ? 'calc(100% - env(safe-area-inset-top, 0px))' : 'calc(100vh - 10px)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily,
         transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
