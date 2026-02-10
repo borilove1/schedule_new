@@ -241,21 +241,26 @@ export default function SignupPage({ onBackClick }) {
     const deptName = formData.department || '';
     const officeName = formData.office || '';
 
-    // 직할 부서인 경우 특별 처리
+    // 직할 부서인 경우 특별 처리 (부서명 또는 처/실명에 '직할' 포함)
     if (deptName.includes('직할')) {
-      // 본부 직할 (처/실도 '직할'인 경우)
-      if (officeName.includes('직할')) {
+      // 1. 부서명 자체에 '본부' 포함 또는 처/실명에 '본부' 또는 '직할' 포함 -> 본부장
+      if (deptName.includes('본부') || officeName.includes('본부') || officeName.includes('직할')) {
         return [{ value: '본부장', label: '본부장' }];
       }
-      // 처/실 직할
-      if (officeName.includes('실')) {
-        return [{ value: '실장', label: '실장' }];
-      }
-      if (officeName.includes('처')) {
+      // 2. 부서명/처/실명에 '처' 포함 (사업처, 관리처 등) -> 처장
+      if (deptName.includes('처') || officeName.includes('처')) {
         return [{ value: '처장', label: '처장' }];
       }
-      // 기본 (지사 등)
-      return [{ value: '지사장', label: '지사장' }];
+      // 3. 부서명/처/실명에 '실' 포함 (기획관리실 등) -> 실장
+      if (deptName.includes('실') || officeName.includes('실')) {
+        return [{ value: '실장', label: '실장' }];
+      }
+      // 4. 지사인 경우
+      if (deptName.includes('지사') || officeName.includes('지사')) {
+        return [{ value: '지사장', label: '지사장' }];
+      }
+      // 기본값 (기타 직할)
+      return [{ value: '처장', label: '처장' }];
     }
 
     // 일반 부서 선택한 경우: 부장, 차장, 직원

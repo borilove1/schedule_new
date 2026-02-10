@@ -32,6 +32,7 @@ CREATE TYPE alert_time AS ENUM ('none', '30min', '1hour', '3hour', '1day');
 CREATE TABLE divisions (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -41,6 +42,7 @@ CREATE TABLE offices (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     division_id INTEGER NOT NULL REFERENCES divisions(id) ON DELETE CASCADE,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(name, division_id)
@@ -51,6 +53,7 @@ CREATE TABLE departments (
     id SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     office_id INTEGER NOT NULL REFERENCES offices(id) ON DELETE CASCADE,
+    sort_order INTEGER DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(name, office_id)
@@ -59,6 +62,9 @@ CREATE TABLE departments (
 -- 조직 구조 인덱스
 CREATE INDEX idx_offices_division ON offices(division_id);
 CREATE INDEX idx_departments_office ON departments(office_id);
+CREATE INDEX idx_divisions_sort_order ON divisions(sort_order);
+CREATE INDEX idx_offices_sort_order ON offices(division_id, sort_order);
+CREATE INDEX idx_departments_sort_order ON departments(office_id, sort_order);
 
 -- ========================================
 -- 2. 사용자 테이블

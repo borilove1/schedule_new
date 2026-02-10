@@ -7,16 +7,16 @@ const router = express.Router();
 // ========== 조직 구조 전체 조회 ==========
 router.get('/structure', async (req, res, next) => {
   try {
-    // 1. 모든 본부 조회
-    const divisionsResult = await query('SELECT id, name FROM divisions ORDER BY id');
+    // 1. 모든 본부 조회 (sort_order 순)
+    const divisionsResult = await query('SELECT id, name, sort_order FROM divisions ORDER BY sort_order, id');
     const divisions = divisionsResult.rows;
 
-    // 2. 모든 처 조회
-    const officesResult = await query('SELECT id, name, division_id FROM offices ORDER BY id');
+    // 2. 모든 처 조회 (sort_order 순)
+    const officesResult = await query('SELECT id, name, division_id, sort_order FROM offices ORDER BY sort_order, id');
     const offices = officesResult.rows;
 
-    // 3. 모든 부서 조회
-    const departmentsResult = await query('SELECT id, name, office_id FROM departments ORDER BY id');
+    // 3. 모든 부서 조회 (sort_order 순)
+    const departmentsResult = await query('SELECT id, name, office_id, sort_order FROM departments ORDER BY sort_order, id');
     const departments = departmentsResult.rows;
 
     // 4. 구조화된 데이터 생성 (ID 포함)
@@ -59,7 +59,7 @@ router.get('/structure', async (req, res, next) => {
 // ========== 본부 목록 ==========
 router.get('/divisions', async (req, res, next) => {
   try {
-    const result = await query('SELECT id, name FROM divisions ORDER BY id');
+    const result = await query('SELECT id, name, sort_order FROM divisions ORDER BY sort_order, id');
     
     res.json({
       success: true,
@@ -75,8 +75,8 @@ router.get('/divisions', async (req, res, next) => {
 router.get('/offices', async (req, res, next) => {
   try {
     const { divisionId } = req.query;
-    
-    let sqlQuery = 'SELECT id, name, division_id FROM offices';
+
+    let sqlQuery = 'SELECT id, name, division_id, sort_order FROM offices';
     let params = [];
 
     if (divisionId) {
@@ -84,7 +84,7 @@ router.get('/offices', async (req, res, next) => {
       params.push(divisionId);
     }
 
-    sqlQuery += ' ORDER BY id';
+    sqlQuery += ' ORDER BY sort_order, id';
 
     const result = await query(sqlQuery, params);
     
@@ -102,8 +102,8 @@ router.get('/offices', async (req, res, next) => {
 router.get('/departments', async (req, res, next) => {
   try {
     const { officeId } = req.query;
-    
-    let sqlQuery = 'SELECT id, name, office_id FROM departments';
+
+    let sqlQuery = 'SELECT id, name, office_id, sort_order FROM departments';
     let params = [];
 
     if (officeId) {
@@ -111,7 +111,7 @@ router.get('/departments', async (req, res, next) => {
       params.push(officeId);
     }
 
-    sqlQuery += ' ORDER BY id';
+    sqlQuery += ' ORDER BY sort_order, id';
 
     const result = await query(sqlQuery, params);
     
@@ -465,6 +465,82 @@ router.delete('/departments/:id', authenticate, authorize('ADMIN'), async (req, 
     }
 
     res.json({ success: true, data: { message: '부서가 삭제되었습니다.' } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ========== 부서 순서 변경 (Admin) ==========
+router.patch('/departments/reorder', authenticate, authorize('ADMIN'), async (req, res, next) => {
+  try {
+    const { orders } = req.body; // [{ id: 1, sortOrder: 0 }, { id: 2, sortOrder: 1 }, ...]
+
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: '순서 정보가 필요합니다.' }
+      });
+    }
+
+    // 각 부서의 순서 업데이트
+    for (const item of orders) {
+      await query(
+        'UPDATE departments SET sort_order = $1, updated_at = NOW() WHERE id = $2',
+        [item.sortOrder, item.id]
+      );
+    }
+
+    res.json({ success: true, message: '부서 순서가 변경되었습니다.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ========== 처/실 순서 변경 (Admin) ==========
+router.patch('/offices/reorder', authenticate, authorize('ADMIN'), async (req, res, next) => {
+  try {
+    const { orders } = req.body;
+
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: '순서 정보가 필요합니다.' }
+      });
+    }
+
+    for (const item of orders) {
+      await query(
+        'UPDATE offices SET sort_order = $1, updated_at = NOW() WHERE id = $2',
+        [item.sortOrder, item.id]
+      );
+    }
+
+    res.json({ success: true, message: '처/실 순서가 변경되었습니다.' });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// ========== 본부 순서 변경 (Admin) ==========
+router.patch('/divisions/reorder', authenticate, authorize('ADMIN'), async (req, res, next) => {
+  try {
+    const { orders } = req.body;
+
+    if (!orders || !Array.isArray(orders)) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: '순서 정보가 필요합니다.' }
+      });
+    }
+
+    for (const item of orders) {
+      await query(
+        'UPDATE divisions SET sort_order = $1, updated_at = NOW() WHERE id = $2',
+        [item.sortOrder, item.id]
+      );
+    }
+
+    res.json({ success: true, message: '본부 순서가 변경되었습니다.' });
   } catch (error) {
     next(error);
   }

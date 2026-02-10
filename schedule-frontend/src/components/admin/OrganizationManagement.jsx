@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Building2, Building, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Building2, Building, FolderOpen, GripVertical } from 'lucide-react';
 import ErrorAlert from '../common/ErrorAlert';
 import ConfirmDialog from '../common/ConfirmDialog';
 import api from '../../utils/api';
@@ -16,6 +16,8 @@ export default function OrganizationManagement() {
   const [error, setError] = useState('');
   const [editModal, setEditModal] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [dragItem, setDragItem] = useState(null);
+  const [dragOverItem, setDragOverItem] = useState(null);
 
   const loadStructure = useCallback(async () => {
     setLoading(true);
@@ -70,11 +72,83 @@ export default function OrganizationManagement() {
 
   const handleSaved = () => { setEditModal(null); loadStructure(); };
 
-  const nodeStyle = (level) => ({
+  // 드래그 앤 드롭 핸들러
+  const handleDragStart = (e, type, item, parentId) => {
+    setDragItem({ type, item, parentId });
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e, type, item, parentId) => {
+    e.preventDefault();
+    if (!dragItem || dragItem.type !== type || dragItem.parentId !== parentId) return;
+    if (dragItem.item.id === item.id) return;
+    setDragOverItem({ type, item, parentId });
+  };
+
+  const handleDragEnd = () => {
+    setDragItem(null);
+    setDragOverItem(null);
+  };
+
+  const handleDrop = async (e, type, targetItem, parentId) => {
+    e.preventDefault();
+    if (!dragItem || dragItem.type !== type || dragItem.parentId !== parentId) return;
+    if (dragItem.item.id === targetItem.id) return;
+
+    try {
+      let items = [];
+      if (type === 'division') {
+        items = [...divisions];
+      } else if (type === 'office') {
+        items = [...(offices[parentId] || [])];
+      } else if (type === 'department') {
+        items = [...(departments[parentId] || [])];
+      }
+
+      const dragIndex = items.findIndex(i => i.id === dragItem.item.id);
+      const targetIndex = items.findIndex(i => i.id === targetItem.id);
+
+      if (dragIndex === -1 || targetIndex === -1) return;
+
+      // 순서 변경
+      const [removed] = items.splice(dragIndex, 1);
+      items.splice(targetIndex, 0, removed);
+
+      // 새 순서 생성
+      const orders = items.map((item, index) => ({ id: item.id, sortOrder: index }));
+
+      // API 호출
+      if (type === 'division') {
+        await api.reorderDivisions(orders);
+        setDivisions(items);
+      } else if (type === 'office') {
+        await api.reorderOffices(orders);
+        setOffices(prev => ({ ...prev, [parentId]: items }));
+      } else if (type === 'department') {
+        await api.reorderDepartments(orders);
+        setDepartments(prev => ({ ...prev, [parentId]: items }));
+      }
+    } catch (err) {
+      setError(err.message || '순서 변경에 실패했습니다.');
+    } finally {
+      setDragItem(null);
+      setDragOverItem(null);
+    }
+  };
+
+  const nodeStyle = (level, isDragging, isDragOver) => ({
     display: 'flex', alignItems: 'center', gap: '8px',
     padding: '10px 16px', paddingLeft: `${16 + level * 24}px`,
     borderBottom: `1px solid ${borderColor}`, cursor: 'pointer', fontSize: '14px',
+    opacity: isDragging ? 0.5 : 1,
+    backgroundColor: isDragOver ? (isDragOver ? 'rgba(59, 130, 246, 0.1)' : cardBg) : undefined,
+    transition: 'background-color 0.15s ease',
   });
+
+  const dragHandleStyle = {
+    cursor: 'grab', display: 'flex', alignItems: 'center',
+    color: secondaryTextColor, padding: '2px',
+  };
 
   const actionBtnStyle = {
     background: 'none', border: 'none', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center',
@@ -112,10 +186,22 @@ export default function OrganizationManagement() {
           const divKey = `div-${div.id}`;
           const isExpanded = expanded[divKey];
           const divOffices = offices[div.id] || [];
+          const isDivDragging = dragItem?.type === 'division' && dragItem?.item.id === div.id;
+          const isDivDragOver = dragOverItem?.type === 'division' && dragOverItem?.item.id === div.id;
 
           return (
             <div key={div.id}>
-              <div style={nodeStyle(0)}>
+              <div
+                style={nodeStyle(0, isDivDragging, isDivDragOver)}
+                draggable
+                onDragStart={(e) => handleDragStart(e, 'division', div, null)}
+                onDragOver={(e) => handleDragOver(e, 'division', div, null)}
+                onDrop={(e) => handleDrop(e, 'division', div, null)}
+                onDragEnd={handleDragEnd}
+              >
+                <span style={dragHandleStyle} title="드래그하여 순서 변경">
+                  <GripVertical size={16} />
+                </span>
                 <span onClick={() => toggleExpand(divKey)} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                   {divOffices.length > 0 ? (isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />) : <span style={{ width: 16 }} />}
                 </span>
@@ -132,10 +218,22 @@ export default function OrganizationManagement() {
                 const offKey = `off-${off.id}`;
                 const isOffExpanded = expanded[offKey];
                 const offDepts = departments[off.id] || [];
+                const isOffDragging = dragItem?.type === 'office' && dragItem?.item.id === off.id;
+                const isOffDragOver = dragOverItem?.type === 'office' && dragOverItem?.item.id === off.id;
 
                 return (
                   <div key={off.id}>
-                    <div style={nodeStyle(1)}>
+                    <div
+                      style={nodeStyle(1, isOffDragging, isOffDragOver)}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, 'office', off, div.id)}
+                      onDragOver={(e) => handleDragOver(e, 'office', off, div.id)}
+                      onDrop={(e) => handleDrop(e, 'office', off, div.id)}
+                      onDragEnd={handleDragEnd}
+                    >
+                      <span style={dragHandleStyle} title="드래그하여 순서 변경">
+                        <GripVertical size={16} />
+                      </span>
                       <span onClick={() => toggleExpand(offKey)} style={{ display: 'flex', alignItems: 'center', cursor: 'pointer' }}>
                         {offDepts.length > 0 ? (isOffExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />) : <span style={{ width: 16 }} />}
                       </span>
@@ -148,17 +246,32 @@ export default function OrganizationManagement() {
                       </div>
                     </div>
 
-                    {isOffExpanded && offDepts.map(dept => (
-                      <div key={dept.id} style={nodeStyle(2)}>
-                        <span style={{ width: 16 }} />
-                        <FolderOpen size={16} color="#f59e0b" />
-                        <span style={{ flex: 1, color: textColor }}>{dept.name}</span>
-                        <div style={{ display: 'flex', gap: '2px' }}>
-                          <button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'department', mode: 'edit', data: dept, parentId: off.id }); }} style={{ ...actionBtnStyle, color: '#3B82F6' }} title="수정"><Edit2 size={14} /></button>
-                          <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: 'department', id: dept.id, name: dept.name }); }} style={{ ...actionBtnStyle, color: '#ef4444' }} title="삭제"><Trash2 size={14} /></button>
+                    {isOffExpanded && offDepts.map(dept => {
+                      const isDeptDragging = dragItem?.type === 'department' && dragItem?.item.id === dept.id;
+                      const isDeptDragOver = dragOverItem?.type === 'department' && dragOverItem?.item.id === dept.id;
+
+                      return (
+                        <div
+                          key={dept.id}
+                          style={nodeStyle(2, isDeptDragging, isDeptDragOver)}
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, 'department', dept, off.id)}
+                          onDragOver={(e) => handleDragOver(e, 'department', dept, off.id)}
+                          onDrop={(e) => handleDrop(e, 'department', dept, off.id)}
+                          onDragEnd={handleDragEnd}
+                        >
+                          <span style={dragHandleStyle} title="드래그하여 순서 변경">
+                            <GripVertical size={16} />
+                          </span>
+                          <FolderOpen size={16} color="#f59e0b" />
+                          <span style={{ flex: 1, color: textColor }}>{dept.name}</span>
+                          <div style={{ display: 'flex', gap: '2px' }}>
+                            <button onClick={(e) => { e.stopPropagation(); setEditModal({ type: 'department', mode: 'edit', data: dept, parentId: off.id }); }} style={{ ...actionBtnStyle, color: '#3B82F6' }} title="수정"><Edit2 size={14} /></button>
+                            <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ type: 'department', id: dept.id, name: dept.name }); }} style={{ ...actionBtnStyle, color: '#ef4444' }} title="삭제"><Trash2 size={14} /></button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 );
               })}

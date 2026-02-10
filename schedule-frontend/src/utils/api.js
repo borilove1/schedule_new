@@ -245,6 +245,27 @@ class ApiClient {
     });
   }
 
+  async reorderDepartments(orders) {
+    return this.request('/organizations/departments/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orders }),
+    });
+  }
+
+  async reorderOffices(orders) {
+    return this.request('/organizations/offices/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orders }),
+    });
+  }
+
+  async reorderDivisions(orders) {
+    return this.request('/organizations/divisions/reorder', {
+      method: 'PATCH',
+      body: JSON.stringify({ orders }),
+    });
+  }
+
   // ========== 시스템 설정 (Admin) ==========
   async getSettings() {
     return this.request('/settings');
