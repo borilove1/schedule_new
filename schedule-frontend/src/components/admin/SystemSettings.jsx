@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import ErrorAlert from '../common/ErrorAlert';
 import SuccessAlert from '../common/SuccessAlert';
-import { Save, RefreshCw, Mail, Send, Eye, EyeOff, Bell } from 'lucide-react';
+import { Save, RefreshCw, Mail, Send, Eye, EyeOff, Bell, Share2 } from 'lucide-react';
 import api from '../../utils/api';
 
 // 알림 타입별 메타데이터
@@ -498,6 +498,62 @@ export default function SystemSettings() {
           backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
         }}>
           * 비활성화된 알림은 인앱/푸시/이메일 모두 발송되지 않습니다. 행위자 본인에게는 알림이 발송되지 않습니다.
+        </div>
+      </div>
+
+      {/* 공유 일정 알림 설정 */}
+      <div style={sectionHeaderStyle}>
+        <Share2 size={18} /> 공유 일정 알림 설정
+      </div>
+      <div style={cardStyle}>
+        {[
+          { key: 'EVENT_REMINDER', label: '시작 전 알림', description: '공유받은 사용자에게 일정 시작 전 알림을 발송합니다.' },
+          { key: 'EVENT_DUE_SOON', label: '마감임박 알림', description: '공유받은 사용자에게 마감임박 알림을 발송합니다.' },
+          { key: 'EVENT_OVERDUE', label: '일정 지연 알림', description: '공유받은 사용자에게 일정 지연 알림을 발송합니다.' },
+        ].map((item, index, arr) => {
+          const sharedConfig = settings.shared_event_notifications || { EVENT_REMINDER: true, EVENT_DUE_SOON: false, EVENT_OVERDUE: false };
+          const isEnabled = sharedConfig[item.key] === true;
+          const isLast = index === arr.length - 1;
+
+          return (
+            <div key={item.key} style={{
+              padding: '16px 24px',
+              borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+            }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>{item.label}</div>
+                <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>{item.description}</div>
+              </div>
+              <button
+                onClick={() => {
+                  const updated = { ...sharedConfig, [item.key]: !isEnabled };
+                  handleChange('shared_event_notifications', updated);
+                }}
+                style={{
+                  width: '48px', height: '26px', borderRadius: '13px',
+                  border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                  backgroundColor: isEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                  transition: 'background-color 0.2s',
+                }}
+              >
+                <div style={{
+                  width: '20px', height: '20px', borderRadius: '50%',
+                  backgroundColor: '#fff', position: 'absolute', top: '3px',
+                  left: isEnabled ? '25px' : '3px', transition: 'left 0.2s',
+                }} />
+              </button>
+            </div>
+          );
+        })}
+        <div style={{
+          padding: '12px 24px',
+          fontSize: '12px',
+          color: secondaryTextColor,
+          borderTop: `1px solid ${borderColor}`,
+          backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+        }}>
+          * 공유 일정의 작성자는 별도로 알림을 받습니다. 이 설정은 공유받은 사용자에게만 적용됩니다.
         </div>
       </div>
 

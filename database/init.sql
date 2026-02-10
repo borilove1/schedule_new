@@ -319,7 +319,8 @@ INSERT INTO system_settings (key, value, description) VALUES
     ('smtp_api_key', '""', 'SMTP API 키 (SendGrid/Mailgun)'),
     ('smtp_from_email', '""', '발신 이메일 주소'),
     ('smtp_from_name', '"업무일정 관리 시스템"', '발신자 이름'),
-    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_DUE_SOON":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_OVERDUE":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"EVENT_SHARED":{"enabled":true,"scopes":["shared_offices"]},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정');
+    ('notification_config', '{"EVENT_REMINDER":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_DUE_SOON":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_OVERDUE":{"enabled":true,"scopes":["creator","shared_offices"]},"EVENT_UPDATED":{"enabled":false,"scope":"creator"},"EVENT_COMPLETED":{"enabled":true,"scope":"dept_leads"},"EVENT_DELETED":{"enabled":false,"scope":"creator"},"EVENT_COMMENTED":{"enabled":true,"scope":"creator"},"EVENT_SHARED":{"enabled":true,"scopes":["shared_offices"]},"USER_REGISTERED":{"enabled":true,"scope":"admins"},"ACCOUNT_APPROVED":{"enabled":true,"scope":"target"}}', '알림 타입별 활성화 및 수신 범위 설정'),
+    ('shared_event_notifications', '{"EVENT_REMINDER":true,"EVENT_DUE_SOON":false,"EVENT_OVERDUE":false}', '공유 일정 알림 설정 (시작 전/마감임박/일정 지연)');
 
 -- ========================================
 -- 7. 세션 테이블 (JWT 대신 사용 가능)
