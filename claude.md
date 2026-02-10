@@ -335,9 +335,18 @@ schedule/
 | `creator` | 일정 작성자 |
 | `target` | 특정 대상 사용자 (예: 승인된 사용자) |
 | `department` | 같은 부서 전체 |
-| `dept_leads` | 상위 부서장 (DEPARTMENT/OFFICE/DIVISION scope) |
+| `dept_leads` | 상위 부서장 (DEPARTMENT/OFFICE/DIVISION scope) - 레거시 |
+| `dept_lead_department` | 같은 부서 부장 (DEPT_LEAD + scope=DEPARTMENT) |
+| `dept_lead_office` | 같은 처 처장/실장 (DEPT_LEAD + scope=OFFICE) |
+| `dept_lead_division` | 같은 본부 본부장 (DEPT_LEAD + scope=DIVISION) |
 | `office` | 같은 처 전체 |
+| `shared_offices` | 공유된 처/실 전체 (sharedOfficeIds 기반) |
 | `admins` | 모든 ADMIN |
+
+**알림 scopes 배열 지원:**
+- `notifyByScope()`가 단일 scope 또는 scopes 배열 모두 지원
+- 예: `notification_config.EVENT_COMPLETED.scopes = ["creator", "dept_lead_office"]`
+- 배열 내 각 scope를 순회하며 수신자 목록 합산 (중복 제거)
 
 **알림 타입:**
 | 타입 | 기본 scope | 설명 |
@@ -349,6 +358,7 @@ schedule/
 | `EVENT_COMPLETED` | dept_leads | 일정 완료 알림 |
 | `EVENT_DELETED` | creator | 일정 삭제 알림 |
 | `EVENT_COMMENTED` | creator | 댓글 알림 |
+| `EVENT_SHARED` | shared_offices | 공유 일정 알림 (일정 공유 시 공유된 처/실에 발송) |
 | `USER_REGISTERED` | admins | 신규 가입 승인 요청 |
 | `ACCOUNT_APPROVED` | target | 계정 승인 완료 |
 
@@ -628,6 +638,8 @@ schedule/
 - ESC 키: 모든 모달 닫기 지원
 - 클릭 외부 감지: 드롭다운/모달 닫기 (useRef + useEffect)
 - requestAnimationFrame: 모달 열림 애니메이션
+- **모달 닫기 애니메이션**: `isClosing` state로 슬라이드 다운 애니메이션 후 unmount (EventModal, EventDetailModal)
+- **캘린더 월 이동 애니메이션**: PC/모바일 모두 좌/우 슬라이드 효과 (`animateMonthChange`, `slideStyle`)
 
 ### 백엔드 eventController.js
 - `toNaiveDateTimeString()`: PG TIMESTAMPTZ → 나이브 문자열 변환 (UTC 기준)
@@ -907,6 +919,12 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 20. 알림 모달 UX 개선: 읽은 알림 전체 삭제 버튼 추가, 헤더/푸터 고정 (flexShrink: 0)
 21. 알림 클릭 시 일정 이동: relatedEventId가 있는 알림 클릭 → 해당 일정 상세 모달 자동 오픈
 22. OVERDUE 상태 서버 계산: 클라이언트 10초 폴링 제거 → 서버 API(getEvents/getEventById/searchEvents)에서 isOverdue 판정 후 status='OVERDUE' 반환
+23. 모달 닫기 애니메이션: EventModal/EventDetailModal에 `isClosing` state로 슬라이드 다운 애니메이션 적용 (300ms)
+24. PC 캘린더 월 이동 슬라이드 애니메이션: 모바일과 동일하게 좌/우 슬라이드 효과 (`animateMonthChange`, `slideStyle` state)
+25. 알림 수신자 다중 선택 UI: SystemSettings에서 드롭다운 → 토글 버튼 다중 선택 방식으로 변경, scopes 배열 지원
+26. 공유 일정 알림 (EVENT_SHARED): 일정 생성 시 공유된 처/실에 알림 발송, `shared_offices` scope 추가
+27. 상위관리자 직급별 분리: `dept_lead_department`(부장), `dept_lead_office`(처장/실장), `dept_lead_division`(본부장) 개별 scope로 분리
+28. 로그인/회원가입 페이지 스크롤: `position: fixed`로 body `overflow: hidden`과 독립적으로 스크롤 가능
 
 ## 알려진 이슈 및 남은 작업
 

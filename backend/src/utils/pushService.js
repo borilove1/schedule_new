@@ -30,7 +30,10 @@ function getVapidPublicKey() {
  * 410/404 응답 시 stale 구독 자동 정리
  */
 async function sendPushToUser(userId, payload) {
-  if (!pushEnabled) return;
+  if (!pushEnabled) {
+    console.log(`[Push] 비활성화 상태 - userId=${userId} 발송 스킵`);
+    return;
+  }
 
   try {
     const result = await query(
@@ -38,7 +41,12 @@ async function sendPushToUser(userId, payload) {
       [userId]
     );
 
-    if (result.rows.length === 0) return;
+    if (result.rows.length === 0) {
+      console.log(`[Push] 구독 없음 - userId=${userId}`);
+      return;
+    }
+
+    console.log(`[Push] 발송 시도 - userId=${userId}, 구독=${result.rows.length}개, title="${payload.title}"`);
 
     const payloadStr = JSON.stringify(payload);
     const staleIds = [];
@@ -51,6 +59,7 @@ async function sendPushToUser(userId, payload) {
             payloadStr,
             { TTL: 86400 }
           );
+          console.log(`[Push] 발송 성공 - userId=${userId}, subId=${sub.id}`);
         } catch (err) {
           if (err.statusCode === 410 || err.statusCode === 404) {
             staleIds.push(sub.id);
