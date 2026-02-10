@@ -327,8 +327,9 @@ class ApiClient {
     return this.request('/organizations/divisions');
   }
 
-  async getDepartments() {
-    return this.request('/organizations/departments');
+  async getDepartments(officeId) {
+    const query = officeId ? `?officeId=${officeId}` : '';
+    return this.request(`/organizations/departments${query}`);
   }
 
   // Notifications

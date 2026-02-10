@@ -29,20 +29,36 @@ const getInitialFormData = (selectedDate) => {
   };
 };
 
+// 직급 옵션
+const POSITION_OPTIONS = [
+  { value: '실장', label: '실장' },
+  { value: '처장', label: '처장' },
+  { value: '본부장', label: '본부장' },
+  { value: '부장', label: '부장' },
+  { value: '차장', label: '차장' },
+  { value: '과장', label: '과장' },
+  { value: '대리', label: '대리' },
+  { value: '사원', label: '사원' },
+];
+
 export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, rateLimitCountdown = 0, onRateLimitStart }) {
   const { user } = useAuth();
   const [formData, setFormData] = useState(() => getInitialFormData(selectedDate));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [offices, setOffices] = useState([]);
-  const [selectedOfficeIds, setSelectedOfficeIds] = useState([]);
-  const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
+
+  // 공유 대상 관련 상태
+  const [sharedTargets, setSharedTargets] = useState([]); // [{ officeId, officeName, departmentId, departmentName, positions }]
+  const [shareOfficeId, setShareOfficeId] = useState('');
+  const [shareDepartmentId, setShareDepartmentId] = useState('');
+  const [sharePositions, setSharePositions] = useState([]);
+  const [shareDepartments, setShareDepartments] = useState([]);
+  const [showShareOptions, setShowShareOptions] = useState(false);
+
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [priorityFocusedIdx, setPriorityFocusedIdx] = useState(-1);
-  const [officeFocusedIdx, setOfficeFocusedIdx] = useState(-1);
   const [priorityIsFocused, setPriorityIsFocused] = useState(false);
-  const [officeIsFocused, setOfficeIsFocused] = useState(false);
-  const officeDropdownRef = useRef(null);
   const priorityDropdownRef = useRef(null);
 
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
@@ -54,8 +70,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
       setFormData(getInitialFormData(selectedDate));
       setError('');
       setLoading(false);
-      setSelectedOfficeIds([]);
-      setShowOfficeDropdown(false);
+      // 공유 대상 초기화
+      setSharedTargets([]);
+      setShareOfficeId('');
+      setShareDepartmentId('');
+      setSharePositions([]);
+      setShareDepartments([]);
+      setShowShareOptions(false);
       setShowPriorityDropdown(false);
       // 처/실 목록 로드
       if (user?.divisionId) {
@@ -67,11 +88,21 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }
   }, [isOpen, selectedDate, user?.divisionId]);
 
+  // 처/실 선택 시 부서 목록 로드
+  useEffect(() => {
+    if (shareOfficeId) {
+      api.getDepartments(shareOfficeId).then(data => {
+        const list = data?.departments || data || [];
+        setShareDepartments(Array.isArray(list) ? list : []);
+      }).catch(() => setShareDepartments([]));
+    } else {
+      setShareDepartments([]);
+      setShareDepartmentId('');
+    }
+  }, [shareOfficeId]);
+
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (officeDropdownRef.current && !officeDropdownRef.current.contains(e.target)) {
-        setShowOfficeDropdown(false);
-      }
       if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target)) {
         setShowPriorityDropdown(false);
       }
@@ -79,6 +110,51 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // 공유 대상 추가
+  const handleAddShareTarget = () => {
+    if (!shareOfficeId) return;
+    const office = offices.find(o => o.id === parseInt(shareOfficeId));
+    if (!office) return;
+
+    const department = shareDepartmentId ? shareDepartments.find(d => d.id === parseInt(shareDepartmentId)) : null;
+
+    const newTarget = {
+      officeId: parseInt(shareOfficeId),
+      officeName: office.name,
+      departmentId: department ? department.id : null,
+      departmentName: department ? department.name : null,
+      positions: sharePositions.length > 0 ? [...sharePositions] : null
+    };
+
+    // 중복 체크
+    const isDuplicate = sharedTargets.some(t =>
+      t.officeId === newTarget.officeId &&
+      t.departmentId === newTarget.departmentId &&
+      JSON.stringify(t.positions) === JSON.stringify(newTarget.positions)
+    );
+
+    if (!isDuplicate) {
+      setSharedTargets([...sharedTargets, newTarget]);
+    }
+
+    // 입력 필드 초기화
+    setShareOfficeId('');
+    setShareDepartmentId('');
+    setSharePositions([]);
+  };
+
+  // 공유 대상 제거
+  const handleRemoveShareTarget = (index) => {
+    setSharedTargets(sharedTargets.filter((_, i) => i !== index));
+  };
+
+  // 직급 토글
+  const toggleSharePosition = (position) => {
+    setSharePositions(prev =>
+      prev.includes(position) ? prev.filter(p => p !== position) : [...prev, position]
+    );
+  };
 
   // 모달 애니메이션
   const [isAnimating, setIsAnimating] = useState(false);
@@ -135,12 +211,6 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const toggleOffice = (officeId) => {
-    setSelectedOfficeIds(prev =>
-      prev.includes(officeId) ? prev.filter(id => id !== officeId) : [...prev, officeId]
-    );
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -164,8 +234,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         priority: formData.priority
       };
 
-      if (selectedOfficeIds.length > 0) {
-        eventData.sharedOfficeIds = selectedOfficeIds;
+      // 공유 대상 추가 (새 형식)
+      if (sharedTargets.length > 0) {
+        eventData.sharedTargets = sharedTargets.map(t => ({
+          officeId: t.officeId,
+          departmentId: t.departmentId,
+          positions: t.positions
+        }));
       }
 
       if (formData.isRecurring) {
@@ -356,105 +431,119 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           {/* 일정 공유 */}
           {offices.length > 0 && (
             <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
-              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Share2 size={14} /> 일정 공유 (선택사항)
               </label>
-              <div ref={officeDropdownRef} style={{ position: 'relative' }}>
-                <div
-                  tabIndex={0}
-                  onClick={() => { setShowOfficeDropdown(!showOfficeDropdown); setOfficeFocusedIdx(0); }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      if (showOfficeDropdown && officeFocusedIdx >= 0 && officeFocusedIdx < offices.length) {
-                        toggleOffice(offices[officeFocusedIdx].id);
-                      } else {
-                        setShowOfficeDropdown(!showOfficeDropdown); setOfficeFocusedIdx(0);
-                      }
-                    } else if (e.key === 'Escape') { setShowOfficeDropdown(false); }
-                    else if (e.key === 'ArrowDown') { e.preventDefault(); if (!showOfficeDropdown) { setShowOfficeDropdown(true); setOfficeFocusedIdx(0); } else { setOfficeFocusedIdx(prev => Math.min(prev + 1, offices.length - 1)); } }
-                    else if (e.key === 'ArrowUp') { e.preventDefault(); if (!showOfficeDropdown) { setShowOfficeDropdown(true); setOfficeFocusedIdx(0); } else { setOfficeFocusedIdx(prev => Math.max(prev - 1, 0)); } }
-                    else if (e.key === 'Tab') { if (showOfficeDropdown) setShowOfficeDropdown(false); }
-                  }}
-                  onFocus={() => setOfficeIsFocused(true)}
-                  onBlur={() => setOfficeIsFocused(false)}
-                  style={{
-                    ...uniformInputStyle,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    minHeight: fieldHeight,
-                    height: 'auto',
-                    paddingRight: '36px',
-                    position: 'relative',
-                    flexWrap: 'wrap',
-                    gap: '4px',
-                    borderColor: (showOfficeDropdown || officeIsFocused) ? '#3B82F6' : borderColor,
-                    boxShadow: (showOfficeDropdown || officeIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
-                    outline: 'none',
-                  }}
-                >
-                  {selectedOfficeIds.length > 0 ? (
-                    selectedOfficeIds.map(id => {
-                      const office = offices.find(o => o.id === id);
-                      return office ? (
-                        <span key={id} style={{
-                          display: 'inline-flex', alignItems: 'center', gap: '4px',
-                          padding: '2px 8px', borderRadius: '12px',
-                          backgroundColor: isDarkMode ? '#3b2f63' : '#ede9fe',
-                          color: isDarkMode ? '#c4b5fd' : '#7c3aed',
-                          fontSize: '12px', fontWeight: '500'
-                        }}>
-                          {office.name}
-                          <span
-                            onClick={(e) => { e.stopPropagation(); toggleOffice(id); }}
-                            style={{ cursor: 'pointer', fontSize: '14px', lineHeight: 1, marginLeft: '2px' }}
-                          >&times;</span>
-                        </span>
-                      ) : null;
-                    })
-                  ) : (
-                    <span style={{ color: secondaryTextColor, fontSize: '14px' }}>공유할 처/실을 선택하세요</span>
-                  )}
-                  <ChevronDown size={16} style={{
-                    position: 'absolute', right: '12px', top: '50%',
-                    color: secondaryTextColor,
-                    transform: showOfficeDropdown ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
-                    transition: 'transform 0.2s'
-                  }} />
+
+              {/* 추가된 공유 대상 목록 */}
+              {sharedTargets.length > 0 && (
+                <div style={{ marginBottom: '10px', display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                  {sharedTargets.map((target, idx) => (
+                    <span key={idx} style={{
+                      display: 'inline-flex', alignItems: 'center', gap: '4px',
+                      padding: '4px 10px', borderRadius: '16px',
+                      backgroundColor: isDarkMode ? '#3b2f63' : '#ede9fe',
+                      color: isDarkMode ? '#c4b5fd' : '#7c3aed',
+                      fontSize: '12px', fontWeight: '500'
+                    }}>
+                      {target.officeName}
+                      {target.departmentName && ` > ${target.departmentName}`}
+                      {target.positions && target.positions.length > 0 && ` (${target.positions.join(', ')})`}
+                      <span
+                        onClick={() => handleRemoveShareTarget(idx)}
+                        style={{ cursor: 'pointer', fontSize: '14px', lineHeight: 1, marginLeft: '4px' }}
+                      >&times;</span>
+                    </span>
+                  ))}
                 </div>
-                {showOfficeDropdown && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                    marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
-                    backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                    maxHeight: '120px', overflowY: 'auto'
-                  }}>
-                    {offices.map((office, idx) => (
-                      <label key={office.id} style={{
-                        display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px',
-                        cursor: 'pointer', fontFamily, fontSize: '14px', color: textColor,
-                        backgroundColor: idx === officeFocusedIdx
-                          ? (isDarkMode ? '#1e293b' : '#f0f9ff')
-                          : selectedOfficeIds.includes(office.id) ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent'
-                      }}
-                        onMouseEnter={() => setOfficeFocusedIdx(idx)}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedOfficeIds.includes(office.id)}
-                          onChange={() => toggleOffice(office.id)}
-                          style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#3B82F6' }}
-                        />
-                        {office.name}
-                      </label>
+              )}
+
+              {/* 공유 대상 추가 UI */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {/* 처/실 선택 */}
+                <select
+                  value={shareOfficeId}
+                  onChange={(e) => {
+                    setShareOfficeId(e.target.value);
+                    setShareDepartmentId('');
+                    setSharePositions([]);
+                  }}
+                  style={{ ...uniformInputStyle, fontSize: '13px' }}
+                >
+                  <option value="">처/실 선택</option>
+                  {offices.map(office => (
+                    <option key={office.id} value={office.id}>{office.name}</option>
+                  ))}
+                </select>
+
+                {/* 부서 선택 (처/실 선택 시 표시) */}
+                {shareOfficeId && shareDepartments.length > 0 && (
+                  <select
+                    value={shareDepartmentId}
+                    onChange={(e) => setShareDepartmentId(e.target.value)}
+                    style={{ ...uniformInputStyle, fontSize: '13px' }}
+                  >
+                    <option value="">부서 전체</option>
+                    {shareDepartments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
+                  </select>
+                )}
+
+                {/* 직급 선택 (처/실 선택 시 표시) */}
+                {shareOfficeId && (
+                  <div>
+                    <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>
+                      직급 선택 (선택 안하면 전체)
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {POSITION_OPTIONS.map(pos => (
+                        <label key={pos.value} style={{
+                          display: 'flex', alignItems: 'center', gap: '4px',
+                          padding: '4px 8px', borderRadius: '12px', cursor: 'pointer',
+                          backgroundColor: sharePositions.includes(pos.value)
+                            ? (isDarkMode ? '#1e40af' : '#dbeafe')
+                            : (isDarkMode ? '#374151' : '#f3f4f6'),
+                          color: sharePositions.includes(pos.value)
+                            ? (isDarkMode ? '#93c5fd' : '#1e40af')
+                            : textColor,
+                          fontSize: '12px', fontWeight: '500',
+                          border: `1px solid ${sharePositions.includes(pos.value) ? '#3B82F6' : borderColor}`,
+                          transition: 'all 0.15s'
+                        }}>
+                          <input
+                            type="checkbox"
+                            checked={sharePositions.includes(pos.value)}
+                            onChange={() => toggleSharePosition(pos.value)}
+                            style={{ display: 'none' }}
+                          />
+                          {pos.label}
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 )}
+
+                {/* 추가 버튼 */}
+                {shareOfficeId && (
+                  <button
+                    type="button"
+                    onClick={handleAddShareTarget}
+                    style={{
+                      padding: '8px 16px', borderRadius: '6px',
+                      backgroundColor: '#3B82F6', color: '#fff', border: 'none',
+                      fontSize: '13px', fontWeight: '500', cursor: 'pointer',
+                      alignSelf: 'flex-start'
+                    }}
+                  >
+                    추가
+                  </button>
+                )}
               </div>
-              <p style={{ marginTop: '6px', fontSize: '12px', color: secondaryTextColor, fontFamily, paddingLeft: '14px' }}>
-                {selectedOfficeIds.length > 0
-                  ? `${selectedOfficeIds.length}개 처/실 소속 전원이 이 일정을 볼 수 있습니다.`
+
+              <p style={{ marginTop: '8px', fontSize: '12px', color: secondaryTextColor, fontFamily }}>
+                {sharedTargets.length > 0
+                  ? `${sharedTargets.length}개 공유 대상이 이 일정을 볼 수 있습니다.`
                   : '같은 부서원은 항상 볼 수 있습니다.'}
               </p>
             </div>

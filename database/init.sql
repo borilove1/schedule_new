@@ -221,14 +221,24 @@ CREATE TABLE event_shared_offices (
     event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
     series_id INTEGER REFERENCES event_series(id) ON DELETE CASCADE,
     office_id INTEGER NOT NULL REFERENCES offices(id) ON DELETE CASCADE,
+    department_id INTEGER REFERENCES departments(id) ON DELETE CASCADE, -- NULL이면 처/실 전체
+    positions JSONB DEFAULT NULL, -- 공유 대상 직급 배열 (NULL이면 전체)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT check_event_or_series CHECK (
         (event_id IS NOT NULL AND series_id IS NULL) OR
         (event_id IS NULL AND series_id IS NOT NULL)
-    ),
-    UNIQUE(event_id, office_id),
-    UNIQUE(series_id, office_id)
+    )
 );
+
+-- 유니크 인덱스 (department_id가 NULL인 경우와 아닌 경우 분리)
+CREATE UNIQUE INDEX idx_eso_event_office_dept ON event_shared_offices(event_id, office_id, department_id)
+    WHERE event_id IS NOT NULL AND department_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_eso_event_office_nodept ON event_shared_offices(event_id, office_id)
+    WHERE event_id IS NOT NULL AND department_id IS NULL;
+CREATE UNIQUE INDEX idx_eso_series_office_dept ON event_shared_offices(series_id, office_id, department_id)
+    WHERE series_id IS NOT NULL AND department_id IS NOT NULL;
+CREATE UNIQUE INDEX idx_eso_series_office_nodept ON event_shared_offices(series_id, office_id)
+    WHERE series_id IS NOT NULL AND department_id IS NULL;
 
 CREATE INDEX idx_eso_event_id ON event_shared_offices(event_id) WHERE event_id IS NOT NULL;
 CREATE INDEX idx_eso_series_id ON event_shared_offices(series_id) WHERE series_id IS NOT NULL;

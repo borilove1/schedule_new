@@ -121,12 +121,16 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       });
     }
 
-    // 공유 처/실 조회
+    // 공유 대상 조회 (부서/직급 포함)
     const sharedResult = await query(
-      'SELECT office_id FROM event_shared_offices WHERE event_id = $1',
+      'SELECT office_id, department_id, positions FROM event_shared_offices WHERE event_id = $1',
       [eventId]
     );
-    const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
+    const sharedTargets = sharedResult.rows.map(r => ({
+      officeId: r.office_id,
+      departmentId: r.department_id,
+      positions: r.positions
+    }));
 
     // 일정 조회 권한 확인 (이벤트 조직 OR 작성자 조직 기준)
     const eventRow = eventResult.rows[0];
@@ -140,8 +144,14 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       // 본인이 작성한 일정
       if (eventRow.creator_id === user.id) return true;
 
-      // 공유된 처/실에 속하는 경우
-      if (sharedOfficeIds.includes(user.officeId)) return true;
+      // 공유된 대상에 포함되는 경우 (부서/직급 필터 적용)
+      const matchesSharedTarget = sharedTargets.some(target => {
+        if (target.officeId !== user.officeId) return false;
+        if (target.departmentId && target.departmentId !== user.departmentId) return false;
+        if (target.positions && target.positions.length > 0 && !target.positions.includes(user.position)) return false;
+        return true;
+      });
+      if (matchesSharedTarget) return true;
 
       // 같은 부서 (이벤트 부서 OR 작성자 부서)
       if (eventRow.department_id === user.departmentId || eventRow.creator_department_id === user.departmentId) return true;
@@ -194,20 +204,16 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
       });
 
       // 공유받은 사용자에게 댓글 알림 (설정이 활성화된 경우)
-      if (sharedOfficeIds.length > 0) {
+      if (sharedTargets.length > 0) {
         const sharedSettings = await getSharedEventNotifications();
         if (sharedSettings.EVENT_COMMENTED === true) {
-          const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
-            ? sharedSettings.positions
-            : [];
           await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${event.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
             actorId: req.user.id,
             creatorId: null,
             departmentId: null,
             officeId: null,
             divisionId: null,
-            sharedOfficeIds,
-            sharedPositions,
+            sharedTargets,
             relatedEventId: parseInt(eventId),
             metadata: { commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
           });
@@ -262,12 +268,16 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       });
     }
 
-    // 공유 처/실 조회
+    // 공유 대상 조회 (부서/직급 포함)
     const sharedResult = await query(
-      'SELECT office_id FROM event_shared_offices WHERE series_id = $1',
+      'SELECT office_id, department_id, positions FROM event_shared_offices WHERE series_id = $1',
       [seriesId]
     );
-    const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
+    const sharedTargets = sharedResult.rows.map(r => ({
+      officeId: r.office_id,
+      departmentId: r.department_id,
+      positions: r.positions
+    }));
 
     // 일정 조회 권한 확인 (이벤트 조직 OR 작성자 조직 기준)
     const seriesRow = seriesResult.rows[0];
@@ -281,8 +291,14 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       // 본인이 작성한 일정
       if (seriesRow.creator_id === user.id) return true;
 
-      // 공유된 처/실에 속하는 경우
-      if (sharedOfficeIds.includes(user.officeId)) return true;
+      // 공유된 대상에 포함되는 경우 (부서/직급 필터 적용)
+      const matchesSharedTarget = sharedTargets.some(target => {
+        if (target.officeId !== user.officeId) return false;
+        if (target.departmentId && target.departmentId !== user.departmentId) return false;
+        if (target.positions && target.positions.length > 0 && !target.positions.includes(user.position)) return false;
+        return true;
+      });
+      if (matchesSharedTarget) return true;
 
       // 같은 부서 (이벤트 부서 OR 작성자 부서)
       if (seriesRow.department_id === user.departmentId || seriesRow.creator_department_id === user.departmentId) return true;
@@ -334,20 +350,16 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
       });
 
       // 공유받은 사용자에게 댓글 알림 (설정이 활성화된 경우)
-      if (sharedOfficeIds.length > 0) {
+      if (sharedTargets.length > 0) {
         const sharedSettings = await getSharedEventNotifications();
         if (sharedSettings.EVENT_COMMENTED === true) {
-          const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
-            ? sharedSettings.positions
-            : [];
           await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${series.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
             actorId: req.user.id,
             creatorId: null,
             departmentId: null,
             officeId: null,
             divisionId: null,
-            sharedOfficeIds,
-            sharedPositions,
+            sharedTargets,
             metadata: { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
           });
         }

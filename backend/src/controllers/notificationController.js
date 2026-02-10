@@ -295,9 +295,37 @@ async function resolveRecipients(scope, context) {
         [context.officeId]
       )).rows.map(r => r.id);
     case 'shared_offices':
-      // 공유된 처/실의 사용자 (직급 필터 적용 가능)
+      // 공유된 대상의 사용자 (부서/직급 필터 적용)
+      // sharedTargets가 있으면 새 형식, 없으면 레거시 형식 사용
+      if (context.sharedTargets && context.sharedTargets.length > 0) {
+        // 새 형식: 각 타겟별로 부서/직급 조건 적용
+        const allUserIds = new Set();
+        for (const target of context.sharedTargets) {
+          let targetQuery, targetParams;
+          if (target.departmentId && target.positions && target.positions.length > 0) {
+            // 부서 + 직급 필터
+            targetQuery = 'SELECT id FROM users WHERE department_id = $1 AND position = ANY($2) AND is_active = true AND approved_at IS NOT NULL';
+            targetParams = [target.departmentId, target.positions];
+          } else if (target.departmentId) {
+            // 부서만 필터 (해당 부서 전체)
+            targetQuery = 'SELECT id FROM users WHERE department_id = $1 AND is_active = true AND approved_at IS NOT NULL';
+            targetParams = [target.departmentId];
+          } else if (target.positions && target.positions.length > 0) {
+            // 처/실 + 직급 필터
+            targetQuery = 'SELECT id FROM users WHERE office_id = $1 AND position = ANY($2) AND is_active = true AND approved_at IS NOT NULL';
+            targetParams = [target.officeId, target.positions];
+          } else {
+            // 처/실 전체
+            targetQuery = 'SELECT id FROM users WHERE office_id = $1 AND is_active = true AND approved_at IS NOT NULL';
+            targetParams = [target.officeId];
+          }
+          const result = await query(targetQuery, targetParams);
+          result.rows.forEach(r => allUserIds.add(r.id));
+        }
+        return Array.from(allUserIds);
+      }
+      // 레거시 형식: sharedOfficeIds + sharedPositions
       if (!context.sharedOfficeIds || context.sharedOfficeIds.length === 0) return [];
-      // sharedPositions가 있으면 해당 직급만, 없거나 빈 배열이면 전체
       if (context.sharedPositions && context.sharedPositions.length > 0) {
         // 'staff', 'chief' 등을 실제 직급으로 변환
         const expandedPositions = [];

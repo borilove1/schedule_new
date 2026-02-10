@@ -461,7 +461,7 @@ async function processEventReminder(job) {
     let departmentId = null;
     let officeId = null;
     let divisionId = null;
-    let sharedOfficeIds = [];
+    let sharedTargets = [];
 
     if (eventId) {
       // 단일 이벤트
@@ -481,12 +481,16 @@ async function processEventReminder(job) {
       officeId = event.office_id;
       divisionId = event.division_id;
 
-      // 공유 처/실 조회
+      // 공유 대상 조회 (부서/직급 포함)
       const sharedResult = await query(
-        'SELECT office_id FROM event_shared_offices WHERE event_id = $1',
+        'SELECT office_id, department_id, positions FROM event_shared_offices WHERE event_id = $1',
         [eventId]
       );
-      sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
+      sharedTargets = sharedResult.rows.map(r => ({
+        officeId: r.office_id,
+        departmentId: r.department_id,
+        positions: r.positions
+      }));
     } else if (seriesId) {
       // 반복 일정
       const result = await query(
@@ -511,12 +515,16 @@ async function processEventReminder(job) {
       officeId = series.office_id;
       divisionId = series.division_id;
 
-      // 공유 처/실 조회
+      // 공유 대상 조회 (부서/직급 포함)
       const sharedResult = await query(
-        'SELECT office_id FROM event_shared_offices WHERE series_id = $1',
+        'SELECT office_id, department_id, positions FROM event_shared_offices WHERE series_id = $1',
         [seriesId]
       );
-      sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
+      sharedTargets = sharedResult.rows.map(r => ({
+        officeId: r.office_id,
+        departmentId: r.department_id,
+        positions: r.positions
+      }));
     }
 
     if (!eventTitle) return;
@@ -581,7 +589,7 @@ async function processEventReminder(job) {
 
     // 2. 공유받은 사용자에게 알림 ([공유] 태그 추가)
     // 시스템 설정에서 해당 알림 타입이 활성화된 경우에만 발송
-    if (sharedOfficeIds.length > 0) {
+    if (sharedTargets.length > 0) {
       const sharedSettings = await getSharedEventNotifications();
       const isSharedNotificationEnabled = sharedSettings[notiType] === true;
 
@@ -598,19 +606,13 @@ async function processEventReminder(job) {
           sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
         }
 
-        // 직급 필터 (positionFilterEnabled가 true이고 positions 배열이 있으면 해당 직급만)
-        const sharedPositions = (sharedSettings.positionFilterEnabled === true && Array.isArray(sharedSettings.positions))
-          ? sharedSettings.positions
-          : [];
-
         await notifyByScope(notiType, sharedTitle, sharedMessage, {
           actorId: targetUserId, // 작성자 제외 (중복 방지)
           creatorId: null, // creator scope 사용 안 함
           departmentId: null,
           officeId: null,
           divisionId: null,
-          sharedOfficeIds,
-          sharedPositions,
+          sharedTargets,
           relatedEventId: eventId,
           metadata: { ...metadata, isShared: true },
         });

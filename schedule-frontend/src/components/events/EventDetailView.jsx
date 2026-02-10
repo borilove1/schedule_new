@@ -129,9 +129,17 @@ export default function EventDetailView({
           </div>
         )}
         {event.sharedOffices && event.sharedOffices.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#8B5CF6', fontSize: isMobile ? '13px' : '14px' }}>
-            <Users size={isMobile ? 14 : 16} />
-            <span>공유: {event.sharedOffices.map(o => o.name || o.officeName || o.office_name).join(', ')}</span>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', color: '#8B5CF6', fontSize: isMobile ? '13px' : '14px' }}>
+            <Users size={isMobile ? 14 : 16} style={{ marginTop: '2px', flexShrink: 0 }} />
+            <span>공유: {event.sharedOffices.map(o => {
+              const name = o.name || o.officeName || o.office_name || '';
+              const dept = o.departmentName || o.department_name || '';
+              const pos = o.positions;
+              let label = name;
+              if (dept) label += ` > ${dept}`;
+              if (pos && pos.length > 0) label += ` (${pos.join(', ')})`;
+              return label;
+            }).join(', ')}</span>
           </div>
         )}
       </div>
