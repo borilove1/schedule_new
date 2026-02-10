@@ -233,15 +233,69 @@ export default function ProfilePage({ onBack }) {
   const availableOffices = profileData.division ? (organizations.offices[profileData.division] || []) : [];
   const availableDepartments = profileData.office ? (organizations.departments[profileData.office] || []) : [];
 
-  const positionOptions = [
-    { value: '사원', label: '사원' },
-    { value: '대리', label: '대리' },
-    { value: '과장', label: '과장' },
-    { value: '차장', label: '차장' },
-    { value: '부장', label: '부장' },
-    { value: '처장', label: '처장' },
-    { value: '본부장', label: '본부장' },
-  ];
+  // 직급 옵션 동적 생성 (소속에 따라 다름)
+  const getPositionOptions = () => {
+    const deptName = profileData.department || '';
+    const officeName = profileData.office || '';
+
+    // 직할인 경우 특별 처리 (부서명 또는 처/실명에 '직할' 포함)
+    if (deptName.includes('직할') || officeName.includes('직할')) {
+      // 1. 본부 직할 -> 본부장
+      if (deptName.includes('본부') || officeName.includes('본부')) {
+        return [{ value: '본부장', label: '본부장' }];
+      }
+      // 2. 처 직할 (사업처, 관리처 등) -> 처장
+      if (deptName.includes('처') || officeName.includes('처')) {
+        return [{ value: '처장', label: '처장' }];
+      }
+      // 3. 실 직할 (기획관리실 등) -> 실장
+      if (deptName.includes('실') || officeName.includes('실')) {
+        return [{ value: '실장', label: '실장' }];
+      }
+      // 4. 지사인 경우
+      if (deptName.includes('지사') || officeName.includes('지사')) {
+        return [{ value: '지사장', label: '지사장' }];
+      }
+      // 기본값 (기타 직할)
+      return [{ value: '본부장', label: '본부장' }];
+    }
+
+    // 일반 부서 선택한 경우: 부장, 차장, 직원
+    if (deptName) {
+      return [
+        { value: '부장', label: '부장' },
+        { value: '차장', label: '차장' },
+        { value: '과장', label: '과장' },
+        { value: '대리', label: '대리' },
+        { value: '사원', label: '사원' },
+      ];
+    }
+
+    // 처/실만 선택한 경우 (부서 없음): 처/실장, 부장, 차장, 직원
+    if (officeName) {
+      const options = [];
+      if (officeName.includes('실')) {
+        options.push({ value: '실장', label: '실장' });
+      } else if (officeName.includes('처')) {
+        options.push({ value: '처장', label: '처장' });
+      } else {
+        options.push({ value: '지사장', label: '지사장' });
+      }
+      options.push(
+        { value: '부장', label: '부장' },
+        { value: '차장', label: '차장' },
+        { value: '과장', label: '과장' },
+        { value: '대리', label: '대리' },
+        { value: '사원', label: '사원' },
+      );
+      return options;
+    }
+
+    // 아무것도 선택 안 한 경우
+    return [];
+  };
+
+  const positionOptions = getPositionOptions();
 
   const divisionOptions = organizations.divisions.map(d => {
     const name = typeof d === 'string' ? d : d.name;
@@ -271,9 +325,11 @@ export default function ProfilePage({ onBack }) {
 
   const handleCustomChange = (name, value) => {
     if (name === 'division') {
-      setProfileData(prev => ({ ...prev, division: value, office: '', department: '' }));
+      setProfileData(prev => ({ ...prev, division: value, office: '', department: '', position: '' }));
     } else if (name === 'office') {
-      setProfileData(prev => ({ ...prev, office: value, department: '' }));
+      setProfileData(prev => ({ ...prev, office: value, department: '', position: '' }));
+    } else if (name === 'department') {
+      setProfileData(prev => ({ ...prev, department: value, position: '' }));
     } else {
       setProfileData(prev => ({ ...prev, [name]: value }));
     }
@@ -450,28 +506,16 @@ export default function ProfilePage({ onBack }) {
         <ErrorAlert message={profileError} />
 
         <form onSubmit={handleProfileSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-            <div>
-              <label style={labelStyle}>이름</label>
-              <input
-                type="text"
-                name="name"
-                value={profileData.name}
-                onChange={handleProfileChange}
-                required
-                style={inputStyle}
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>직급</label>
-              <CustomSelect
-                value={profileData.position}
-                onChange={(val) => handleCustomChange('position', val)}
-                options={positionOptions}
-                placeholder="선택"
-                colors={colors}
-              />
-            </div>
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>이름</label>
+            <input
+              type="text"
+              name="name"
+              value={profileData.name}
+              onChange={handleProfileChange}
+              required
+              style={inputStyle}
+            />
           </div>
 
           <div style={{ marginBottom: '16px' }}>
@@ -494,11 +538,11 @@ export default function ProfilePage({ onBack }) {
               placeholder="선택하세요"
               disabled={!profileData.division}
               colors={colors}
-              maxItems={3}
+              maxItems={4}
             />
           </div>
 
-          <div style={{ marginBottom: '20px' }}>
+          <div style={{ marginBottom: '16px' }}>
             <label style={labelStyle}>부서{availableDepartments.length > 0 ? '' : ' (해당 없음)'}</label>
             <CustomSelect
               value={profileData.department}
@@ -507,7 +551,20 @@ export default function ProfilePage({ onBack }) {
               placeholder={availableDepartments.length > 0 ? '선택하세요' : '해당 없음'}
               disabled={!profileData.office || availableDepartments.length === 0}
               colors={colors}
-              maxItems={3}
+              maxItems={4}
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={labelStyle}>직급</label>
+            <CustomSelect
+              value={profileData.position}
+              onChange={(val) => handleCustomChange('position', val)}
+              options={positionOptions}
+              placeholder={positionOptions.length > 0 ? '선택하세요' : '소속을 먼저 선택하세요'}
+              disabled={!profileData.office || positionOptions.length === 0}
+              colors={colors}
+              maxItems={4}
             />
           </div>
 
