@@ -426,11 +426,15 @@ async function processEventReminder(job) {
     let eventTitle = null;
     let eventStartAt = null;
     let targetUserId = creatorId;
+    let departmentId = null;
+    let officeId = null;
+    let divisionId = null;
+    let sharedOfficeIds = [];
 
     if (eventId) {
       // 단일 이벤트
       const result = await query(
-        'SELECT id, title, start_at, status, creator_id FROM events WHERE id = $1',
+        'SELECT id, title, start_at, status, creator_id, department_id, office_id, division_id FROM events WHERE id = $1',
         [eventId]
       );
 
@@ -441,10 +445,20 @@ async function processEventReminder(job) {
       eventTitle = event.title;
       eventStartAt = event.start_at;
       targetUserId = event.creator_id;
+      departmentId = event.department_id;
+      officeId = event.office_id;
+      divisionId = event.division_id;
+
+      // 공유 처/실 조회
+      const sharedResult = await query(
+        'SELECT office_id FROM event_shared_offices WHERE event_id = $1',
+        [eventId]
+      );
+      sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
     } else if (seriesId) {
       // 반복 일정
       const result = await query(
-        'SELECT id, title, status, start_time, creator_id FROM event_series WHERE id = $1',
+        'SELECT id, title, status, start_time, creator_id, department_id, office_id, division_id FROM event_series WHERE id = $1',
         [seriesId]
       );
 
@@ -461,6 +475,16 @@ async function processEventReminder(job) {
 
       eventTitle = series.title;
       targetUserId = series.creator_id;
+      departmentId = series.department_id;
+      officeId = series.office_id;
+      divisionId = series.division_id;
+
+      // 공유 처/실 조회
+      const sharedResult = await query(
+        'SELECT office_id FROM event_shared_offices WHERE series_id = $1',
+        [seriesId]
+      );
+      sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
     }
 
     if (!eventTitle) return;
@@ -513,6 +537,10 @@ async function processEventReminder(job) {
     await notifyByScope(notiType, title, message, {
       actorId: null,
       creatorId: targetUserId,
+      departmentId,
+      officeId,
+      divisionId,
+      sharedOfficeIds,
       relatedEventId: eventId,
       metadata,
     });
