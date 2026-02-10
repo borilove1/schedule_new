@@ -223,9 +223,11 @@ export default function SignupPage({ onBackClick }) {
 
   const handleCustomChange = (name, value) => {
     if (name === 'division') {
-      setFormData({ ...formData, division: value, office: '', department: '' });
+      setFormData({ ...formData, division: value, office: '', department: '', position: '' });
     } else if (name === 'office') {
-      setFormData({ ...formData, office: value, department: '' });
+      setFormData({ ...formData, office: value, department: '', position: '' });
+    } else if (name === 'department') {
+      setFormData({ ...formData, department: value, position: '' });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -234,15 +236,64 @@ export default function SignupPage({ onBackClick }) {
   const availableOffices = formData.division ? (organizations.offices[formData.division] || []) : [];
   const availableDepartments = formData.office ? (organizations.departments[formData.office] || []) : [];
 
-  const positionOptions = [
-    { value: '사원', label: '사원' },
-    { value: '대리', label: '대리' },
-    { value: '과장', label: '과장' },
-    { value: '차장', label: '차장' },
-    { value: '부장', label: '부장' },
-    { value: '처장', label: '처장' },
-    { value: '본부장', label: '본부장' },
-  ];
+  // 직급 옵션 동적 생성 (소속에 따라 다름)
+  const getPositionOptions = () => {
+    const deptName = formData.department || '';
+    const officeName = formData.office || '';
+
+    // 직할 부서인 경우 특별 처리
+    if (deptName.includes('직할')) {
+      // 본부 직할 (처/실도 '직할'인 경우)
+      if (officeName.includes('직할')) {
+        return [{ value: '본부장', label: '본부장' }];
+      }
+      // 처/실 직할
+      if (officeName.includes('실')) {
+        return [{ value: '실장', label: '실장' }];
+      }
+      if (officeName.includes('처')) {
+        return [{ value: '처장', label: '처장' }];
+      }
+      // 기본 (지사 등)
+      return [{ value: '지사장', label: '지사장' }];
+    }
+
+    // 일반 부서 선택한 경우: 부장, 차장, 직원
+    if (deptName) {
+      return [
+        { value: '부장', label: '부장' },
+        { value: '차장', label: '차장' },
+        { value: '과장', label: '과장' },
+        { value: '대리', label: '대리' },
+        { value: '사원', label: '사원' },
+      ];
+    }
+
+    // 처/실만 선택한 경우 (부서 없음): 처/실장, 부장, 차장, 직원
+    if (officeName) {
+      const options = [];
+      if (officeName.includes('실')) {
+        options.push({ value: '실장', label: '실장' });
+      } else if (officeName.includes('처')) {
+        options.push({ value: '처장', label: '처장' });
+      } else {
+        options.push({ value: '지사장', label: '지사장' });
+      }
+      options.push(
+        { value: '부장', label: '부장' },
+        { value: '차장', label: '차장' },
+        { value: '과장', label: '과장' },
+        { value: '대리', label: '대리' },
+        { value: '사원', label: '사원' },
+      );
+      return options;
+    }
+
+    // 아무것도 선택 안 한 경우
+    return [];
+  };
+
+  const positionOptions = getPositionOptions();
 
   const divisionOptions = organizations.divisions.map(d => {
     const name = typeof d === 'string' ? d : d.name;
@@ -408,32 +459,75 @@ export default function SignupPage({ onBackClick }) {
           </div>
         ) : (
         <form onSubmit={handleSubmit}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-            <div>
-              <label style={labelStyle}>이름 *</label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                autoFocus
-                style={inputStyle}
-                placeholder="홍길동"
-              />
-            </div>
-            <div>
-              <label style={labelStyle}>직급 *</label>
-              <CustomSelect
-                value={formData.position}
-                onChange={(val) => handleCustomChange('position', val)}
-                options={positionOptions}
-                placeholder="선택"
-                colors={colors}
-              />
-            </div>
+          {/* 1. 이름 */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>이름 *</label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              autoFocus
+              style={inputStyle}
+              placeholder="홍길동"
+            />
           </div>
 
+          {/* 2. 소속 선택 */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>1차 사업소 *</label>
+            <CustomSelect
+              value={formData.division}
+              onChange={(val) => handleCustomChange('division', val)}
+              options={divisionOptions}
+              placeholder="소속 사업소를 선택하세요"
+              disabled={loadingOrgs}
+              colors={colors}
+            />
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>2차 사업소 *</label>
+            <CustomSelect
+              value={formData.office}
+              onChange={(val) => handleCustomChange('office', val)}
+              options={officeOptions}
+              placeholder="소속 사업소를 선택하세요"
+              disabled={!formData.division || loadingOrgs}
+              colors={colors}
+              maxItems={4}
+            />
+          </div>
+
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>부서{availableDepartments.length > 0 ? ' *' : ''}</label>
+            <CustomSelect
+              value={formData.department}
+              onChange={(val) => handleCustomChange('department', val)}
+              options={departmentOptions}
+              placeholder={availableDepartments.length > 0 ? '소속 부서를 선택하세요' : '해당 없음'}
+              disabled={!formData.office || loadingOrgs || availableDepartments.length === 0}
+              colors={colors}
+              maxItems={4}
+            />
+          </div>
+
+          {/* 3. 직급 (소속 선택 후 활성화) */}
+          <div style={{ marginBottom: '14px' }}>
+            <label style={labelStyle}>직급 *</label>
+            <CustomSelect
+              value={formData.position}
+              onChange={(val) => handleCustomChange('position', val)}
+              options={positionOptions}
+              placeholder={positionOptions.length > 0 ? '직급을 선택하세요' : '소속을 먼저 선택하세요'}
+              disabled={!formData.office || positionOptions.length === 0}
+              colors={colors}
+              maxItems={4}
+            />
+          </div>
+
+          {/* 4. 이메일 */}
           <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>이메일 *</label>
             <input
@@ -447,6 +541,7 @@ export default function SignupPage({ onBackClick }) {
             />
           </div>
 
+          {/* 5. 비밀번호 */}
           <div style={{ marginBottom: '14px' }}>
             <label style={labelStyle}>비밀번호 *</label>
             <div style={{ position: 'relative' }}>
@@ -483,7 +578,8 @@ export default function SignupPage({ onBackClick }) {
             </div>
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
+          {/* 6. 비밀번호 확인 */}
+          <div style={{ marginBottom: '28px' }}>
             <label style={labelStyle}>비밀번호 확인 *</label>
             <div style={{ position: 'relative' }}>
               <input
@@ -527,44 +623,6 @@ export default function SignupPage({ onBackClick }) {
                 비밀번호가 일치하지 않습니다.
               </div>
             )}
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>1차 사업소 *</label>
-            <CustomSelect
-              value={formData.division}
-              onChange={(val) => handleCustomChange('division', val)}
-              options={divisionOptions}
-              placeholder="소속 사업소를 선택하세요"
-              disabled={loadingOrgs}
-              colors={colors}
-            />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={labelStyle}>2차 사업소 *</label>
-            <CustomSelect
-              value={formData.office}
-              onChange={(val) => handleCustomChange('office', val)}
-              options={officeOptions}
-              placeholder="소속 사업소를 선택하세요"
-              disabled={!formData.division || loadingOrgs}
-              colors={colors}
-              maxItems={3}
-            />
-          </div>
-
-          <div style={{ marginBottom: '28px' }}>
-            <label style={labelStyle}>부서{availableDepartments.length > 0 ? ' *' : ''}</label>
-            <CustomSelect
-              value={formData.department}
-              onChange={(val) => handleCustomChange('department', val)}
-              options={departmentOptions}
-              placeholder={availableDepartments.length > 0 ? '소속 부서를 선택하세요' : '해당 없음'}
-              disabled={!formData.office || loadingOrgs || availableDepartments.length === 0}
-              colors={colors}
-              maxItems={3}
-            />
           </div>
 
           <ErrorAlert message={error} />
