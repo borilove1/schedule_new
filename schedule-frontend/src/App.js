@@ -61,7 +61,15 @@ function AppContent() {
     setCurrentPage('calendar');
   };
 
-  const { bgColor, textColor } = useThemeColors();
+  const { isDarkMode, bgColor, cardBg, textColor } = useThemeColors();
+
+  // 모바일 상태바 색상: 로그인 전=배경색, 로그인 후=헤더색
+  React.useEffect(() => {
+    const meta = document.getElementById('theme-color-meta');
+    if (meta) {
+      meta.content = user ? cardBg : bgColor;
+    }
+  }, [user, cardBg, bgColor]);
 
   if (loading) {
     return (
