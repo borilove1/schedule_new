@@ -5,7 +5,7 @@ import SuccessAlert from '../common/SuccessAlert';
 import { Save, RefreshCw, Mail, Send, Eye, EyeOff, Bell, Share2 } from 'lucide-react';
 import api from '../../utils/api';
 
-// 알림 타입별 메타데이터
+// 알림 타입별 메타데이터 (EVENT_SHARED는 공유 일정 알림 설정 섹션에서 별도 관리)
 const NOTIFICATION_TYPES = {
   EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
   EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
@@ -14,7 +14,6 @@ const NOTIFICATION_TYPES = {
   EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
   EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
   EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division'] },
-  EVENT_SHARED:     { label: '공유 일정',     scopes: ['shared_offices'] },
   USER_REGISTERED:  { label: '신규 가입 요청', scopes: ['admins'] },
   ACCOUNT_APPROVED: { label: '계정 승인',     scopes: ['target'] },
 };
@@ -506,46 +505,90 @@ export default function SystemSettings() {
         <Share2 size={18} /> 공유 일정 알림 설정
       </div>
       <div style={cardStyle}>
-        {[
-          { key: 'EVENT_REMINDER', label: '시작 전 알림', description: '공유받은 사용자에게 일정 시작 전 알림을 발송합니다.' },
-          { key: 'EVENT_DUE_SOON', label: '마감임박 알림', description: '공유받은 사용자에게 마감임박 알림을 발송합니다.' },
-          { key: 'EVENT_OVERDUE', label: '일정 지연 알림', description: '공유받은 사용자에게 일정 지연 알림을 발송합니다.' },
-        ].map((item, index, arr) => {
+        {(() => {
+          const notifConfig = settings.notification_config || {};
+          const eventSharedConfig = notifConfig.EVENT_SHARED || { enabled: false };
+          const isSharedEnabled = eventSharedConfig.enabled === true;
           const sharedConfig = settings.shared_event_notifications || { EVENT_REMINDER: true, EVENT_DUE_SOON: false, EVENT_OVERDUE: false };
-          const isEnabled = sharedConfig[item.key] === true;
-          const isLast = index === arr.length - 1;
 
           return (
-            <div key={item.key} style={{
-              padding: '16px 24px',
-              borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
-            }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>{item.label}</div>
-                <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>{item.description}</div>
+            <>
+              {/* 마스터 토글: 공유 일정 알림 활성화 */}
+              <div style={{
+                padding: '16px 24px',
+                borderBottom: `1px solid ${borderColor}`,
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>공유 일정 알림</div>
+                  <div style={{ fontSize: '12px', color: secondaryTextColor, marginTop: '2px' }}>
+                    일정 공유 시 공유받은 처/실 사용자에게 알림을 발송합니다.
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const updated = { ...notifConfig, EVENT_SHARED: { ...eventSharedConfig, enabled: !isSharedEnabled, scopes: ['shared_offices'] } };
+                    handleChange('notification_config', updated);
+                  }}
+                  style={{
+                    width: '48px', height: '26px', borderRadius: '13px',
+                    border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                    backgroundColor: isSharedEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                    transition: 'background-color 0.2s',
+                  }}
+                >
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    backgroundColor: '#fff', position: 'absolute', top: '3px',
+                    left: isSharedEnabled ? '25px' : '3px', transition: 'left 0.2s',
+                  }} />
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  const updated = { ...sharedConfig, [item.key]: !isEnabled };
-                  handleChange('shared_event_notifications', updated);
-                }}
-                style={{
-                  width: '48px', height: '26px', borderRadius: '13px',
-                  border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
-                  backgroundColor: isEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
-                  transition: 'background-color 0.2s',
-                }}
-              >
-                <div style={{
-                  width: '20px', height: '20px', borderRadius: '50%',
-                  backgroundColor: '#fff', position: 'absolute', top: '3px',
-                  left: isEnabled ? '25px' : '3px', transition: 'left 0.2s',
-                }} />
-              </button>
-            </div>
+
+              {/* 하위 토글: 공유 일정 알림 활성화 시에만 표시 */}
+              {isSharedEnabled && [
+                { key: 'EVENT_REMINDER', label: '시작 전 알림', description: '공유받은 사용자에게 일정 시작 전 알림을 발송합니다.' },
+                { key: 'EVENT_DUE_SOON', label: '마감임박 알림', description: '공유받은 사용자에게 마감임박 알림을 발송합니다.' },
+                { key: 'EVENT_OVERDUE', label: '일정 지연 알림', description: '공유받은 사용자에게 일정 지연 알림을 발송합니다.' },
+              ].map((item, index, arr) => {
+                const isEnabled = sharedConfig[item.key] === true;
+                const isLast = index === arr.length - 1;
+
+                return (
+                  <div key={item.key} style={{
+                    padding: '14px 24px 14px 40px',
+                    borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
+                    backgroundColor: isDarkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)',
+                  }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: '13px', fontWeight: '500', color: textColor }}>{item.label}</div>
+                      <div style={{ fontSize: '11px', color: secondaryTextColor, marginTop: '2px' }}>{item.description}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const updated = { ...sharedConfig, [item.key]: !isEnabled };
+                        handleChange('shared_event_notifications', updated);
+                      }}
+                      style={{
+                        width: '44px', height: '24px', borderRadius: '12px',
+                        border: 'none', cursor: 'pointer', position: 'relative', flexShrink: 0,
+                        backgroundColor: isEnabled ? '#3B82F6' : (isDarkMode ? '#475569' : '#cbd5e1'),
+                        transition: 'background-color 0.2s',
+                      }}
+                    >
+                      <div style={{
+                        width: '18px', height: '18px', borderRadius: '50%',
+                        backgroundColor: '#fff', position: 'absolute', top: '3px',
+                        left: isEnabled ? '23px' : '3px', transition: 'left 0.2s',
+                      }} />
+                    </button>
+                  </div>
+                );
+              })}
+            </>
           );
-        })}
+        })()}
         <div style={{
           padding: '12px 24px',
           fontSize: '12px',
