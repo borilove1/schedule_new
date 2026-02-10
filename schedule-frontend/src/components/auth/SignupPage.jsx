@@ -312,9 +312,11 @@ export default function SignupPage({ onBackClick }) {
       minHeight: '100vh',
       backgroundColor: bgColor,
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'center',
-      padding: '20px',
+      padding: '40px 20px',
+      boxSizing: 'border-box',
+      overflowY: 'auto',
       transition: 'background-color 0.2s'
     }}>
       <div style={{
