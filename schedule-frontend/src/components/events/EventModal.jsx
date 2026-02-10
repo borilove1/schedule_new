@@ -228,7 +228,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         </div>
 
         {/* Body - scrollable */}
-        <form onSubmit={handleSubmit} style={{ padding: isMobile ? '16px 20px 20px' : '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
+        <form onSubmit={handleSubmit} style={{ padding: isMobile ? '12px 16px 16px' : '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
           {/* 작성자 정보 (필요 시 주석 해제)
           <div style={{
             padding: '8px 12px', borderRadius: '8px', backgroundColor: bgColor,
@@ -238,17 +238,17 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           </div>
           */}
 
-          <div style={{ marginBottom: '14px' }}>
+          <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={labelStyle}>제목 *</label>
             <input type="text" name="title" value={formData.title} onChange={handleChange} required autoFocus={!isMobile} style={uniformInputStyle} placeholder="일정 제목을 입력하세요" />
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
+          <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={labelStyle}>내용</label>
-            <textarea name="content" value={formData.content} onChange={handleChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
+            <textarea name="content" value={formData.content} onChange={handleChange} rows={isMobile ? 2 : 3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '10px' : '14px' }}>
             <div>
               <label style={labelStyle}>시작 날짜 *</label>
               <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={dateInputStyle} />
@@ -259,7 +259,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '10px' : '14px' }}>
             <div>
               <label style={labelStyle}>종료 날짜 *</label>
               <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={dateInputStyle} />
@@ -270,7 +270,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             </div>
           </div>
 
-          <div style={{ marginBottom: '14px' }}>
+          <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={labelStyle}>우선순위</label>
             <div ref={priorityDropdownRef} style={{ position: 'relative' }}>
               <div
@@ -345,7 +345,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
 
           {/* 일정 공유 */}
           {offices.length > 0 && (
-            <div style={{ marginBottom: '14px' }}>
+            <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
               <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Share2 size={14} /> 일정 공유 (선택사항)
               </label>
@@ -450,7 +450,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
             </div>
           )}
 
-          <div style={{ marginBottom: '14px' }}>
+          <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontFamily }}>
               <input
                 type="checkbox" name="isRecurring" checked={formData.isRecurring}
