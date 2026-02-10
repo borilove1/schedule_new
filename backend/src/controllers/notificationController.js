@@ -208,18 +208,29 @@ exports.notifyByScope = async (type, title, message, context) => {
     const typeConfig = config[type];
     if (!typeConfig?.enabled) return; // OFF면 스킵
 
-    // 2. scope에 따라 수신자 목록 결정
-    const recipients = await resolveRecipients(typeConfig.scope, context);
+    // 2. scopes 배열에 따라 수신자 목록 결정 (기존 단일 scope 호환)
+    const scopes = Array.isArray(typeConfig.scopes) && typeConfig.scopes.length > 0
+      ? typeConfig.scopes
+      : (typeConfig.scope ? [typeConfig.scope] : []);
+
+    if (scopes.length === 0) return;
+
+    // 각 scope에서 수신자 수집 (중복 제거)
+    const recipientSet = new Set();
+    for (const scope of scopes) {
+      const scopeRecipients = await resolveRecipients(scope, context);
+      scopeRecipients.forEach(id => recipientSet.add(id));
+    }
 
     // 3. 행위자 본인 제외 (자기 알림 방지)
-    const filtered = context.actorId
-      ? recipients.filter(id => id !== context.actorId)
-      : recipients;
+    if (context.actorId) {
+      recipientSet.delete(context.actorId);
+    }
 
-    if (filtered.length === 0) return;
+    if (recipientSet.size === 0) return;
 
     // 4. 각 수신자에게 알림 생성
-    for (const userId of filtered) {
+    for (const userId of recipientSet) {
       await exports.createNotification(userId, type, title, message, context.relatedEventId || null, context.metadata || null);
     }
   } catch (error) {
@@ -243,6 +254,7 @@ async function resolveRecipients(scope, context) {
         [context.departmentId]
       )).rows.map(r => r.id);
     case 'dept_leads':
+      // 기존 호환성 유지: 모든 상위 관리자
       return (await query(`
         SELECT id FROM users
         WHERE role = 'DEPT_LEAD' AND is_active = true AND approved_at IS NOT NULL
@@ -252,6 +264,30 @@ async function resolveRecipients(scope, context) {
           OR (scope = 'DIVISION' AND division_id = $3)
         )
       `, [context.departmentId, context.officeId, context.divisionId])).rows.map(r => r.id);
+    case 'dept_lead_department':
+      // 부장 (같은 부서의 DEPT_LEAD)
+      if (!context.departmentId) return [];
+      return (await query(`
+        SELECT id FROM users
+        WHERE role = 'DEPT_LEAD' AND scope = 'DEPARTMENT' AND department_id = $1
+        AND is_active = true AND approved_at IS NOT NULL
+      `, [context.departmentId])).rows.map(r => r.id);
+    case 'dept_lead_office':
+      // 처장/실장 (같은 처/실의 DEPT_LEAD)
+      if (!context.officeId) return [];
+      return (await query(`
+        SELECT id FROM users
+        WHERE role = 'DEPT_LEAD' AND scope = 'OFFICE' AND office_id = $1
+        AND is_active = true AND approved_at IS NOT NULL
+      `, [context.officeId])).rows.map(r => r.id);
+    case 'dept_lead_division':
+      // 본부장 (같은 본부의 DEPT_LEAD)
+      if (!context.divisionId) return [];
+      return (await query(`
+        SELECT id FROM users
+        WHERE role = 'DEPT_LEAD' AND scope = 'DIVISION' AND division_id = $1
+        AND is_active = true AND approved_at IS NOT NULL
+      `, [context.divisionId])).rows.map(r => r.id);
     case 'office':
       if (!context.officeId) return context.creatorId ? [context.creatorId] : [];
       return (await query(

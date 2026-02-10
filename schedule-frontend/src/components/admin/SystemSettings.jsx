@@ -7,13 +7,13 @@ import api from '../../utils/api';
 
 // 알림 타입별 메타데이터
 const NOTIFICATION_TYPES = {
-  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_OVERDUE:    { label: '일정 지연 알림', scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_leads', 'office'] },
-  EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_leads'] },
+  EVENT_REMINDER:   { label: '일정 시작 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_DUE_SOON:   { label: '마감임박 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_OVERDUE:    { label: '일정 지연 알림', scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_UPDATED:    { label: '일정 수정',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
+  EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division'] },
   USER_REGISTERED:  { label: '신규 가입 요청', scopes: ['admins'] },
   ACCOUNT_APPROVED: { label: '계정 승인',     scopes: ['target'] },
 };
@@ -21,7 +21,9 @@ const NOTIFICATION_TYPES = {
 const SCOPE_LABELS = {
   creator: '작성자만',
   department: '같은 부서',
-  dept_leads: '상위 관리자',
+  dept_lead_department: '부장',
+  dept_lead_office: '처장/실장',
+  dept_lead_division: '본부장',
   office: '같은 처/실',
   admins: '전체 관리자',
   target: '해당 사용자',
@@ -398,42 +400,36 @@ export default function SystemSettings() {
       <div style={cardStyle}>
         {Object.entries(NOTIFICATION_TYPES).map(([type, meta], index, arr) => {
           const config = settings.notification_config || {};
-          const typeConfig = config[type] || { enabled: false, scope: meta.scopes[0] };
+          const typeConfig = config[type] || { enabled: false, scopes: [] };
+          // 기존 단일 scope를 배열로 마이그레이션
+          const selectedScopes = Array.isArray(typeConfig.scopes)
+            ? typeConfig.scopes
+            : (typeConfig.scope ? [typeConfig.scope] : []);
           const isLast = index === arr.length - 1;
           const hasSingleScope = meta.scopes.length <= 1;
+
+          const toggleScope = (scopeValue) => {
+            let newScopes;
+            if (selectedScopes.includes(scopeValue)) {
+              newScopes = selectedScopes.filter(s => s !== scopeValue);
+            } else {
+              newScopes = [...selectedScopes, scopeValue];
+            }
+            const updated = { ...config, [type]: { ...typeConfig, scopes: newScopes } };
+            handleChange('notification_config', updated);
+          };
 
           return (
             <div key={type} style={{
               padding: '16px 24px',
               borderBottom: isLast ? 'none' : `1px solid ${borderColor}`,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px',
             }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>
-                  {meta.label}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '500', color: textColor }}>
+                    {meta.label}
+                  </div>
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                {/* 수신 범위 드롭다운 */}
-                <select
-                  value={typeConfig.scope || meta.scopes[0]}
-                  onChange={e => {
-                    const updated = { ...config, [type]: { ...typeConfig, scope: e.target.value } };
-                    handleChange('notification_config', updated);
-                  }}
-                  disabled={!typeConfig.enabled || hasSingleScope}
-                  style={{
-                    ...inputStyle,
-                    minWidth: '120px',
-                    opacity: (!typeConfig.enabled || hasSingleScope) ? 0.5 : 1,
-                    cursor: (!typeConfig.enabled || hasSingleScope) ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {meta.scopes.map(s => (
-                    <option key={s} value={s}>{SCOPE_LABELS[s]}</option>
-                  ))}
-                </select>
 
                 {/* ON/OFF 토글 */}
                 <button
@@ -455,6 +451,40 @@ export default function SystemSettings() {
                   }} />
                 </button>
               </div>
+
+              {/* 수신 범위 복수선택 (활성화된 경우만 표시) */}
+              {typeConfig.enabled && !hasSingleScope && (
+                <div style={{
+                  marginTop: '12px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}>
+                  {meta.scopes.map(scopeValue => {
+                    const isSelected = selectedScopes.includes(scopeValue);
+                    return (
+                      <button
+                        key={scopeValue}
+                        onClick={() => toggleScope(scopeValue)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '16px',
+                          border: `1px solid ${isSelected ? '#3B82F6' : borderColor}`,
+                          backgroundColor: isSelected
+                            ? (isDarkMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)')
+                            : 'transparent',
+                          color: isSelected ? '#3B82F6' : secondaryTextColor,
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {SCOPE_LABELS[scopeValue]}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           );
         })}
