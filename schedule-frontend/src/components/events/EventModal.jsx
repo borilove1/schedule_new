@@ -55,7 +55,11 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
   const [sharePositions, setSharePositions] = useState([]);
   const [shareDepartments, setShareDepartments] = useState([]);
   const [showShareOptions, setShowShareOptions] = useState(false);
+  const [showOfficeDropdown, setShowOfficeDropdown] = useState(false);
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
   const [showPositionDropdown, setShowPositionDropdown] = useState(false);
+  const officeDropdownRef = useRef(null);
+  const departmentDropdownRef = useRef(null);
   const positionDropdownRef = useRef(null);
 
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
@@ -80,6 +84,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
       setShareDepartments([]);
       setShowShareOptions(false);
       setShowPriorityDropdown(false);
+      setShowOfficeDropdown(false);
+      setShowDepartmentDropdown(false);
       setShowPositionDropdown(false);
       // 처/실 목록 로드
       if (user?.divisionId) {
@@ -108,6 +114,12 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     const handleClickOutside = (e) => {
       if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target)) {
         setShowPriorityDropdown(false);
+      }
+      if (officeDropdownRef.current && !officeDropdownRef.current.contains(e.target)) {
+        setShowOfficeDropdown(false);
+      }
+      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(e.target)) {
+        setShowDepartmentDropdown(false);
       }
       if (positionDropdownRef.current && !positionDropdownRef.current.contains(e.target)) {
         setShowPositionDropdown(false);
@@ -466,34 +478,125 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
 
               {/* 공유 대상 추가 UI */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {/* 처/실 선택 */}
-                <select
-                  value={shareOfficeId}
-                  onChange={(e) => {
-                    setShareOfficeId(e.target.value);
-                    setShareDepartmentId('');
-                    setSharePositions([]);
-                  }}
-                  style={{ ...uniformInputStyle, fontSize: '13px' }}
-                >
-                  <option value="">처/실 선택</option>
-                  {offices.map(office => (
-                    <option key={office.id} value={office.id}>{office.name}</option>
-                  ))}
-                </select>
-
-                {/* 부서 선택 (처/실 선택 시 표시) */}
-                {shareOfficeId && shareDepartments.length > 0 && (
-                  <select
-                    value={shareDepartmentId}
-                    onChange={(e) => setShareDepartmentId(e.target.value)}
-                    style={{ ...uniformInputStyle, fontSize: '13px' }}
+                {/* 처/실 선택 - 커스텀 드롭다운 */}
+                <div ref={officeDropdownRef} style={{ position: 'relative' }}>
+                  <div
+                    onClick={() => setShowOfficeDropdown(!showOfficeDropdown)}
+                    style={{
+                      ...uniformInputStyle,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      paddingRight: '36px',
+                      position: 'relative',
+                      borderColor: showOfficeDropdown ? '#3B82F6' : borderColor,
+                      boxShadow: showOfficeDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                    }}
                   >
-                    <option value="">부서 전체</option>
-                    {shareDepartments.map(dept => (
-                      <option key={dept.id} value={dept.id}>{dept.name}</option>
-                    ))}
-                  </select>
+                    <span style={{ color: shareOfficeId ? textColor : secondaryTextColor }}>
+                      {shareOfficeId ? offices.find(o => o.id === parseInt(shareOfficeId))?.name || '처/실 선택' : '처/실 선택'}
+                    </span>
+                    <ChevronDown size={16} style={{
+                      position: 'absolute', right: '12px', top: '50%',
+                      color: secondaryTextColor,
+                      transform: showOfficeDropdown ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
+                      transition: 'transform 0.2s',
+                    }} />
+                  </div>
+                  {showOfficeDropdown && (
+                    <div style={{
+                      position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                      marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                      backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
+                      maxHeight: '200px', overflowY: 'auto',
+                    }}>
+                      {offices.map((office) => (
+                        <div key={office.id}
+                          onClick={() => {
+                            setShareOfficeId(String(office.id));
+                            setShareDepartmentId('');
+                            setSharePositions([]);
+                            setShowOfficeDropdown(false);
+                          }}
+                          style={{
+                            padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
+                            color: textColor,
+                            backgroundColor: parseInt(shareOfficeId) === office.id ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                          }}
+                          onMouseEnter={(e) => { if (parseInt(shareOfficeId) !== office.id) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                          onMouseLeave={(e) => { if (parseInt(shareOfficeId) !== office.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          {office.name}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* 부서 선택 (처/실 선택 시 표시) - 커스텀 드롭다운 */}
+                {shareOfficeId && shareDepartments.length > 0 && (
+                  <div ref={departmentDropdownRef} style={{ position: 'relative' }}>
+                    <div
+                      onClick={() => setShowDepartmentDropdown(!showDepartmentDropdown)}
+                      style={{
+                        ...uniformInputStyle,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        paddingRight: '36px',
+                        position: 'relative',
+                        borderColor: showDepartmentDropdown ? '#3B82F6' : borderColor,
+                        boxShadow: showDepartmentDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                      }}
+                    >
+                      <span style={{ color: shareDepartmentId ? textColor : secondaryTextColor }}>
+                        {shareDepartmentId ? shareDepartments.find(d => d.id === parseInt(shareDepartmentId))?.name || '부서 전체' : '부서 전체'}
+                      </span>
+                      <ChevronDown size={16} style={{
+                        position: 'absolute', right: '12px', top: '50%',
+                        color: secondaryTextColor,
+                        transform: showDepartmentDropdown ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
+                        transition: 'transform 0.2s',
+                      }} />
+                    </div>
+                    {showDepartmentDropdown && (
+                      <div style={{
+                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                        marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                        backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
+                        maxHeight: '200px', overflowY: 'auto',
+                      }}>
+                        <div
+                          onClick={() => { setShareDepartmentId(''); setShowDepartmentDropdown(false); }}
+                          style={{
+                            padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
+                            color: textColor,
+                            backgroundColor: !shareDepartmentId ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                          }}
+                          onMouseEnter={(e) => { if (shareDepartmentId) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                          onMouseLeave={(e) => { if (shareDepartmentId) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          부서 전체
+                        </div>
+                        {shareDepartments.map((dept) => (
+                          <div key={dept.id}
+                            onClick={() => { setShareDepartmentId(String(dept.id)); setShowDepartmentDropdown(false); }}
+                            style={{
+                              padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
+                              color: textColor,
+                              backgroundColor: parseInt(shareDepartmentId) === dept.id ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                            }}
+                            onMouseEnter={(e) => { if (parseInt(shareDepartmentId) !== dept.id) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                            onMouseLeave={(e) => { if (parseInt(shareDepartmentId) !== dept.id) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                          >
+                            {dept.name}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
 
                 {/* 직급 선택 (처/실 선택 시 표시) - 커스텀 드롭다운 */}
@@ -528,7 +631,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                         position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                         marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                         backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                        maxHeight: '180px', overflowY: 'auto',
+                        maxHeight: '200px', overflowY: 'auto',
                       }}>
                         {POSITION_OPTIONS.map((pos) => (
                           <div key={pos.value}
