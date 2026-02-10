@@ -166,12 +166,13 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
 
 /**
  * 단일 이벤트의 대기 중인 리마인더 취소
+ * 일정 수정 시 기존 알림도 삭제하여 중복 체크에 걸리지 않도록 함
  */
 async function cancelEventReminders(eventId) {
   if (!boss) return;
 
   try {
-    // reminder + duesoon + overdue 모두 취소
+    // 1. reminder + duesoon + overdue 큐 작업 취소
     await query(`
       DELETE FROM pgboss.job
       WHERE name = 'event-reminder'
@@ -179,7 +180,18 @@ async function cancelEventReminders(eventId) {
       AND (singletonkey LIKE $1 OR singletonkey LIKE $2 OR singletonkey = $3)
     `, [`reminder-event-${eventId}-%`, `duesoon-event-${eventId}-%`, `overdue-event-${eventId}`]);
 
-    console.log(`[ReminderQueue] Cancelled reminders for event ${eventId}`);
+    // 2. 최근 4시간 이내의 읽지 않은 리마인더/마감임박/지연 알림 삭제
+    // (일정 수정 후 새 알림이 중복 체크에 걸리지 않도록)
+    const deleteResult = await query(`
+      DELETE FROM notifications
+      WHERE related_event_id = $1
+      AND type IN ('EVENT_REMINDER', 'EVENT_DUE_SOON', 'EVENT_OVERDUE')
+      AND is_read = false
+      AND created_at > NOW() - INTERVAL '4 hours'
+    `, [eventId]);
+
+    const deletedCount = deleteResult.rowCount || 0;
+    console.log(`[ReminderQueue] Cancelled reminders for event ${eventId}, deleted ${deletedCount} pending notifications`);
   } catch (error) {
     console.error(`[ReminderQueue] Failed to cancel event ${eventId}:`, error.message);
   }
