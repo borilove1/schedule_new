@@ -7,6 +7,24 @@ const { broadcast } = require('../src/utils/sseManager');
 
 const router = express.Router();
 
+/**
+ * 공유 일정 알림 설정 조회
+ */
+async function getSharedEventNotifications() {
+  try {
+    const result = await query(
+      "SELECT value FROM system_settings WHERE key = 'shared_event_notifications'"
+    );
+    if (result.rows.length === 0) {
+      return { EVENT_REMINDER: true, EVENT_DUE_SOON: false, EVENT_OVERDUE: false, EVENT_COMMENTED: false };
+    }
+    return result.rows[0].value;
+  } catch (error) {
+    console.error('[Comments] Failed to get shared_event_notifications:', error.message);
+    return { EVENT_REMINDER: true, EVENT_DUE_SOON: false, EVENT_OVERDUE: false, EVENT_COMMENTED: false };
+  }
+}
+
 // 댓글 내용 검증 미들웨어
 const validateComment = [
   body('content')
@@ -174,6 +192,23 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
         relatedEventId: parseInt(eventId),
         metadata: { commentAuthor: req.user.name, commentContent: content.substring(0, 100) },
       });
+
+      // 공유받은 사용자에게 댓글 알림 (설정이 활성화된 경우)
+      if (sharedOfficeIds.length > 0) {
+        const sharedSettings = await getSharedEventNotifications();
+        if (sharedSettings.EVENT_COMMENTED === true) {
+          await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${event.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
+            actorId: req.user.id,
+            creatorId: null,
+            departmentId: null,
+            officeId: null,
+            divisionId: null,
+            sharedOfficeIds,
+            relatedEventId: parseInt(eventId),
+            metadata: { commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
+          });
+        }
+      }
     } catch (notifError) {
       console.error('Comment notification error:', notifError);
     }
@@ -293,6 +328,22 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
         divisionId: series.division_id,
         metadata: { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100) },
       });
+
+      // 공유받은 사용자에게 댓글 알림 (설정이 활성화된 경우)
+      if (sharedOfficeIds.length > 0) {
+        const sharedSettings = await getSharedEventNotifications();
+        if (sharedSettings.EVENT_COMMENTED === true) {
+          await notifyByScope('EVENT_COMMENTED', '[공유] 새 댓글', `[공유] "${series.title}" 일정에 ${req.user.name}님이 댓글을 남겼습니다.`, {
+            actorId: req.user.id,
+            creatorId: null,
+            departmentId: null,
+            officeId: null,
+            divisionId: null,
+            sharedOfficeIds,
+            metadata: { seriesId: parseInt(seriesId), commentAuthor: req.user.name, commentContent: content.substring(0, 100), isShared: true },
+          });
+        }
+      }
     } catch (notifError) {
       console.error('Comment notification error:', notifError);
     }

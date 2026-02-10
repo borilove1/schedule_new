@@ -550,6 +550,7 @@ export default function SystemSettings() {
                 { key: 'EVENT_REMINDER', label: '시작 전 알림', description: '공유받은 사용자에게 일정 시작 전 알림을 발송합니다.' },
                 { key: 'EVENT_DUE_SOON', label: '마감임박 알림', description: '공유받은 사용자에게 마감임박 알림을 발송합니다.' },
                 { key: 'EVENT_OVERDUE', label: '일정 지연 알림', description: '공유받은 사용자에게 일정 지연 알림을 발송합니다.' },
+                { key: 'EVENT_COMMENTED', label: '댓글 알림', description: '공유받은 사용자에게 새 댓글 알림을 발송합니다.' },
               ].map((item, index, arr) => {
                 const isEnabled = sharedConfig[item.key] === true;
                 const isLast = index === arr.length - 1;
