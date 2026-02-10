@@ -70,12 +70,17 @@ const getPositionOptions = (officeName, departmentName) => {
     return baseOptions;
   }
 
-  // 처/실만 선택한 경우 (부서 없음): 처/실장 추가
+  // 처/실만 선택한 경우 (부서 없음): 해당 장급 추가
   if (offName) {
-    return [
-      { value: 'chief', label: '처/실장', includes: ['처장', '실장'] },
-      ...baseOptions,
-    ];
+    const options = [];
+    if (offName.includes('실')) {
+      options.push({ value: '실장', label: '실장' });
+    } else if (offName.includes('처')) {
+      options.push({ value: '처장', label: '처장' });
+    } else {
+      options.push({ value: '지사장', label: '지사장' });
+    }
+    return [...options, ...baseOptions];
   }
 
   return baseOptions;
