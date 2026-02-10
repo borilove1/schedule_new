@@ -86,12 +86,13 @@ function buildShareClause(user, eventIdColumn, paramIdxStart) {
     return { clause: '', params: [], nextParamIdx: paramIdxStart };
   }
 
+  // NULL 파라미터 타입 명시를 위해 CAST 사용
   const clause = ` OR EXISTS (
     SELECT 1 FROM event_shared_offices eso
     WHERE eso.${eventIdColumn}
     AND eso.office_id = $${paramIdxStart}
-    AND (eso.department_id IS NULL OR eso.department_id = $${paramIdxStart + 1})
-    AND (eso.positions IS NULL OR eso.positions @> jsonb_build_array($${paramIdxStart + 2}))
+    AND (eso.department_id IS NULL OR eso.department_id = $${paramIdxStart + 1}::INTEGER)
+    AND (eso.positions IS NULL OR eso.positions @> jsonb_build_array($${paramIdxStart + 2}::TEXT))
   )`;
 
   return {
