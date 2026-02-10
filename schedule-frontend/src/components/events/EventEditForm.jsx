@@ -339,10 +339,10 @@ export default function EventEditForm({
               </div>
               {showOfficeDropdown && (
                 <div style={{
-                  position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                  marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                  position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 10,
+                  marginBottom: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                   backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                  maxHeight: '200px', overflowY: 'auto',
+                  maxHeight: '160px', overflowY: 'auto',
                 }}>
                   {offices.map((office) => (
                     <div key={office.id}
@@ -396,8 +396,8 @@ export default function EventEditForm({
                 </div>
                 {showDepartmentDropdown && (
                   <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                    marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                    position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 10,
+                    marginBottom: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                     backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
                     maxHeight: '160px', overflowY: 'auto',
                   }}>
@@ -461,8 +461,8 @@ export default function EventEditForm({
                 </div>
                 {showPositionDropdown && (
                   <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
-                    marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                    position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 10,
+                    marginBottom: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                     backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
                     maxHeight: '160px', overflowY: 'auto',
                   }}>
