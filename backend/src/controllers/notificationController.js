@@ -202,18 +202,27 @@ exports.deleteReadNotifications = async (req, res) => {
  */
 exports.notifyByScope = async (type, title, message, context) => {
   try {
+    console.log(`[notifyByScope] type=${type}, context=`, JSON.stringify(context));
     // 1. notification_config 조회
     const configResult = await query("SELECT value FROM system_settings WHERE key = 'notification_config'");
     const config = configResult.rows[0]?.value || {};
     const typeConfig = config[type];
-    if (!typeConfig?.enabled) return; // OFF면 스킵
+    console.log(`[notifyByScope] typeConfig=`, JSON.stringify(typeConfig));
+    if (!typeConfig?.enabled) {
+      console.log(`[notifyByScope] ${type} is disabled, skipping`);
+      return;
+    }
 
     // 2. scopes 배열에 따라 수신자 목록 결정 (기존 단일 scope 호환)
     const scopes = Array.isArray(typeConfig.scopes) && typeConfig.scopes.length > 0
       ? typeConfig.scopes
       : (typeConfig.scope ? [typeConfig.scope] : []);
 
-    if (scopes.length === 0) return;
+    console.log(`[notifyByScope] scopes=`, scopes);
+    if (scopes.length === 0) {
+      console.log(`[notifyByScope] No scopes, skipping`);
+      return;
+    }
 
     // 각 scope에서 수신자 수집 (중복 제거)
     const recipientSet = new Set();
@@ -296,11 +305,14 @@ async function resolveRecipients(scope, context) {
       )).rows.map(r => r.id);
     case 'shared_offices':
       // 공유된 처/실의 모든 사용자
+      console.log('[shared_offices] context.sharedOfficeIds:', context.sharedOfficeIds);
       if (!context.sharedOfficeIds || context.sharedOfficeIds.length === 0) return [];
-      return (await query(
+      const sharedResult = await query(
         'SELECT id FROM users WHERE office_id = ANY($1) AND is_active = true AND approved_at IS NOT NULL',
         [context.sharedOfficeIds]
-      )).rows.map(r => r.id);
+      );
+      console.log('[shared_offices] Found users:', sharedResult.rows.map(r => r.id));
+      return sharedResult.rows.map(r => r.id);
     case 'admins':
       return (await query(
         "SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true"
