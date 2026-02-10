@@ -309,7 +309,11 @@ export default function SignupPage({ onBackClick }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: bgColor,
       display: 'flex',
       alignItems: 'flex-start',
@@ -317,7 +321,8 @@ export default function SignupPage({ onBackClick }) {
       padding: '40px 20px',
       boxSizing: 'border-box',
       overflowY: 'auto',
-      transition: 'background-color 0.2s'
+      transition: 'background-color 0.2s',
+      zIndex: 100
     }}>
       <div style={{
         width: '100%',

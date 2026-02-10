@@ -33,13 +33,20 @@ export default function LoginPage({ onSignupClick }) {
 
   return (
     <div style={{
-      minHeight: '100vh',
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
       backgroundColor: bgColor,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '20px',
-      transition: 'background-color 0.2s'
+      boxSizing: 'border-box',
+      overflowY: 'auto',
+      transition: 'background-color 0.2s',
+      zIndex: 100
     }}>
       <div style={{
         width: '100%',
