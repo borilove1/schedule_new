@@ -36,11 +36,16 @@ export default function EventEditForm({
   const [shareDepartmentId, setShareDepartmentId] = useState('');
   const [sharePositions, setSharePositions] = useState([]);
   const [shareDepartments, setShareDepartments] = useState([]);
+  const [showPositionDropdown, setShowPositionDropdown] = useState(false);
+  const positionDropdownRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (priorityDropdownRef.current && !priorityDropdownRef.current.contains(e.target)) {
         setShowPriorityDropdown(false);
+      }
+      if (positionDropdownRef.current && !positionDropdownRef.current.contains(e.target)) {
+        setShowPositionDropdown(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -297,37 +302,67 @@ export default function EventEditForm({
               </select>
             )}
 
-            {/* 직급 선택 (처/실 선택 시 표시) */}
+            {/* 직급 선택 (처/실 선택 시 표시) - 커스텀 드롭다운 */}
             {shareOfficeId && (
-              <div>
-                <div style={{ fontSize: '12px', color: secondaryTextColor, marginBottom: '4px' }}>
-                  직급 선택 (선택 안하면 전체)
+              <div ref={positionDropdownRef} style={{ position: 'relative' }}>
+                <div
+                  onClick={() => setShowPositionDropdown(!showPositionDropdown)}
+                  style={{
+                    ...uniformInputStyle,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingRight: '36px',
+                    position: 'relative',
+                    borderColor: showPositionDropdown ? '#3B82F6' : borderColor,
+                    boxShadow: showPositionDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                  }}
+                >
+                  <span style={{ color: sharePositions.length > 0 ? textColor : secondaryTextColor }}>
+                    {sharePositions.length > 0 ? sharePositions.join(', ') : '직급 전체'}
+                  </span>
+                  <ChevronDown size={16} style={{
+                    position: 'absolute', right: '12px', top: '50%',
+                    color: secondaryTextColor,
+                    transform: showPositionDropdown ? 'translateY(-50%) rotate(180deg)' : 'translateY(-50%)',
+                    transition: 'transform 0.2s',
+                  }} />
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {POSITION_OPTIONS.map(pos => (
-                    <label key={pos.value} style={{
-                      display: 'flex', alignItems: 'center', gap: '4px',
-                      padding: '4px 8px', borderRadius: '12px', cursor: 'pointer',
-                      backgroundColor: sharePositions.includes(pos.value)
-                        ? (isDarkMode ? '#1e40af' : '#dbeafe')
-                        : (isDarkMode ? '#374151' : '#f3f4f6'),
-                      color: sharePositions.includes(pos.value)
-                        ? (isDarkMode ? '#93c5fd' : '#1e40af')
-                        : textColor,
-                      fontSize: '12px', fontWeight: '500',
-                      border: `1px solid ${sharePositions.includes(pos.value) ? '#3B82F6' : borderColor}`,
-                      transition: 'all 0.15s'
-                    }}>
-                      <input
-                        type="checkbox"
-                        checked={sharePositions.includes(pos.value)}
-                        onChange={() => toggleSharePosition(pos.value)}
-                        style={{ display: 'none' }}
-                      />
-                      {pos.label}
-                    </label>
-                  ))}
-                </div>
+                {showPositionDropdown && (
+                  <div style={{
+                    position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                    marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
+                    backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
+                    maxHeight: '180px', overflowY: 'auto',
+                  }}>
+                    {POSITION_OPTIONS.map((pos) => (
+                      <div key={pos.value}
+                        onClick={() => toggleSharePosition(pos.value)}
+                        style={{
+                          padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
+                          color: textColor,
+                          backgroundColor: sharePositions.includes(pos.value) ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                        }}
+                        onMouseEnter={(e) => { if (!sharePositions.includes(pos.value)) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                        onMouseLeave={(e) => { if (!sharePositions.includes(pos.value)) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                      >
+                        <div style={{
+                          width: '16px', height: '16px', borderRadius: '3px',
+                          border: `2px solid ${sharePositions.includes(pos.value) ? '#3B82F6' : borderColor}`,
+                          backgroundColor: sharePositions.includes(pos.value) ? '#3B82F6' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {sharePositions.includes(pos.value) && (
+                            <span style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                        {pos.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
