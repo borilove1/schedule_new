@@ -525,8 +525,16 @@ export default function SignupPage({ onBackClick }) {
               value={formData.position}
               onChange={(val) => handleCustomChange('position', val)}
               options={positionOptions}
-              placeholder={positionOptions.length > 0 ? '직급을 선택하세요' : '소속을 먼저 선택하세요'}
-              disabled={!formData.office || positionOptions.length === 0}
+              placeholder={
+                !formData.office
+                  ? '소속을 먼저 선택하세요'
+                  : (availableDepartments.length > 0 && !formData.department)
+                    ? '부서를 먼저 선택하세요'
+                    : positionOptions.length > 0
+                      ? '직급을 선택하세요'
+                      : '소속을 먼저 선택하세요'
+              }
+              disabled={!formData.office || (availableDepartments.length > 0 && !formData.department) || positionOptions.length === 0}
               colors={colors}
               maxItems={4}
             />

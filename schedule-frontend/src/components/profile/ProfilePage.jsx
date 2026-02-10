@@ -561,8 +561,16 @@ export default function ProfilePage({ onBack }) {
               value={profileData.position}
               onChange={(val) => handleCustomChange('position', val)}
               options={positionOptions}
-              placeholder={positionOptions.length > 0 ? '선택하세요' : '소속을 먼저 선택하세요'}
-              disabled={!profileData.office || positionOptions.length === 0}
+              placeholder={
+                !profileData.office
+                  ? '소속을 먼저 선택하세요'
+                  : (availableDepartments.length > 0 && !profileData.department)
+                    ? '부서를 먼저 선택하세요'
+                    : positionOptions.length > 0
+                      ? '선택하세요'
+                      : '소속을 먼저 선택하세요'
+              }
+              disabled={!profileData.office || (availableDepartments.length > 0 && !profileData.department) || positionOptions.length === 0}
               colors={colors}
               maxItems={4}
             />
