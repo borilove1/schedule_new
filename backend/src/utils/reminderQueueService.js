@@ -560,14 +560,12 @@ async function processEventReminder(job) {
     });
 
     // 2. 공유받은 사용자에게 알림 ([공유] 태그 추가)
-    if (sharedOfficeIds.length > 0) {
+    // 단, 마감임박(EVENT_DUE_SOON)은 공유 사용자에게 발송하지 않음
+    if (sharedOfficeIds.length > 0 && notiType !== 'EVENT_DUE_SOON') {
       let sharedTitle, sharedMessage;
       if (notiType === 'EVENT_OVERDUE') {
         sharedTitle = '[공유] 일정 지연';
         sharedMessage = `[공유] "${eventTitle}" 일정의 종료시간이 지났으나 완료처리 되지 않았습니다.`;
-      } else if (notiType === 'EVENT_DUE_SOON') {
-        sharedTitle = '[공유] 마감임박';
-        sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 종료됩니다.`;
       } else {
         sharedTitle = '[공유] 일정 알림';
         sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
