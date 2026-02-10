@@ -8,7 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", "Segoe UI", sans-serif';
 
-export default function CommentSection({ eventId, currentUser, canEdit, rateLimitCountdown = 0 }) {
+export default function CommentSection({ eventId, currentUser, canComment = true, canEdit, rateLimitCountdown = 0 }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -463,8 +463,8 @@ export default function CommentSection({ eventId, currentUser, canEdit, rateLimi
         </div>
       )}
 
-      {/* Add Comment Form */}
-      {canEdit && (
+      {/* Add Comment Form - 조회 권한이 있으면 댓글 작성 가능 */}
+      {(canComment ?? canEdit) && (
         <form onSubmit={handleAddComment}>
           <div style={{
             display: 'flex',

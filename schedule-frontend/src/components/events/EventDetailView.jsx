@@ -214,11 +214,11 @@ export default function EventDetailView({
         </div>
       )}
 
-      {/* 댓글 섹션 */}
+      {/* 댓글 섹션 - 일정을 볼 수 있으면 댓글 작성 가능 */}
       <CommentSection
         eventId={eventId}
         currentUser={currentUser}
-        canEdit={true}
+        canComment={true}
         rateLimitCountdown={rateLimitCountdown}
       />
     </>

@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { query } = require('../config/database');
-const { authenticate, canViewEvent, canEditEvent } = require('../middleware/auth');
+const { authenticate } = require('../middleware/auth');
 const { notifyByScope } = require('../src/controllers/notificationController');
 const { broadcast } = require('../src/utils/sseManager');
 
@@ -89,8 +89,13 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
     const { eventId } = req.params;
     const { content } = req.body;
 
-    // 일정 존재 확인 + 공유 처/실 정보 조회
-    const eventResult = await query('SELECT * FROM events WHERE id = $1', [eventId]);
+    // 일정 존재 확인 + 작성자 조직 정보 함께 조회
+    const eventResult = await query(`
+      SELECT e.*, u.department_id as creator_department_id, u.office_id as creator_office_id, u.division_id as creator_division_id
+      FROM events e
+      JOIN users u ON e.creator_id = u.id
+      WHERE e.id = $1
+    `, [eventId]);
     if (eventResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -105,17 +110,45 @@ router.post('/events/:eventId', validateComment, async (req, res, next) => {
     );
     const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
 
-    // 일정 조회 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
+    // 일정 조회 권한 확인 (이벤트 조직 OR 작성자 조직 기준)
     const eventRow = eventResult.rows[0];
-    const eventForAuth = {
-      ...eventRow,
-      departmentId: eventRow.department_id,
-      officeId: eventRow.office_id,
-      divisionId: eventRow.division_id,
-      creatorId: eventRow.creator_id,
-      sharedOfficeIds,
+    const user = req.user;
+
+    // 권한 체크 로직 (buildScopeFilter와 동일하게)
+    const canComment = () => {
+      // ADMIN은 모든 일정에 댓글 가능
+      if (user.role === 'ADMIN') return true;
+
+      // 본인이 작성한 일정
+      if (eventRow.creator_id === user.id) return true;
+
+      // 공유된 처/실에 속하는 경우
+      if (sharedOfficeIds.includes(user.officeId)) return true;
+
+      // 같은 부서 (이벤트 부서 OR 작성자 부서)
+      if (eventRow.department_id === user.departmentId || eventRow.creator_department_id === user.departmentId) return true;
+
+      // 같은 처 (이벤트 처 OR 작성자 처)
+      if (['처장', '실장'].includes(user.position)) {
+        if (eventRow.office_id === user.officeId || eventRow.creator_office_id === user.officeId) return true;
+      }
+
+      // 같은 본부 (이벤트 본부 OR 작성자 본부)
+      if (user.position === '본부장') {
+        if (eventRow.division_id === user.divisionId || eventRow.creator_division_id === user.divisionId) return true;
+      }
+
+      // DEPT_LEAD scope 기반 체크
+      if (user.role === 'DEPT_LEAD') {
+        if (user.scope === 'DIVISION' && (eventRow.division_id === user.divisionId || eventRow.creator_division_id === user.divisionId)) return true;
+        if (user.scope === 'OFFICE' && (eventRow.office_id === user.officeId || eventRow.creator_office_id === user.officeId)) return true;
+        if (user.scope === 'DEPARTMENT' && (eventRow.department_id === user.departmentId || eventRow.creator_department_id === user.departmentId)) return true;
+      }
+
+      return false;
     };
-    if (!canViewEvent(req.user, eventForAuth)) {
+
+    if (!canComment()) {
       return res.status(403).json({
         success: false,
         error: { code: 'AUTH_005', message: '권한이 없습니다.' }
@@ -176,8 +209,13 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
     const { seriesId } = req.params;
     const { content, occurrenceDate } = req.body;
 
-    // 시리즈 존재 확인 + 공유 처/실 정보 조회
-    const seriesResult = await query('SELECT * FROM event_series WHERE id = $1', [seriesId]);
+    // 시리즈 존재 확인 + 작성자 조직 정보 함께 조회
+    const seriesResult = await query(`
+      SELECT es.*, u.department_id as creator_department_id, u.office_id as creator_office_id, u.division_id as creator_division_id
+      FROM event_series es
+      JOIN users u ON es.creator_id = u.id
+      WHERE es.id = $1
+    `, [seriesId]);
     if (seriesResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -192,17 +230,45 @@ router.post('/series/:seriesId', validateComment, async (req, res, next) => {
     );
     const sharedOfficeIds = sharedResult.rows.map(r => r.office_id);
 
-    // 권한 확인 (DB row는 snake_case이므로 camelCase로 변환)
+    // 일정 조회 권한 확인 (이벤트 조직 OR 작성자 조직 기준)
     const seriesRow = seriesResult.rows[0];
-    const seriesForAuth = {
-      ...seriesRow,
-      departmentId: seriesRow.department_id,
-      officeId: seriesRow.office_id,
-      divisionId: seriesRow.division_id,
-      creatorId: seriesRow.creator_id,
-      sharedOfficeIds,
+    const user = req.user;
+
+    // 권한 체크 로직 (buildScopeFilter와 동일하게)
+    const canComment = () => {
+      // ADMIN은 모든 일정에 댓글 가능
+      if (user.role === 'ADMIN') return true;
+
+      // 본인이 작성한 일정
+      if (seriesRow.creator_id === user.id) return true;
+
+      // 공유된 처/실에 속하는 경우
+      if (sharedOfficeIds.includes(user.officeId)) return true;
+
+      // 같은 부서 (이벤트 부서 OR 작성자 부서)
+      if (seriesRow.department_id === user.departmentId || seriesRow.creator_department_id === user.departmentId) return true;
+
+      // 같은 처 (이벤트 처 OR 작성자 처)
+      if (['처장', '실장'].includes(user.position)) {
+        if (seriesRow.office_id === user.officeId || seriesRow.creator_office_id === user.officeId) return true;
+      }
+
+      // 같은 본부 (이벤트 본부 OR 작성자 본부)
+      if (user.position === '본부장') {
+        if (seriesRow.division_id === user.divisionId || seriesRow.creator_division_id === user.divisionId) return true;
+      }
+
+      // DEPT_LEAD scope 기반 체크
+      if (user.role === 'DEPT_LEAD') {
+        if (user.scope === 'DIVISION' && (seriesRow.division_id === user.divisionId || seriesRow.creator_division_id === user.divisionId)) return true;
+        if (user.scope === 'OFFICE' && (seriesRow.office_id === user.officeId || seriesRow.creator_office_id === user.officeId)) return true;
+        if (user.scope === 'DEPARTMENT' && (seriesRow.department_id === user.departmentId || seriesRow.creator_department_id === user.departmentId)) return true;
+      }
+
+      return false;
     };
-    if (!canViewEvent(req.user, seriesForAuth)) {
+
+    if (!canComment()) {
       return res.status(403).json({
         success: false,
         error: { code: 'AUTH_005', message: '권한이 없습니다.' }
