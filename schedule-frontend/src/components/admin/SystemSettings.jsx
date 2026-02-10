@@ -14,6 +14,7 @@ const NOTIFICATION_TYPES = {
   EVENT_COMPLETED:  { label: '일정 완료',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
   EVENT_DELETED:    { label: '일정 삭제',     scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division', 'office'] },
   EVENT_COMMENTED:  { label: '새 댓글',       scopes: ['creator', 'department', 'dept_lead_department', 'dept_lead_office', 'dept_lead_division'] },
+  EVENT_SHARED:     { label: '공유 일정',     scopes: ['shared_offices'] },
   USER_REGISTERED:  { label: '신규 가입 요청', scopes: ['admins'] },
   ACCOUNT_APPROVED: { label: '계정 승인',     scopes: ['target'] },
 };
@@ -25,6 +26,7 @@ const SCOPE_LABELS = {
   dept_lead_office: '처장/실장',
   dept_lead_division: '본부장',
   office: '같은 처/실',
+  shared_offices: '공유된 처/실',
   admins: '전체 관리자',
   target: '해당 사용자',
 };

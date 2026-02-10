@@ -218,15 +218,29 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
   };
 
   // ESC 키로 모달 닫기
+  // 모달 애니메이션
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 300); // transition 시간과 동일
+  }, [isClosing, onClose]);
+
   const handleEsc = useCallback((e) => {
     if (e.key === 'Escape') {
       if (activeDialog) {
         setActiveDialog(null);
       } else {
-        onClose();
+        handleClose();
       }
     }
-  }, [onClose, activeDialog]);
+  }, [handleClose, activeDialog]);
 
   useEffect(() => {
     if (isOpen) {
@@ -235,17 +249,13 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
     }
   }, [isOpen, handleEsc]);
 
-  // 모달 애니메이션
-  const [isAnimating, setIsAnimating] = useState(false);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isClosing) {
       requestAnimationFrame(() => setIsAnimating(true));
-    } else {
-      setIsAnimating(false);
     }
-  }, [isOpen]);
+  }, [isOpen, isClosing]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isClosing) return null;
 
   return (
     <div
@@ -290,7 +300,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
           <h2 id="event-detail-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>
             {isEditing ? (editType === 'all' ? '반복 일정 수정' : '일정 수정') : '일정 상세'}
           </h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer' }}>
+          <button onClick={handleClose} style={{ background: 'none', border: 'none', color: textColor, cursor: 'pointer' }}>
             <X size={24} />
           </button>
         </div>

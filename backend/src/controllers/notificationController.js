@@ -294,6 +294,13 @@ async function resolveRecipients(scope, context) {
         'SELECT id FROM users WHERE office_id = $1 AND is_active = true AND approved_at IS NOT NULL',
         [context.officeId]
       )).rows.map(r => r.id);
+    case 'shared_offices':
+      // 공유된 처/실의 모든 사용자
+      if (!context.sharedOfficeIds || context.sharedOfficeIds.length === 0) return [];
+      return (await query(
+        'SELECT id FROM users WHERE office_id = ANY($1) AND is_active = true AND approved_at IS NOT NULL',
+        [context.sharedOfficeIds]
+      )).rows.map(r => r.id);
     case 'admins':
       return (await query(
         "SELECT id FROM users WHERE role = 'ADMIN' AND is_active = true"

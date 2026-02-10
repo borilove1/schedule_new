@@ -192,13 +192,36 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     });
   }, []);
 
-  const handlePrevMonth = useCallback(() => {
-    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1));
+  // 슬라이드 애니메이션 상태 (PC/모바일 공용)
+  const touchRef = useRef(null);
+  const swipeContainerRef = useRef(null);
+  const [slideStyle, setSlideStyle] = useState({});
+
+  // 슬라이드 애니메이션과 함께 월 변경 (PC 버튼 / 모바일 스와이프 공용)
+  const animateMonthChange = useCallback((direction) => {
+    const goLeft = direction === 'next';
+    const exitX = goLeft ? '-30%' : '30%';
+    const enterX = goLeft ? '30%' : '-30%';
+    setSlideStyle({ transform: `translateX(${exitX})`, opacity: 0, transition: 'transform 0.2s ease, opacity 0.2s ease' });
+    setTimeout(() => {
+      setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + (goLeft ? 1 : -1)));
+      setSelectedDay(null);
+      setSlideStyle({ transform: `translateX(${enterX})`, opacity: 0, transition: 'none' });
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setSlideStyle({ transform: 'translateX(0)', opacity: 1, transition: 'transform 0.2s ease, opacity 0.2s ease' });
+        });
+      });
+    }, 200);
   }, []);
 
+  const handlePrevMonth = useCallback(() => {
+    animateMonthChange('prev');
+  }, [animateMonthChange]);
+
   const handleNextMonth = useCallback(() => {
-    setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1));
-  }, []);
+    animateMonthChange('next');
+  }, [animateMonthChange]);
 
   const handleToday = useCallback(() => {
     setCurrentDate(new Date());
@@ -208,10 +231,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const handleSearchOpen = useCallback(() => setShowSearchModal(true), []);
   const handleSearchClose = useCallback(() => setShowSearchModal(false), []);
 
-  // 모바일 스와이프로 월 이동 (슬라이드 애니메이션)
-  const touchRef = useRef(null);
-  const swipeContainerRef = useRef(null);
-  const [slideStyle, setSlideStyle] = useState({});
+  // 모바일 스와이프로 월 이동
   const handleTouchStart = useCallback((e) => {
     if (!isMobileOrTablet) return;
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -222,21 +242,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     const dy = e.changedTouches[0].clientY - touchRef.current.y;
     touchRef.current = null;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
-    const goLeft = dx < 0;
-    const exitX = goLeft ? '-30%' : '30%';
-    const enterX = goLeft ? '30%' : '-30%';
-    setSlideStyle({ transform: `translateX(${exitX})`, opacity: 0, transition: 'transform 0.2s ease, opacity 0.2s ease' });
-    setTimeout(() => {
-      if (goLeft) handleNextMonth(); else handlePrevMonth();
-      setSelectedDay(null);
-      setSlideStyle({ transform: `translateX(${enterX})`, opacity: 0, transition: 'none' });
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setSlideStyle({ transform: 'translateX(0)', opacity: 1, transition: 'transform 0.2s ease, opacity 0.2s ease' });
-        });
-      });
-    }, 200);
-  }, [isMobileOrTablet, handlePrevMonth, handleNextMonth]);
+    animateMonthChange(dx < 0 ? 'next' : 'prev');
+  }, [isMobileOrTablet, animateMonthChange]);
 
   // 스와이프 중 세로 스크롤 방지 (가로 이동이 세로보다 클 때)
   useEffect(() => {

@@ -383,6 +383,21 @@ exports.createEvent = async (req, res) => {
         return seriesResult;
       });
 
+      // 공유 일정 알림 발송
+      if (sharedOfficeIds && sharedOfficeIds.length > 0) {
+        try {
+          await notifyByScope('EVENT_SHARED', '공유 일정', `"${title}" 일정이 공유되었습니다.`, {
+            actorId: userId,
+            creatorId: userId,
+            sharedOfficeIds,
+            relatedEventId: null,
+            metadata: { seriesId: result.rows[0].id }
+          });
+        } catch (nErr) {
+          console.error('[Notification] Failed to send shared event notification:', nErr.message);
+        }
+      }
+
       broadcast('event_changed', { action: 'created' });
       res.status(201).json({
         success: true,
@@ -428,6 +443,20 @@ exports.createEvent = async (req, res) => {
         await scheduleEventReminder(newEvent.id, newEvent.start_at, newEvent.end_at, userId);
       } catch (qErr) {
         console.error('[Queue] Failed to schedule reminder:', qErr.message);
+      }
+
+      // 공유 일정 알림 발송
+      if (sharedOfficeIds && sharedOfficeIds.length > 0) {
+        try {
+          await notifyByScope('EVENT_SHARED', '공유 일정', `"${title}" 일정이 공유되었습니다.`, {
+            actorId: userId,
+            creatorId: userId,
+            sharedOfficeIds,
+            relatedEventId: newEvent.id,
+          });
+        } catch (nErr) {
+          console.error('[Notification] Failed to send shared event notification:', nErr.message);
+        }
       }
 
       broadcast('event_changed', { action: 'created' });

@@ -80,10 +80,24 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // 모달 애니메이션
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleClose = useCallback(() => {
+    if (isClosing) return;
+    setIsClosing(true);
+    setIsAnimating(false);
+    setTimeout(() => {
+      setIsClosing(false);
+      onClose();
+    }, 300); // transition 시간과 동일
+  }, [isClosing, onClose]);
+
   // ESC 키로 모달 닫기
   const handleEsc = useCallback((e) => {
-    if (e.key === 'Escape') onClose();
-  }, [onClose]);
+    if (e.key === 'Escape') handleClose();
+  }, [handleClose]);
 
   useEffect(() => {
     if (isOpen) {
@@ -92,17 +106,13 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }
   }, [isOpen, handleEsc]);
 
-  // 모달 애니메이션
-  const [isAnimating, setIsAnimating] = useState(false);
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !isClosing) {
       requestAnimationFrame(() => setIsAnimating(true));
-    } else {
-      setIsAnimating(false);
     }
-  }, [isOpen]);
+  }, [isOpen, isClosing]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isClosing) return null;
 
   const fieldHeight = isMobile ? '40px' : '46px';
 
@@ -220,7 +230,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           flexShrink: 0, backgroundColor: cardBg, zIndex: 1,
         }}>
           <h2 id="event-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>{isMobile ? '새 일정' : '새 일정 만들기'}</h2>
-          <button onClick={onClose} style={{
+          <button onClick={handleClose} style={{
             background: 'none', border: 'none', color: textColor, cursor: 'pointer'
           }}>
             <X size={24} />
