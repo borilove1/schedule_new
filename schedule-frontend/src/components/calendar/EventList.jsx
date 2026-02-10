@@ -145,7 +145,7 @@ const EventList = React.memo(function EventList({
                         whiteSpace: 'nowrap',
                         flexShrink: 0
                       }}>
-                        {event.creator.name}
+                        {event.department ? `${event.department} ${event.creator.name}` : event.creator.name}
                       </span>
                     )}
                     {event.sharedOffices && event.sharedOffices.length > 0 && (
