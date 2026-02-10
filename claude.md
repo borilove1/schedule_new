@@ -168,7 +168,7 @@ schedule/
 | `event_series` | 반복 일정 템플릿 | title, content, recurrence_type/interval/end_date, start_time, end_time, first_occurrence_date, **duration_days**, status, completed_at, alert, creator_id, department_id, office_id, division_id |
 | `events` | 단일+예외 일정 | title, content, start_at, end_at, status, completed_at, alert, series_id (FK), occurrence_date, is_exception, original_series_id, creator_id, department_id, office_id, division_id |
 | `event_exceptions` | 반복 일정 예외 날짜 | series_id (FK), exception_date, UNIQUE(series_id, exception_date) |
-| `event_shared_offices` | 일정 공유 처/실 | event_id XOR series_id, office_id (FK) |
+| `event_shared_offices` | 일정 공유 처/실 | event_id XOR series_id, office_id (FK), department_id (FK, NULL=처 전체), positions (JSONB, NULL=전체 직급) |
 | `comments` | 댓글 | content, event_id XOR series_id, author_id, is_edited |
 | `notifications` | 인앱 알림 | user_id, type, title, message, is_read, related_event_id, related_series_id, metadata (JSONB) |
 | `system_settings` | 시스템 설정 | key (UNIQUE), value (JSONB), description, updated_by |
@@ -194,7 +194,9 @@ schedule/
 - `can_view_event(user_id, division_id, office_id, department_id)`: 역할 기반 일정 조회 권한 확인
 
 ### 시드 데이터
-- 부산울산본부 1개, 20개 처/실/지사, 19개 부서 (기획관리실 4, 전력사업처 7, 전력관리처 8)
+- 부산울산본부 1개, 21개 처/실/지사 (본부직할 포함), 22개 부서
+- **직할 부서**: 본부직할(처), 기획실 직할/사업처 직할/관리처 직할(부서) - sort_order=0으로 맨 앞 정렬
+- 기획관리실 5개 부서 (직할 포함), 전력사업처 8개 부서 (직할 포함), 전력관리처 9개 부서 (직할 포함)
 - 기본 관리자: `admin@admin.com` / `admin1234`
 - 시스템 설정 기본값 17개 (reminder_times, due_soon_threshold, SMTP, notification_config 포함)
 
@@ -239,10 +241,16 @@ schedule/
 - `event_series`의 `status`/`completed_at`이 가상 일정 생성 시 기본값으로 사용됨
 
 ### 일정 공유 시스템
-- `event_shared_offices` 테이블: event_id 또는 series_id + office_id
-- 생성/수정 시 선택한 처/실을 INSERT (기존 DELETE 후 재INSERT)
-- "이번만 수정" 시 시리즈 공유 처를 예외 이벤트로 복사
-- 조회 시 `buildScopeFilter()`에서 shared office도 포함하여 필터링
+- `event_shared_offices` 테이블: event_id 또는 series_id + office_id + department_id + positions
+- **공유 대상 세분화**: 처/실 전체, 특정 부서, 특정 직급까지 지정 가능
+  - `department_id = NULL`: 처/실 전체
+  - `department_id = N`: 해당 부서만
+  - `positions = NULL`: 전체 직급
+  - `positions = ["부장", "차장"]`: 특정 직급만
+- 생성/수정 시 선택한 공유 대상을 INSERT (기존 DELETE 후 재INSERT)
+- "이번만 수정" 시 시리즈 공유 대상을 예외 이벤트로 복사
+- 조회 시 `buildShareClause()`에서 사용자의 office_id, department_id, position으로 필터링
+- **직할 부서**: 처장/실장/지사장은 직할 부서 선택 시에만 공유 대상으로 표시
 
 ### 일정 검색 시스템
 - **백엔드**: `GET /api/v1/events/search?q=검색어&page=1&limit=20`
@@ -928,6 +936,8 @@ UPDATE users SET is_active = true, approved_at = NOW() WHERE id = <userId>;
 29. 부서 선택 필수화: 부서가 있는 처 선택 시 부서를 선택해야 직급 드롭다운 활성화 (회원가입/프로필 수정)
 30. 일정 공유 직급 옵션 개선: 직할 부서 선택 시에만 실장/처장/지사장 표시, 부서 전체/일반 부서는 부장/차장/직원만
 31. 드롭다운 탭 포커스 glow 효과: 모든 CustomSelect 및 일정 공유 드롭다운에 키보드 탭 이동 시 파란색 glow 효과 추가
+32. buildShareClause NULL 파라미터 타입 에러: PostgreSQL이 NULL 파라미터 타입을 추론 못하는 문제 → `::INTEGER`, `::TEXT` 캐스팅 추가
+33. init.sql 직할 부서 추가: 본부직할(처/실), 기획실 직할/사업처 직할/관리처 직할(부서) 시드 데이터 추가, sort_order=0으로 맨 앞 정렬
 
 ## 알려진 이슈 및 남은 작업
 
