@@ -6,17 +6,14 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
 
-// 직급 옵션
+// 직급 옵션 (본부장 > 처장 > 실장 > 부장 > 차장 > 직원)
 const POSITION_OPTIONS = [
-  { value: '실장', label: '실장' },
-  { value: '처장', label: '처장' },
   { value: '본부장', label: '본부장' },
+  { value: '처장', label: '처장' },
+  { value: '실장', label: '실장' },
   { value: '부장', label: '부장' },
   { value: '차장', label: '차장' },
-  { value: '과장', label: '과장' },
-  { value: '대리', label: '대리' },
-  { value: '주임', label: '주임' },
-  { value: '사원', label: '사원' },
+  { value: 'staff', label: '직원', includes: ['사원', '대리', '과장'] },
 ];
 
 export default function EventEditForm({
@@ -113,11 +110,43 @@ export default function EventEditForm({
     onSharedTargetsChange(sharedTargets.filter((_, i) => i !== idx));
   };
 
-  // 직급 토글
-  const toggleSharePosition = (pos) => {
-    setSharePositions(prev =>
-      prev.includes(pos) ? prev.filter(p => p !== pos) : [...prev, pos]
-    );
+  // 직급 토글 (직원 선택 시 사원/대리/과장 한꺼번에 토글)
+  const toggleSharePosition = (position) => {
+    const opt = POSITION_OPTIONS.find(o => o.value === position);
+    if (opt?.includes) {
+      // 직원(staff) - 사원/대리/과장 모두 토글
+      const allIncluded = opt.includes.every(p => sharePositions.includes(p));
+      if (allIncluded) {
+        setSharePositions(prev => prev.filter(p => !opt.includes.includes(p)));
+      } else {
+        setSharePositions(prev => [...new Set([...prev, ...opt.includes])]);
+      }
+    } else {
+      setSharePositions(prev =>
+        prev.includes(position) ? prev.filter(p => p !== position) : [...prev, position]
+      );
+    }
+  };
+
+  // 직급이 선택되었는지 확인 (직원은 사원/대리/과장 모두 선택 시 체크)
+  const isPositionSelected = (position) => {
+    const opt = POSITION_OPTIONS.find(o => o.value === position);
+    if (opt?.includes) {
+      return opt.includes.every(p => sharePositions.includes(p));
+    }
+    return sharePositions.includes(position);
+  };
+
+  // 표시용 직급 문자열 (사원/대리/과장 모두 선택 시 '직원'으로 표시)
+  const getDisplayPositions = () => {
+    if (sharePositions.length === 0) return '직급 전체';
+    const staffPositions = ['사원', '대리', '과장'];
+    const hasAllStaff = staffPositions.every(p => sharePositions.includes(p));
+    const nonStaff = sharePositions.filter(p => !staffPositions.includes(p));
+    if (hasAllStaff) {
+      return nonStaff.length > 0 ? [...nonStaff, '직원'].join(', ') : '직원';
+    }
+    return sharePositions.join(', ');
   };
 
   const fieldHeight = isMobile ? '40px' : '46px';
@@ -370,7 +399,7 @@ export default function EventEditForm({
                     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                     marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                     backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                    maxHeight: '200px', overflowY: 'auto',
+                    maxHeight: '160px', overflowY: 'auto',
                   }}>
                     <div
                       onClick={() => { setShareDepartmentId(''); setShowDepartmentDropdown(false); }}
@@ -421,7 +450,7 @@ export default function EventEditForm({
                   }}
                 >
                   <span style={{ color: sharePositions.length > 0 ? textColor : secondaryTextColor }}>
-                    {sharePositions.length > 0 ? sharePositions.join(', ') : '직급 전체'}
+                    {getDisplayPositions()}
                   </span>
                   <ChevronDown size={16} style={{
                     position: 'absolute', right: '12px', top: '50%',
@@ -435,33 +464,36 @@ export default function EventEditForm({
                     position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                     marginTop: '4px', borderRadius: '8px', border: `1px solid ${borderColor}`,
                     backgroundColor: cardBg, boxShadow: isDarkMode ? '0 4px 12px rgba(0,0,0,0.4)' : '0 4px 12px rgba(0,0,0,0.12)',
-                    maxHeight: '200px', overflowY: 'auto',
+                    maxHeight: '160px', overflowY: 'auto',
                   }}>
-                    {POSITION_OPTIONS.map((pos) => (
-                      <div key={pos.value}
-                        onClick={() => toggleSharePosition(pos.value)}
-                        style={{
-                          padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
-                          color: textColor,
-                          backgroundColor: sharePositions.includes(pos.value) ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
-                          display: 'flex', alignItems: 'center', gap: '8px',
-                        }}
-                        onMouseEnter={(e) => { if (!sharePositions.includes(pos.value)) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
-                        onMouseLeave={(e) => { if (!sharePositions.includes(pos.value)) e.currentTarget.style.backgroundColor = 'transparent'; }}
-                      >
-                        <div style={{
-                          width: '16px', height: '16px', borderRadius: '3px',
-                          border: `2px solid ${sharePositions.includes(pos.value) ? '#3B82F6' : borderColor}`,
-                          backgroundColor: sharePositions.includes(pos.value) ? '#3B82F6' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {sharePositions.includes(pos.value) && (
-                            <span style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
-                          )}
+                    {POSITION_OPTIONS.map((pos) => {
+                      const selected = isPositionSelected(pos.value);
+                      return (
+                        <div key={pos.value}
+                          onClick={() => toggleSharePosition(pos.value)}
+                          style={{
+                            padding: '10px 12px', cursor: 'pointer', fontFamily, fontSize: '14px',
+                            color: textColor,
+                            backgroundColor: selected ? (isDarkMode ? '#1e293b' : '#f0f9ff') : 'transparent',
+                            display: 'flex', alignItems: 'center', gap: '8px',
+                          }}
+                          onMouseEnter={(e) => { if (!selected) e.currentTarget.style.backgroundColor = isDarkMode ? '#1e293b' : '#f5f5f5'; }}
+                          onMouseLeave={(e) => { if (!selected) e.currentTarget.style.backgroundColor = 'transparent'; }}
+                        >
+                          <div style={{
+                            width: '16px', height: '16px', borderRadius: '3px',
+                            border: `2px solid ${selected ? '#3B82F6' : borderColor}`,
+                            backgroundColor: selected ? '#3B82F6' : 'transparent',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}>
+                            {selected && (
+                              <span style={{ color: '#fff', fontSize: '10px', fontWeight: 'bold' }}>✓</span>
+                            )}
+                          </div>
+                          {pos.label}
                         </div>
-                        {pos.label}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>
