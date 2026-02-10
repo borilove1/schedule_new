@@ -7,9 +7,8 @@ import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
 
 // 직급 옵션 - 처/실명, 부서명에 따라 동적으로 결정
-// 직할 부서: 해당 장급만 표시
-// 일반 부서: 부장, 차장, 직원
-// 처/실만 선택: 처/실장, 부장, 차장, 직원
+// 직할 부서: 해당 장급만 표시 (실장/처장/지사장)
+// 일반 부서 또는 부서 전체: 부장, 차장, 직원
 const getPositionOptions = (officeName, departmentName) => {
   const deptName = departmentName || '';
   const offName = officeName || '';
@@ -47,17 +46,9 @@ const getPositionOptions = (officeName, departmentName) => {
     return baseOptions;
   }
 
-  // 처/실만 선택한 경우 (부서 없음): 해당 장급 추가
+  // 처/실만 선택한 경우 (부서 전체): 일반 직급만 (실장/처장은 직할 부서에서만)
   if (offName) {
-    const options = [];
-    if (offName.includes('실')) {
-      options.push({ value: '실장', label: '실장' });
-    } else if (offName.includes('처')) {
-      options.push({ value: '처장', label: '처장' });
-    } else {
-      options.push({ value: '지사장', label: '지사장' });
-    }
-    return [...options, ...baseOptions];
+    return baseOptions;
   }
 
   return baseOptions;
