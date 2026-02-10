@@ -6,18 +6,49 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
 
-// 직급 옵션 - 부서 선택 여부에 따라 다름
-// 처/실만 선택: 처장/실장, 부장, 차장, 직원
-// 부서 선택: 부장, 차장, 직원
-const getPositionOptions = (hasDepartment) => {
+// 직급 옵션 - 처/실명, 부서명에 따라 동적으로 결정
+// 직할 부서: 해당 장급만 표시
+// 일반 부서: 부장, 차장, 직원
+// 처/실만 선택: 처/실장, 부장, 차장, 직원
+const getPositionOptions = (officeName, departmentName) => {
+  const deptName = departmentName || '';
+  const offName = officeName || '';
+
+  // 직할인 경우 특별 처리 (부서명 또는 처/실명에 '직할' 포함)
+  if (deptName.includes('직할') || offName.includes('직할')) {
+    // 1. 본부 직할 -> 본부장
+    if (deptName.includes('본부') || offName.includes('본부')) {
+      return [{ value: '본부장', label: '본부장' }];
+    }
+    // 2. 처 직할 (사업처, 관리처 등) -> 처장
+    if (deptName.includes('처') || offName.includes('처')) {
+      return [{ value: '처장', label: '처장' }];
+    }
+    // 3. 실 직할 (기획관리실 등) -> 실장
+    if (deptName.includes('실') || offName.includes('실')) {
+      return [{ value: '실장', label: '실장' }];
+    }
+    // 4. 지사인 경우
+    if (deptName.includes('지사') || offName.includes('지사')) {
+      return [{ value: '지사장', label: '지사장' }];
+    }
+    // 기본값 (기타 직할)
+    return [{ value: '본부장', label: '본부장' }];
+  }
+
   const baseOptions = [
     { value: '부장', label: '부장' },
     { value: '차장', label: '차장' },
     { value: 'staff', label: '직원', includes: ['사원', '대리', '과장'] },
   ];
 
-  if (!hasDepartment) {
-    // 처/실만 선택한 경우 처장/실장 추가
+  // 일반 부서 선택한 경우
+  if (deptName) {
+    return baseOptions;
+  }
+
+  // 처/실만 선택한 경우 (부서 없음): 처/실장 추가
+  if (offName) {
     return [
       { value: 'chief', label: '처/실장', includes: ['처장', '실장'] },
       ...baseOptions,
@@ -128,8 +159,10 @@ export default function EventEditForm({
     onSharedTargetsChange(sharedTargets.filter((_, i) => i !== idx));
   };
 
-  // 현재 직급 옵션 (부서 선택 여부에 따라 동적)
-  const positionOptions = getPositionOptions(!!shareDepartmentId);
+  // 현재 직급 옵션 (처/실명, 부서명에 따라 동적)
+  const selectedOfficeName = shareOfficeId ? offices.find(o => o.id === parseInt(shareOfficeId))?.name : '';
+  const selectedDepartmentName = shareDepartmentId ? shareDepartments.find(d => d.id === parseInt(shareDepartmentId))?.name : '';
+  const positionOptions = getPositionOptions(selectedOfficeName, selectedDepartmentName);
 
   // 직급 토글 (직원/처/실장 선택 시 포함된 직급 한꺼번에 토글)
   const toggleSharePosition = (position) => {
