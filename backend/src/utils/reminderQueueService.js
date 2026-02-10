@@ -522,6 +522,7 @@ async function processEventReminder(job) {
       metadata.compositeId = `series-${seriesId}-${new Date(occurrenceDate).getTime()}`;
     }
 
+    // 작성자용 메시지
     let title, message;
     if (notiType === 'EVENT_OVERDUE') {
       title = '일정 지연';
@@ -534,16 +535,43 @@ async function processEventReminder(job) {
       message = `"${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
     }
 
+    // 1. 작성자에게 알림 (일반 메시지)
     await notifyByScope(notiType, title, message, {
       actorId: null,
       creatorId: targetUserId,
       departmentId,
       officeId,
       divisionId,
-      sharedOfficeIds,
+      sharedOfficeIds: [], // 작성자만
       relatedEventId: eventId,
       metadata,
     });
+
+    // 2. 공유받은 사용자에게 알림 ([공유] 태그 추가)
+    if (sharedOfficeIds.length > 0) {
+      let sharedTitle, sharedMessage;
+      if (notiType === 'EVENT_OVERDUE') {
+        sharedTitle = '[공유] 일정 지연';
+        sharedMessage = `[공유] "${eventTitle}" 일정의 종료시간이 지났으나 완료처리 되지 않았습니다.`;
+      } else if (notiType === 'EVENT_DUE_SOON') {
+        sharedTitle = '[공유] 마감임박';
+        sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 종료됩니다.`;
+      } else {
+        sharedTitle = '[공유] 일정 알림';
+        sharedMessage = `[공유] "${eventTitle}" 일정이 ${timeMessage}에 시작됩니다.`;
+      }
+
+      await notifyByScope(notiType, sharedTitle, sharedMessage, {
+        actorId: targetUserId, // 작성자 제외 (중복 방지)
+        creatorId: null, // creator scope 사용 안 함
+        departmentId: null,
+        officeId: null,
+        divisionId: null,
+        sharedOfficeIds,
+        relatedEventId: eventId,
+        metadata: { ...metadata, isShared: true },
+      });
+    }
 
     // 알림 발송 시 SSE broadcast로 클라이언트 즉시 갱신
     broadcast('event_changed', {
