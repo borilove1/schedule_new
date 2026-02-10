@@ -103,6 +103,11 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
   const [priorityIsFocused, setPriorityIsFocused] = useState(false);
   const priorityDropdownRef = useRef(null);
 
+  // 일정 공유 드롭다운 포커스 상태
+  const [officeIsFocused, setOfficeIsFocused] = useState(false);
+  const [departmentIsFocused, setDepartmentIsFocused] = useState(false);
+  const [positionIsFocused, setPositionIsFocused] = useState(false);
+
   const { isDarkMode, bgColor, cardBg, textColor, secondaryTextColor, borderColor } = useThemeColors();
   const isMobile = useIsMobile();
   const { fontFamily, inputStyle, labelStyle } = useCommonStyles();
@@ -565,7 +570,10 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                 {/* 처/실 선택 - 커스텀 드롭다운 */}
                 <div ref={officeDropdownRef} style={{ position: 'relative' }}>
                   <div
+                    tabIndex={0}
                     onClick={() => setShowOfficeDropdown(!showOfficeDropdown)}
+                    onFocus={() => setOfficeIsFocused(true)}
+                    onBlur={() => setOfficeIsFocused(false)}
                     style={{
                       ...uniformInputStyle,
                       cursor: 'pointer',
@@ -574,8 +582,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                       justifyContent: 'space-between',
                       paddingRight: '36px',
                       position: 'relative',
-                      borderColor: showOfficeDropdown ? '#3B82F6' : borderColor,
-                      boxShadow: showOfficeDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                      borderColor: (showOfficeDropdown || officeIsFocused) ? '#3B82F6' : borderColor,
+                      boxShadow: (showOfficeDropdown || officeIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                     }}
                   >
                     <span style={{ color: shareOfficeId ? textColor : secondaryTextColor }}>
@@ -622,7 +630,10 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                 {shareOfficeId && shareDepartments.length > 0 && (
                   <div ref={departmentDropdownRef} style={{ position: 'relative' }}>
                     <div
+                      tabIndex={0}
                       onClick={() => setShowDepartmentDropdown(!showDepartmentDropdown)}
+                      onFocus={() => setDepartmentIsFocused(true)}
+                      onBlur={() => setDepartmentIsFocused(false)}
                       style={{
                         ...uniformInputStyle,
                         cursor: 'pointer',
@@ -631,8 +642,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                         justifyContent: 'space-between',
                         paddingRight: '36px',
                         position: 'relative',
-                        borderColor: showDepartmentDropdown ? '#3B82F6' : borderColor,
-                        boxShadow: showDepartmentDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                        borderColor: (showDepartmentDropdown || departmentIsFocused) ? '#3B82F6' : borderColor,
+                        boxShadow: (showDepartmentDropdown || departmentIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                       }}
                     >
                       <span style={{ color: shareDepartmentId ? textColor : secondaryTextColor }}>
@@ -687,7 +698,10 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                 {shareOfficeId && (
                   <div ref={positionDropdownRef} style={{ position: 'relative' }}>
                     <div
+                      tabIndex={0}
                       onClick={() => setShowPositionDropdown(!showPositionDropdown)}
+                      onFocus={() => setPositionIsFocused(true)}
+                      onBlur={() => setPositionIsFocused(false)}
                       style={{
                         ...uniformInputStyle,
                         cursor: 'pointer',
@@ -696,8 +710,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
                         justifyContent: 'space-between',
                         paddingRight: '36px',
                         position: 'relative',
-                        borderColor: showPositionDropdown ? '#3B82F6' : borderColor,
-                        boxShadow: showPositionDropdown ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+                        borderColor: (showPositionDropdown || positionIsFocused) ? '#3B82F6' : borderColor,
+                        boxShadow: (showPositionDropdown || positionIsFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
                       }}
                     >
                       <span style={{ color: sharePositions.length > 0 ? textColor : secondaryTextColor }}>

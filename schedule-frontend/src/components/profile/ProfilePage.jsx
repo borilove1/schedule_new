@@ -11,6 +11,7 @@ import { subscribeToPush, unsubscribeFromPush, getPushPermissionState } from '..
 // 커스텀 드롭다운 컴포넌트
 function CustomSelect({ value, onChange, options, placeholder, disabled, colors, dropUp, maxItems }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [focusedIdx, setFocusedIdx] = useState(-1);
   const ref = useRef(null);
   const { isDarkMode, cardBg, textColor, secondaryTextColor, borderColor, inputBg } = colors;
@@ -63,11 +64,13 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, colors,
         tabIndex={disabled ? -1 : 0}
         onClick={() => !disabled && setIsOpen(!isOpen)}
         onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         style={{
           width: '100%',
           padding: '12px',
           borderRadius: '12px',
-          border: `1px solid ${isOpen ? '#3B82F6' : borderColor}`,
+          border: `1px solid ${(isOpen || isFocused) ? '#3B82F6' : borderColor}`,
           backgroundColor: disabled ? (isDarkMode ? '#1a1a2e' : '#f3f4f6') : inputBg,
           color: value ? textColor : secondaryTextColor,
           fontSize: '14px',
@@ -78,7 +81,7 @@ function CustomSelect({ value, onChange, options, placeholder, disabled, colors,
           alignItems: 'center',
           paddingRight: '36px',
           position: 'relative',
-          boxShadow: isOpen ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+          boxShadow: (isOpen || isFocused) ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
           transition: 'border-color 0.2s, box-shadow 0.2s',
           opacity: disabled ? 0.6 : 1,
           outline: 'none',
