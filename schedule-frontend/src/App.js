@@ -61,7 +61,7 @@ function AppContent() {
     setCurrentPage('calendar');
   };
 
-  const { isDarkMode, bgColor, cardBg, textColor } = useThemeColors();
+  const { bgColor, cardBg, textColor } = useThemeColors();
 
   // 모바일 상태바 색상: 로그인 전=배경색, 로그인 후=헤더색
   React.useEffect(() => {
