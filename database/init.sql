@@ -420,62 +420,67 @@ CREATE TRIGGER update_push_subscriptions_updated_at BEFORE UPDATE ON push_subscr
 -- 본부
 INSERT INTO divisions (name) VALUES ('부산울산본부');
 
--- 처/실/지사
-INSERT INTO offices (name, division_id) VALUES
-    ('기획관리실', 1),
-    ('전력사업처', 1),
-    ('전력관리처', 1),
-    ('안전재난부', 1),
-    ('울산지사', 1),
-    ('김해지사', 1),
-    ('동래지사', 1),
-    ('남부산지사', 1),
-    ('양산지사', 1),
-    ('중부산지사', 1),
-    ('북부산지사', 1),
-    ('동울산지사', 1),
-    ('서부산지사', 1),
-    ('기장지사', 1),
-    ('서울산지사', 1),
-    ('영도지사', 1),
-    ('울산전력지사', 1),
-    ('북부산전력지사', 1),
-    ('동부산전력지사', 1),
-    ('서부산전력지사', 1);
+-- 처/실/지사 (본부직할은 sort_order=0으로 맨 앞)
+INSERT INTO offices (name, division_id, sort_order) VALUES
+    ('본부직할', 1, 0),
+    ('기획관리실', 1, 1),
+    ('전력사업처', 1, 2),
+    ('전력관리처', 1, 3),
+    ('안전재난부', 1, 4),
+    ('울산지사', 1, 5),
+    ('김해지사', 1, 6),
+    ('동래지사', 1, 7),
+    ('남부산지사', 1, 8),
+    ('양산지사', 1, 9),
+    ('중부산지사', 1, 10),
+    ('북부산지사', 1, 11),
+    ('동울산지사', 1, 12),
+    ('서부산지사', 1, 13),
+    ('기장지사', 1, 14),
+    ('서울산지사', 1, 15),
+    ('영도지사', 1, 16),
+    ('울산전력지사', 1, 17),
+    ('북부산전력지사', 1, 18),
+    ('동부산전력지사', 1, 19),
+    ('서부산전력지사', 1, 20);
 
--- 부서 (기획관리실 산하)
-INSERT INTO departments (name, office_id) VALUES
-    ('전략경영부', 1),
-    ('경영지원부', 1),
-    ('재무자재부', 1),
-    ('AI혁신부', 1);
+-- 부서 (기획관리실 산하) - office_id=2
+INSERT INTO departments (name, office_id, sort_order) VALUES
+    ('기획실 직할', 2, 0),
+    ('전략경영부', 2, 1),
+    ('경영지원부', 2, 2),
+    ('재무자재부', 2, 3),
+    ('AI혁신부', 2, 4);
 
--- 부서 (전력사업처 산하)
-INSERT INTO departments (name, office_id) VALUES
-    ('고객지원부', 2),
-    ('전력공급부', 2),
-    ('요금관리부', 2),
-    ('배전운영부', 2),
-    ('에너지효율부', 2),
-    ('배전건설부', 2),
-    ('ICT운영부', 2);
+-- 부서 (전력사업처 산하) - office_id=3
+INSERT INTO departments (name, office_id, sort_order) VALUES
+    ('사업처 직할', 3, 0),
+    ('고객지원부', 3, 1),
+    ('전력공급부', 3, 2),
+    ('요금관리부', 3, 3),
+    ('배전운영부', 3, 4),
+    ('에너지효율부', 3, 5),
+    ('배전건설부', 3, 6),
+    ('ICT운영부', 3, 7);
 
--- 부서 (전력관리처 산하)
-INSERT INTO departments (name, office_id) VALUES
-    ('송변전안전팀', 3),
-    ('지역협력부', 3),
-    ('계통운영부', 3),
-    ('송전운영부', 3),
-    ('변전운영부', 3),
-    ('설비보강부', 3),
-    ('전자제어부', 3),
-    ('토건운영부', 3);
+-- 부서 (전력관리처 산하) - office_id=4
+INSERT INTO departments (name, office_id, sort_order) VALUES
+    ('관리처 직할', 4, 0),
+    ('송변전안전팀', 4, 1),
+    ('지역협력부', 4, 2),
+    ('계통운영부', 4, 3),
+    ('송전운영부', 4, 4),
+    ('변전운영부', 4, 5),
+    ('설비보강부', 4, 6),
+    ('전자제어부', 4, 7),
+    ('토건운영부', 4, 8);
 
--- 안전재난부, 각 지사는 하위 부서 없음
+-- 안전재난부(5), 각 지사(6~21)는 하위 부서 없음
 
 -- 기본 관리자 계정 (비밀번호: admin1234)
+-- department_id=2 (전략경영부), office_id=2 (기획관리실), division_id=1 (부산울산본부)
 INSERT INTO users (email, password_hash, name, position, department_id, office_id, division_id, role, is_active, approved_at)
-VALUES ('admin@admin.com', '$2b$10$KhDtW2rngfY.kTP84M6JoOyP2Pap.HHPIpfALbXjMei4wOrYftjC.', '관리자', '관리자', 1, 1, 1, 'ADMIN', true, NOW());
+VALUES ('admin@admin.com', '$2b$10$KhDtW2rngfY.kTP84M6JoOyP2Pap.HHPIpfALbXjMei4wOrYftjC.', '관리자', '관리자', 2, 2, 1, 'ADMIN', true, NOW());
 
 -- ========================================
 -- 10. 유용한 뷰 (View)
