@@ -653,6 +653,13 @@ exports.updateEvent = async (req, res) => {
           RETURNING *
         `;
 
+        // 기존 공유 처 조회 (새로 추가된 처에만 알림 발송을 위해)
+        let previousSharedOfficeIds = [];
+        if (sharedOfficeIds !== undefined) {
+          const prevSharedResult = await query('SELECT office_id FROM event_shared_offices WHERE series_id = $1', [seriesId]);
+          previousSharedOfficeIds = prevSharedResult.rows.map(r => r.office_id);
+        }
+
         // 공유 처 업데이트 (트랜잭션)
         const result = await transaction(async (client) => {
           const updateResult = await client.query(updateQuery, values);
@@ -668,6 +675,23 @@ exports.updateEvent = async (req, res) => {
         });
 
         const updatedSeries = result.rows[0];
+
+        // 새로 추가된 공유 처에 알림 발송
+        if (sharedOfficeIds && sharedOfficeIds.length > 0) {
+          const newSharedOfficeIds = sharedOfficeIds.filter(id => !previousSharedOfficeIds.includes(id));
+          if (newSharedOfficeIds.length > 0) {
+            try {
+              await notifyByScope('EVENT_SHARED', '공유 일정', `"${updatedSeries.title}" 일정이 공유되었습니다.`, {
+                actorId: userId,
+                creatorId: updatedSeries.creator_id,
+                sharedOfficeIds: newSharedOfficeIds,
+                metadata: { seriesId: parseInt(seriesId) }
+              });
+            } catch (nErr) {
+              console.error('[Notification] Failed to send shared event notification:', nErr.message);
+            }
+          }
+        }
 
         // 시리즈 리마인더 재스케줄링 (시간 변경 시 daily scheduler가 처리)
         try {
@@ -846,6 +870,14 @@ exports.updateEvent = async (req, res) => {
       return res.json({ success: true, data: { series: newSeries } });
     } else {
       // 일반 일정 수정 (공유 처 업데이트 포함)
+
+      // 기존 공유 처 조회 (새로 추가된 처에만 알림 발송을 위해)
+      let previousSharedOfficeIds = [];
+      if (sharedOfficeIds !== undefined) {
+        const prevSharedResult = await query('SELECT office_id FROM event_shared_offices WHERE event_id = $1', [id]);
+        previousSharedOfficeIds = prevSharedResult.rows.map(r => r.office_id);
+      }
+
       const result = await transaction(async (client) => {
         const updateQuery = `
           UPDATE events
@@ -866,6 +898,23 @@ exports.updateEvent = async (req, res) => {
       });
 
       const updatedEvent = result.rows[0];
+
+      // 새로 추가된 공유 처에 알림 발송
+      if (sharedOfficeIds && sharedOfficeIds.length > 0) {
+        const newSharedOfficeIds = sharedOfficeIds.filter(id => !previousSharedOfficeIds.includes(id));
+        if (newSharedOfficeIds.length > 0) {
+          try {
+            await notifyByScope('EVENT_SHARED', '공유 일정', `"${updatedEvent.title}" 일정이 공유되었습니다.`, {
+              actorId: userId,
+              creatorId: updatedEvent.creator_id,
+              sharedOfficeIds: newSharedOfficeIds,
+              relatedEventId: updatedEvent.id,
+            });
+          } catch (nErr) {
+            console.error('[Notification] Failed to send shared event notification:', nErr.message);
+          }
+        }
+      }
 
       // 큐 리마인더 재스케줄링
       try {
