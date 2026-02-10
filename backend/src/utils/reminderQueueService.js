@@ -106,15 +106,15 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
     // 일정 시작이 이미 지났으면 스킵
     if (eventStart <= now) continue;
     const alertAt = new Date(eventStart.getTime() - minutes * 60 * 1000);
-    // 알림 시간이 과거면 즉시(1초 후) 스케줄링, 미래면 해당 시간에 스케줄링
-    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 1000);
+    // 알림 시간이 이미 지났으면 스킵 (일정 수정 시 과거 알림 재발송 방지)
+    if (alertAt <= now) continue;
     const jobKey = `reminder-event-${eventId}-${timeKey}`;
     try {
       await boss.send('event-reminder', {
         eventId, seriesId: null, occurrenceDate: null, creatorId,
         reminderMinutes: minutes, timeKey, notificationType: 'EVENT_REMINDER',
-      }, { startAfter: scheduleAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
-      console.log(`[ReminderQueue] Scheduled reminder: event ${eventId}, ${timeKey} before start at ${scheduleAt.toISOString()}`);
+      }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
+      console.log(`[ReminderQueue] Scheduled reminder: event ${eventId}, ${timeKey} before start at ${alertAt.toISOString()}`);
     } catch (error) {
       console.error(`[ReminderQueue] Failed to schedule event ${eventId}:`, error.message);
     }
@@ -128,15 +128,15 @@ async function scheduleEventReminder(eventId, startAt, endAt, creatorId) {
     // 일정 종료가 이미 지났으면 스킵
     if (eventEnd <= now) continue;
     const alertAt = new Date(eventEnd.getTime() - minutes * 60 * 1000);
-    // 알림 시간이 과거면 즉시(1초 후) 스케줄링, 미래면 해당 시간에 스케줄링
-    const scheduleAt = alertAt > now ? alertAt : new Date(now.getTime() + 1000);
+    // 알림 시간이 이미 지났으면 스킵 (일정 수정 시 과거 알림 재발송 방지)
+    if (alertAt <= now) continue;
     const jobKey = `duesoon-event-${eventId}-${timeKey}`;
     try {
       await boss.send('event-reminder', {
         eventId, seriesId: null, occurrenceDate: null, creatorId,
         reminderMinutes: minutes, timeKey, notificationType: 'EVENT_DUE_SOON',
-      }, { startAfter: scheduleAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
-      console.log(`[ReminderQueue] Scheduled due-soon: event ${eventId}, ${timeKey} before end at ${scheduleAt.toISOString()}`);
+      }, { startAfter: alertAt, singletonKey: jobKey, retryLimit: 2, expireInMinutes: 60 });
+      console.log(`[ReminderQueue] Scheduled due-soon: event ${eventId}, ${timeKey} before end at ${alertAt.toISOString()}`);
     } catch (error) {
       if (!error.message?.includes('singleton')) {
         console.error(`[ReminderQueue] Failed to schedule due-soon event ${eventId}:`, error.message);
