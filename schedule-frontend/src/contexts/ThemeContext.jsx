@@ -18,6 +18,13 @@ export const ThemeProvider = ({ children }) => {
 
   useEffect(() => {
     localStorage.setItem('darkMode', JSON.stringify(isDarkMode));
+    // 모바일 상태바 색상 업데이트 (헤더 색상과 맞춤)
+    const meta = document.getElementById('theme-color-meta');
+    if (meta) {
+      meta.content = isDarkMode ? '#1e293b' : '#ffffff';
+    }
+    // body 배경색 업데이트
+    document.body.style.backgroundColor = isDarkMode ? '#0f172a' : '#f8fafc';
   }, [isDarkMode]);
 
   const toggleDarkMode = useCallback(() => setIsDarkMode(prev => !prev), []);
