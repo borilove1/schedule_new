@@ -17,6 +17,7 @@ export default function MainLayout({ children, currentPage, onNavigate, onGoHome
       {/* Header */}
       <header style={{
         padding: isMobile ? '6px 16px' : '8px 24px',
+        paddingTop: `calc(env(safe-area-inset-top, 0px) + ${isMobile ? '6px' : '8px'})`,
         borderBottom: `1px solid ${borderColor}`,
         backgroundColor: cardBg,
         display: 'flex',
