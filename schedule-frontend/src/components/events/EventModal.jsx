@@ -298,7 +298,10 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
 
   useEffect(() => {
     if (isOpen && !isClosing) {
-      requestAnimationFrame(() => setIsAnimating(true));
+      // 이중 rAF로 초기 상태 렌더 후 애니메이션 시작
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setIsAnimating(true));
+      });
     }
   }, [isOpen, isClosing]);
 
@@ -427,7 +430,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily,
         transform: (isMobile && swipeStyle) ? swipeStyle.transform : (isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)')),
         opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
-        transition: (isMobile && swipeStyle) ? swipeStyle.transition : (isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease'),
+        transition: (isMobile && swipeStyle) ? swipeStyle.transition : (isMobile ? 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)' : 'transform 0.25s ease, opacity 0.2s ease'),
       }}>
         {/* Header - sticky */}
         {isMobile && (
