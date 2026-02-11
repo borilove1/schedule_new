@@ -388,9 +388,10 @@ class ApiClient {
   }
 
   // ========== 첨부파일 ==========
-  async uploadAttachments(eventId, files) {
+  async uploadAttachments(eventId, files, editType) {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
+    if (editType) formData.append('editType', editType);
     const headers = {};
     if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
     const response = await fetch(`${API_BASE_URL}/events/${eventId}/attachments`, {

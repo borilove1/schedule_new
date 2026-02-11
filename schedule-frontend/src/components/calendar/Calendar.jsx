@@ -17,7 +17,7 @@ import { connectSSE, onSSE } from '../../utils/sseClient';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
-export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cachedEvents = [], onEventsLoaded, pendingEventId, onEventOpened }) {
+export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cachedEvents = [], onEventsLoaded, pendingEventId, onEventOpened, onNavigateSettings, onEventNavigate }) {
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
@@ -271,6 +271,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         onToday={handleToday}
         onNewEvent={() => handleNewEvent(selectedDay)}
         onSearch={handleSearchOpen}
+        onSettings={onNavigateSettings}
+        onEventNavigate={onEventNavigate}
         isMobile={isMobile}
       />
 

@@ -9,13 +9,12 @@ import SignupPage from './components/auth/SignupPage';
 import MainLayout from './components/layout/MainLayout';
 import Calendar from './components/calendar/Calendar';
 import AdminPage from './components/admin/AdminPage';
-import ProfilePage from './components/profile/ProfilePage';
+import SettingsPage from './components/settings/SettingsPage';
 
 function AppContent() {
   const { user, loading } = useAuth();
   const [authPage, setAuthPage] = useState('login');
   const [currentPage, setCurrentPage] = useState('calendar');
-  const [calendarKey, setCalendarKey] = useState(0);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [cachedEvents, setCachedEvents] = useState([]);
   const [pendingEventId, setPendingEventId] = useState(null);
@@ -49,27 +48,21 @@ function AppContent() {
     }, 1000);
   }, []);
 
-  // 홈으로 이동 (캘린더 + 이번 달로 리셋)
-  const handleGoHome = () => {
-    setCurrentPage('calendar');
-    setCalendarKey(k => k + 1);
-  };
-
   // 알림에서 일정 클릭 시 해당 일정으로 이동
   const handleEventNavigate = (eventId) => {
     setPendingEventId(eventId);
     setCurrentPage('calendar');
   };
 
-  const { bgColor, cardBg, textColor } = useThemeColors();
+  const { bgColor, textColor } = useThemeColors();
 
-  // 모바일 상태바 색상: 로그인 전=배경색, 로그인 후=헤더색
+  // 모바일 상태바 색상
   React.useEffect(() => {
     const meta = document.getElementById('theme-color-meta');
     if (meta) {
-      meta.content = user ? cardBg : bgColor;
+      meta.content = bgColor;
     }
-  }, [user, cardBg, bgColor]);
+  }, [bgColor]);
 
   if (loading) {
     return (
@@ -97,20 +90,24 @@ function AppContent() {
   // 인증된 경우
   return (
     <NotificationProvider>
-      <MainLayout currentPage={currentPage} onNavigate={setCurrentPage} onGoHome={handleGoHome} onEventNavigate={handleEventNavigate}>
+      <MainLayout>
         {currentPage === 'admin' && user.role === 'ADMIN' ? (
-          <AdminPage />
-        ) : currentPage === 'profile' ? (
-          <ProfilePage onBack={() => setCurrentPage('calendar')} />
+          <AdminPage onBack={() => setCurrentPage('settings')} />
+        ) : currentPage === 'settings' ? (
+          <SettingsPage
+            onBack={() => setCurrentPage('calendar')}
+            onNavigateToAdmin={() => setCurrentPage('admin')}
+          />
         ) : (
           <Calendar
-            key={calendarKey}
             rateLimitCountdown={rateLimitCountdown}
             onRateLimitStart={startRateLimitCountdown}
             cachedEvents={cachedEvents}
             onEventsLoaded={setCachedEvents}
             pendingEventId={pendingEventId}
             onEventOpened={() => setPendingEventId(null)}
+            onNavigateSettings={() => setCurrentPage('settings')}
+            onEventNavigate={handleEventNavigate}
           />
         )}
       </MainLayout>

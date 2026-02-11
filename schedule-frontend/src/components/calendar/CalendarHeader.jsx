@@ -1,11 +1,22 @@
 import React from 'react';
-import { ChevronLeft, ChevronRight, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Search, Settings } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
+import NotificationBell from '../notifications/NotificationBell';
 
 const CalendarHeader = React.memo(function CalendarHeader({
-  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, onSearch, isMobile
+  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, onSearch, onSettings, onEventNavigate, isMobile
 }) {
   const { textColor, secondaryTextColor, cardBg, borderColor } = useThemeColors();
+
+  const iconBtnStyle = {
+    background: 'none',
+    border: 'none',
+    color: secondaryTextColor,
+    cursor: 'pointer',
+    padding: '6px',
+    display: 'flex',
+    borderRadius: '6px',
+  };
 
   return (
     <div style={{
@@ -24,24 +35,13 @@ const CalendarHeader = React.memo(function CalendarHeader({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <button
-          onClick={onPrevMonth}
-          style={{ background: 'none', border: 'none', color: secondaryTextColor, cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '6px' }}
-        >
+        <button onClick={onPrevMonth} style={iconBtnStyle}>
           <ChevronLeft size={20} />
         </button>
-        <button
-          onClick={onNextMonth}
-          style={{ background: 'none', border: 'none', color: secondaryTextColor, cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '6px' }}
-        >
+        <button onClick={onNextMonth} style={iconBtnStyle}>
           <ChevronRight size={20} />
         </button>
-        <button
-          onClick={onSearch}
-          style={{ background: 'none', border: 'none', color: secondaryTextColor, cursor: 'pointer', padding: '6px', display: 'flex', borderRadius: '6px' }}
-          title="일정 검색"
-          aria-label="일정 검색"
-        >
+        <button onClick={onSearch} style={iconBtnStyle} title="일정 검색" aria-label="일정 검색">
           <Search size={18} />
         </button>
         <button
@@ -83,6 +83,34 @@ const CalendarHeader = React.memo(function CalendarHeader({
             <Plus size={16} />
           </button>
         )}
+
+        {/* 구분선 */}
+        <div style={{
+          width: '1px',
+          height: '20px',
+          backgroundColor: borderColor,
+          marginLeft: '4px',
+          marginRight: '4px',
+        }} />
+
+        <NotificationBell onEventClick={onEventNavigate} />
+
+        <button
+          onClick={onSettings}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: secondaryTextColor,
+            cursor: 'pointer',
+            padding: '6px',
+            display: 'flex',
+            borderRadius: '6px',
+          }}
+          title="설정"
+          aria-label="설정"
+        >
+          <Settings size={20} />
+        </button>
       </div>
     </div>
   );

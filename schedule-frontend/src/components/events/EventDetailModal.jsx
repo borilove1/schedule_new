@@ -150,10 +150,11 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
           try { await api.deleteAttachment(attId); } catch (e) { console.error('첨부파일 삭제 실패:', e); }
         }
 
-        // Upload new files
+        // Upload new files (시리즈: editType 전달로 전체/이번만 구분)
         if (newFiles.length > 0) {
           try {
-            await api.uploadAttachments(eventId, newFiles);
+            const uploadEditType = String(eventId).startsWith('series-') ? editType : undefined;
+            await api.uploadAttachments(eventId, newFiles, uploadEditType);
           } catch (e) { console.error('첨부파일 업로드 실패:', e); }
         }
 

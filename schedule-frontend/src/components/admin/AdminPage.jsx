@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useThemeColors } from '../../hooks/useThemeColors';
-import { Users, Building2, Settings } from 'lucide-react';
+import { ArrowLeft, Users, Building2, Settings } from 'lucide-react';
 import UserManagement from './UserManagement';
 import OrganizationManagement from './OrganizationManagement';
 import SystemSettings from './SystemSettings';
@@ -11,12 +11,34 @@ const tabs = [
   { id: 'settings', label: '시스템 설정', icon: Settings },
 ];
 
-export default function AdminPage() {
+export default function AdminPage({ onBack }) {
   const [activeTab, setActiveTab] = useState('users');
-  const { secondaryTextColor, borderColor } = useThemeColors();
+  const { textColor, secondaryTextColor, borderColor } = useThemeColors();
 
   return (
     <div>
+      {/* 뒤로가기 헤더 */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: '12px',
+        marginBottom: '24px',
+      }}>
+        <button
+          onClick={onBack}
+          style={{
+            background: 'none', border: 'none', color: secondaryTextColor,
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            padding: '4px', borderRadius: '8px',
+          }}
+          title="설정으로 돌아가기"
+        >
+          <ArrowLeft size={22} />
+        </button>
+        <h2 style={{ fontSize: '20px', fontWeight: '600', color: textColor, margin: 0 }}>
+          관리자
+        </h2>
+      </div>
+
+      {/* 탭 */}
       <div style={{
         display: 'flex', gap: '4px', marginBottom: '24px',
         borderBottom: `2px solid ${borderColor}`, paddingBottom: '0',
