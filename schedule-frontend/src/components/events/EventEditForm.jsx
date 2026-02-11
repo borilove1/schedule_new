@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Share2, ChevronDown } from 'lucide-react';
+import { Share2, ChevronDown, Paperclip, Download, Trash2 } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
@@ -56,11 +56,13 @@ const getPositionOptions = (officeName, departmentName) => {
 
 export default function EventEditForm({
   formData, onChange, onSubmit, onCancel, editType, event, loading, actionInProgress, error,
-  offices = [], sharedTargets = [], onSharedTargetsChange, onRecurringToggle, rateLimitCountdown = 0
+  offices = [], sharedTargets = [], onSharedTargetsChange, onRecurringToggle, rateLimitCountdown = 0,
+  attachments = [], newFiles = [], onNewFilesChange, onDeleteExistingAttachment
 }) {
   const { isDarkMode, borderColor, textColor, cardBg, bgColor, secondaryTextColor } = useThemeColors();
   const isMobile = useIsMobile();
   const { inputStyle, labelStyle, fontFamily } = useCommonStyles();
+  const fileInputRef = useRef(null);
   const [showPriorityDropdown, setShowPriorityDropdown] = useState(false);
   const [priorityFocusedIdx, setPriorityFocusedIdx] = useState(-1);
   const [priorityIsFocused, setPriorityIsFocused] = useState(false);
@@ -241,6 +243,111 @@ export default function EventEditForm({
         <label style={labelStyle}>내용</label>
         <textarea name="content" value={formData.content} onChange={onChange} rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
       </div>
+
+      {/* 첨부파일 관리 */}
+      {(onNewFilesChange || attachments.length > 0) && (
+        <div style={{ marginBottom: '14px' }}>
+          <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Paperclip size={14} /> 첨부파일
+          </label>
+          {/* 기존 첨부파일 */}
+          {attachments.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+              {attachments.map(att => (
+                <div key={att.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '6px 10px', borderRadius: '6px',
+                  backgroundColor: bgColor, fontSize: '13px',
+                }}>
+                  <Download size={12} color={secondaryTextColor} style={{ flexShrink: 0 }} />
+                  <span style={{ color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {att.originalName}
+                  </span>
+                  <span style={{ color: secondaryTextColor, fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {att.fileSize >= 1024 * 1024 ? `${(att.fileSize / (1024 * 1024)).toFixed(1)}MB` : `${Math.round(att.fileSize / 1024)}KB`}
+                  </span>
+                  {onDeleteExistingAttachment && (
+                    <button
+                      type="button"
+                      onClick={() => onDeleteExistingAttachment(att.id)}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {/* 새 파일 */}
+          {newFiles.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '8px' }}>
+              {newFiles.map((file, idx) => (
+                <div key={`new-${idx}`} style={{
+                  display: 'flex', alignItems: 'center', gap: '8px',
+                  padding: '6px 10px', borderRadius: '6px',
+                  backgroundColor: isDarkMode ? '#1e3a5f' : '#dbeafe', fontSize: '13px',
+                }}>
+                  <Paperclip size={12} color={secondaryTextColor} style={{ flexShrink: 0 }} />
+                  <span style={{ color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {file.name}
+                  </span>
+                  <span style={{ color: secondaryTextColor, fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)}MB` : `${Math.round(file.size / 1024)}KB`}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => onNewFilesChange(newFiles.filter((_, i) => i !== idx))}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, flexShrink: 0 }}
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* 파일 추가 버튼 */}
+          {onNewFilesChange && (
+            <>
+              <input
+                type="file"
+                ref={fileInputRef}
+                multiple
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files);
+                  const totalCount = attachments.length + newFiles.length;
+                  const maxFiles = 5 - totalCount;
+                  if (maxFiles <= 0) {
+                    e.target.value = '';
+                    return;
+                  }
+                  const validFiles = files.slice(0, maxFiles).filter(f => f.size <= 20 * 1024 * 1024);
+                  onNewFilesChange([...newFiles, ...validFiles]);
+                  e.target.value = '';
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={attachments.length + newFiles.length >= 5}
+                style={{
+                  padding: '6px 14px', borderRadius: '6px',
+                  border: `1px dashed ${borderColor}`,
+                  backgroundColor: 'transparent', color: secondaryTextColor,
+                  cursor: attachments.length + newFiles.length >= 5 ? 'not-allowed' : 'pointer',
+                  fontSize: '13px', fontWeight: '500',
+                  display: 'flex', alignItems: 'center', gap: '6px',
+                  fontFamily, opacity: attachments.length + newFiles.length >= 5 ? 0.5 : 1,
+                }}
+              >
+                <Paperclip size={14} />
+                파일 추가
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: '14px' }}>
         <div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, Share2, ChevronDown } from 'lucide-react';
+import { X, Share2, ChevronDown, Paperclip } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
@@ -83,6 +83,8 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [offices, setOffices] = useState([]);
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const fileInputRef = useRef(null);
 
   // 공유 대상 관련 상태
   const [sharedTargets, setSharedTargets] = useState([]); // [{ officeId, officeName, departmentId, departmentName, positions }]
@@ -117,6 +119,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
       setFormData(getInitialFormData(selectedDate));
       setError('');
       setLoading(false);
+      setAttachedFiles([]);
       // 공유 대상 초기화
       setSharedTargets([]);
       setShareOfficeId('');
@@ -357,7 +360,24 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         eventData.recurrenceEndDate = formData.recurrenceEndDate;
       }
 
-      await api.createEvent(eventData);
+      const result = await api.createEvent(eventData);
+
+      // Upload attachments if any
+      if (attachedFiles.length > 0) {
+        let uploadId;
+        if (result?.series?.id) uploadId = `series-${result.series.id}`;
+        else if (result?.event?.id) uploadId = result.event.id;
+        else if (result?.id) uploadId = result.id;
+        if (uploadId) {
+          try {
+            await api.uploadAttachments(uploadId, attachedFiles);
+          } catch (uploadErr) {
+            console.error('첨부파일 업로드 실패:', uploadErr);
+          }
+        }
+      }
+
+      setAttachedFiles([]);
       setFormData(getInitialFormData(selectedDate));
       onSuccess();
       onClose();
@@ -438,6 +458,77 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={labelStyle}>내용</label>
             <textarea name="content" value={formData.content} onChange={handleChange} rows={isMobile ? 2 : 3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="일정 내용을 입력하세요" />
+          </div>
+
+          {/* 첨부파일 */}
+          <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
+            <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Paperclip size={14} /> 첨부파일 (선택사항)
+            </label>
+            <input
+              type="file"
+              ref={fileInputRef}
+              multiple
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                const files = Array.from(e.target.files);
+                const maxFiles = 5 - attachedFiles.length;
+                if (maxFiles <= 0) {
+                  setError('첨부파일은 최대 5개까지 가능합니다.');
+                  e.target.value = '';
+                  return;
+                }
+                const validFiles = files.slice(0, maxFiles).filter(f => f.size <= 20 * 1024 * 1024);
+                if (validFiles.length < files.slice(0, maxFiles).length) {
+                  setError('일부 파일이 크기 제한(20MB)을 초과하여 제외되었습니다.');
+                }
+                setAttachedFiles(prev => [...prev, ...validFiles]);
+                e.target.value = '';
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={attachedFiles.length >= 5}
+              style={{
+                padding: '8px 16px', borderRadius: '8px',
+                border: `1px dashed ${borderColor}`,
+                backgroundColor: 'transparent', color: secondaryTextColor,
+                cursor: attachedFiles.length >= 5 ? 'not-allowed' : 'pointer',
+                fontSize: '13px', fontWeight: '500',
+                display: 'flex', alignItems: 'center', gap: '6px',
+                fontFamily, opacity: attachedFiles.length >= 5 ? 0.5 : 1,
+              }}
+            >
+              <Paperclip size={14} />
+              파일 선택 (최대 5개, 각 20MB)
+            </button>
+            {attachedFiles.length > 0 && (
+              <div style={{ marginTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {attachedFiles.map((file, idx) => (
+                  <div key={idx} style={{
+                    display: 'flex', alignItems: 'center', gap: '8px',
+                    padding: '6px 10px', borderRadius: '6px',
+                    backgroundColor: bgColor, fontSize: '13px',
+                  }}>
+                    <Paperclip size={12} color={secondaryTextColor} style={{ flexShrink: 0 }} />
+                    <span style={{ color: textColor, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                      {file.name}
+                    </span>
+                    <span style={{ color: secondaryTextColor, fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)}MB` : `${Math.round(file.size / 1024)}KB`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachedFiles(prev => prev.filter((_, i) => i !== idx))}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px 4px', fontSize: '16px', lineHeight: 1, flexShrink: 0 }}
+                    >
+                      &times;
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '10px' : '14px' }}>

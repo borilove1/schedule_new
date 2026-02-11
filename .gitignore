@@ -6,6 +6,9 @@ ssl/*.key
 .env
 backend/.env
 
+# MCP 설정 (API 키 포함)
+.mcp.json
+
 # Node.js
 node_modules/
 npm-debug.log*
@@ -19,3 +22,8 @@ nul
 
 # 부하테스트 생성 토큰 (보안)
 load-tests/**/tokens-*.csv
+
+# 로컬 Docker 테스트 파일
+docker-compose.local.yml
+schedule-frontend/Dockerfile.local
+schedule-frontend/nginx.local.conf

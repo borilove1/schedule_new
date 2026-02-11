@@ -1,6 +1,8 @@
 // backend/src/controllers/eventController.js
 // 기존 DB 구조에 맞춘 반복 일정 컨트롤러
 
+const path = require('path');
+const fs = require('fs');
 const { query, transaction } = require('../../config/database');
 const { generateOccurrencesFromSeries } = require('../utils/recurringEvents');
 const { notifyByScope } = require('./notificationController');
@@ -10,6 +12,8 @@ const {
   cancelSeriesReminders,
 } = require('../utils/reminderQueueService');
 const { broadcast } = require('../utils/sseManager');
+
+const UPLOADS_DIR = path.join(__dirname, '..', '..', 'uploads');
 
 /**
  * PG의 TIMESTAMP WITH TIME ZONE → 타임존 없는 나이브 문자열 변환
@@ -251,7 +255,23 @@ exports.getEvents = async (req, res) => {
       }
     }
 
-    // 8-2. 마감임박 기준 조회
+    // 8-2. 첨부파일 수 일괄 조회
+    let attachmentCountMap = {};
+    if (eventIds.length > 0 || allSeriesIds.length > 0) {
+      const attachCountQuery = `
+        SELECT event_id, series_id, COUNT(*) as attachment_count
+        FROM event_attachments
+        WHERE event_id = ANY($1) OR series_id = ANY($2)
+        GROUP BY event_id, series_id
+      `;
+      const attachResult = await query(attachCountQuery, [eventIds, allSeriesIds]);
+      for (const row of attachResult.rows) {
+        const key = row.event_id ? `event_${row.event_id}` : `series_${row.series_id}`;
+        attachmentCountMap[key] = parseInt(row.attachment_count);
+      }
+    }
+
+    // 8-3. 마감임박 기준 조회
     const THRESHOLD_MINUTES = { '30min': 30, '1hour': 60, '3hour': 180 };
     let dueSoonMaxMinutes = 0;
     try {
@@ -269,6 +289,9 @@ exports.getEvents = async (req, res) => {
         || [];
       const commentCount = commentCountMap[`event_${event.id}`]
         || commentCountMap[`series_${event.series_id}`]
+        || 0;
+      const attachmentCount = attachmentCountMap[`event_${event.id}`]
+        || attachmentCountMap[`series_${event.series_id}`]
         || 0;
       // 마감임박 판정: PENDING + 종료시간이 현재~threshold 이내
       // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
@@ -312,6 +335,7 @@ exports.getEvents = async (req, res) => {
         division: event.division_name,
         sharedOffices,
         commentCount,
+        attachmentCount,
         createdAt: toNaiveDateTimeString(event.created_at),
         updatedAt: toNaiveDateTimeString(event.updated_at)
       };
@@ -1302,6 +1326,19 @@ exports.getEventById = async (req, res) => {
       const seriesEndTime = new Date(seriesEndTimeParsed.getTime() - KST_OFFSET_MS);
       const isOverdue = status !== 'DONE' && seriesEndTime < new Date();
 
+      // 첨부파일 조회
+      const seriesAttachResult = await query(
+        'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE series_id = $1 ORDER BY created_at',
+        [series.id]
+      );
+      const seriesAttachments = seriesAttachResult.rows.map(a => ({
+        id: a.id,
+        originalName: a.original_name,
+        fileSize: a.file_size,
+        mimeType: a.mime_type,
+        createdAt: a.created_at,
+      }));
+
       // 필드명 camelCase로 변환
       const formattedEvent = {
         id: id,
@@ -1330,6 +1367,7 @@ exports.getEventById = async (req, res) => {
         office: series.office_name,
         division: series.division_name,
         sharedOffices: seriesSharedOffices,
+        attachments: seriesAttachments,
         createdAt: series.created_at,
         updatedAt: series.updated_at
       };
@@ -1389,6 +1427,19 @@ exports.getEventById = async (req, res) => {
     const eventEndTime = new Date(eventEndTimeParsed.getTime() - KST_OFFSET_MS);
     const isEventOverdue = event.status !== 'DONE' && eventEndTime < new Date();
 
+    // 첨부파일 조회
+    const eventAttachResult = await query(
+      'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE event_id = $1 OR (series_id = $2 AND $2 IS NOT NULL) ORDER BY created_at',
+      [event.id, event.series_id]
+    );
+    const eventAttachments = eventAttachResult.rows.map(a => ({
+      id: a.id,
+      originalName: a.original_name,
+      fileSize: a.file_size,
+      mimeType: a.mime_type,
+      createdAt: a.created_at,
+    }));
+
     // 필드명 camelCase로 변환
     const formattedEvent = {
       id: event.id,
@@ -1414,6 +1465,7 @@ exports.getEventById = async (req, res) => {
       office: event.office_name,
       division: event.division_name,
       sharedOffices: eventSharedOffices,
+      attachments: eventAttachments,
       createdAt: toNaiveDateTimeString(event.created_at),
       updatedAt: toNaiveDateTimeString(event.updated_at)
     };
@@ -1904,5 +1956,166 @@ exports.searchEvents = async (req, res) => {
   } catch (error) {
     console.error('Search events error:', error);
     res.status(500).json({ success: false, message: 'Failed to search events' });
+  }
+};
+
+/**
+ * 첨부파일 업로드
+ */
+exports.uploadAttachment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const files = req.files;
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, error: { code: 'NO_FILES', message: '파일을 선택해주세요.' } });
+    }
+
+    // series-* ID 파싱
+    let eventId = null;
+    let seriesId = null;
+
+    if (String(id).startsWith('series-')) {
+      seriesId = parseInt(id.split('-')[1]);
+      const seriesResult = await query('SELECT * FROM event_series WHERE id = $1', [seriesId]);
+      if (seriesResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Event series not found' });
+      }
+      if (!canEditEvent(req.user, seriesResult.rows[0])) {
+        return res.status(403).json({ success: false, message: '첨부파일을 추가할 권한이 없습니다.' });
+      }
+    } else {
+      eventId = parseInt(id);
+      const eventResult = await query('SELECT * FROM events WHERE id = $1', [eventId]);
+      if (eventResult.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Event not found' });
+      }
+      if (!canEditEvent(req.user, eventResult.rows[0])) {
+        return res.status(403).json({ success: false, message: '첨부파일을 추가할 권한이 없습니다.' });
+      }
+    }
+
+    // 기존 첨부파일 수 확인 (최대 5개)
+    const countResult = await query(
+      'SELECT COUNT(*) as cnt FROM event_attachments WHERE event_id = $1 OR series_id = $2',
+      [eventId, seriesId]
+    );
+    const existingCount = parseInt(countResult.rows[0].cnt);
+    if (existingCount + files.length > 5) {
+      // 업로드된 파일 삭제
+      for (const file of files) {
+        fs.unlink(file.path, () => {});
+      }
+      return res.status(400).json({
+        success: false,
+        error: { code: 'TOO_MANY_FILES', message: `최대 5개까지 첨부할 수 있습니다. (현재 ${existingCount}개)` }
+      });
+    }
+
+    // DB에 저장
+    const attachments = [];
+    for (const file of files) {
+      const result = await query(
+        `INSERT INTO event_attachments (event_id, series_id, file_name, original_name, file_size, mime_type, uploaded_by)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id, original_name, file_size, mime_type, created_at`,
+        [eventId, seriesId, file.filename, file.originalname, file.size, file.mimetype, userId]
+      );
+      const row = result.rows[0];
+      attachments.push({
+        id: row.id,
+        originalName: row.original_name,
+        fileSize: row.file_size,
+        mimeType: row.mime_type,
+        createdAt: row.created_at,
+      });
+    }
+
+    broadcast('event_changed', { action: 'updated' });
+    res.status(201).json({ success: true, data: { attachments } });
+  } catch (error) {
+    console.error('Upload attachment error:', error);
+    // 에러 시 업로드된 파일 정리
+    if (req.files) {
+      for (const file of req.files) {
+        fs.unlink(file.path, () => {});
+      }
+    }
+    res.status(500).json({ success: false, message: 'Failed to upload attachment' });
+  }
+};
+
+/**
+ * 첨부파일 다운로드
+ */
+exports.downloadAttachment = async (req, res) => {
+  try {
+    const { attachmentId } = req.params;
+
+    const result = await query(
+      'SELECT * FROM event_attachments WHERE id = $1',
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Attachment not found' });
+    }
+
+    const attachment = result.rows[0];
+    const filePath = path.join(UPLOADS_DIR, attachment.file_name);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'File not found on server' });
+    }
+
+    // Content-Disposition: inline → 브라우저가 열기/저장 결정
+    const encodedName = encodeURIComponent(attachment.original_name);
+    res.setHeader('Content-Disposition', `inline; filename="${encodedName}"; filename*=UTF-8''${encodedName}`);
+    res.sendFile(path.resolve(filePath));
+  } catch (error) {
+    console.error('Download attachment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to download attachment' });
+  }
+};
+
+/**
+ * 첨부파일 삭제
+ */
+exports.deleteAttachment = async (req, res) => {
+  try {
+    const { attachmentId } = req.params;
+    const userId = req.user.id;
+
+    const result = await query(
+      'SELECT * FROM event_attachments WHERE id = $1',
+      [attachmentId]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Attachment not found' });
+    }
+
+    const attachment = result.rows[0];
+
+    // 권한 체크: 업로더 본인 또는 ADMIN
+    if (attachment.uploaded_by !== userId && req.user.role !== 'ADMIN') {
+      return res.status(403).json({ success: false, message: '삭제 권한이 없습니다.' });
+    }
+
+    // DB 삭제
+    await query('DELETE FROM event_attachments WHERE id = $1', [attachmentId]);
+
+    // 파일 삭제
+    const filePath = path.join(UPLOADS_DIR, attachment.file_name);
+    fs.unlink(filePath, (err) => {
+      if (err) console.error('Failed to delete file:', err.message);
+    });
+
+    broadcast('event_changed', { action: 'updated' });
+    res.json({ success: true, data: { message: '첨부파일이 삭제되었습니다.' } });
+  } catch (error) {
+    console.error('Delete attachment error:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete attachment' });
   }
 };

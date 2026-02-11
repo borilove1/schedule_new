@@ -35,6 +35,8 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
     startDate: '', startTime: '', endDate: '', endTime: '',
     isRecurring: false, recurrenceType: 'week', recurrenceInterval: 1, recurrenceEndDate: ''
   });
+  const [newFiles, setNewFiles] = useState([]);
+  const [deletedAttachmentIds, setDeletedAttachmentIds] = useState([]);
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -43,6 +45,8 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
       setActiveDialog(null);
       setEditType('this');
       setSharedTargets([]);
+      setNewFiles([]);
+      setDeletedAttachmentIds([]);
       actionGuard.reset();
       loadEvent();
       if (currentUser?.divisionId) {
@@ -140,6 +144,21 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         }
 
         await api.updateEvent(eventId, updateData);
+
+        // Delete removed attachments
+        for (const attId of deletedAttachmentIds) {
+          try { await api.deleteAttachment(attId); } catch (e) { console.error('첨부파일 삭제 실패:', e); }
+        }
+
+        // Upload new files
+        if (newFiles.length > 0) {
+          try {
+            await api.uploadAttachments(eventId, newFiles);
+          } catch (e) { console.error('첨부파일 업로드 실패:', e); }
+        }
+
+        setNewFiles([]);
+        setDeletedAttachmentIds([]);
         onSuccess();
         refreshNotifications();
         onClose();
@@ -224,6 +243,18 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
     } else {
       setEditType('this');
       setIsEditing(true);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    try {
+      await api.deleteAttachment(attachmentId);
+      await loadEvent();
+      onSuccess();
+    } catch (err) {
+      const msg = err.message || '첨부파일 삭제에 실패했습니다.';
+      setError(msg);
+      if (isRateLimitError(msg) && onRateLimitStart) onRateLimitStart(60);
     }
   };
 
@@ -331,6 +362,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
                 error={error}
                 eventId={eventId}
                 rateLimitCountdown={rateLimitCountdown}
+                onDeleteAttachment={handleDeleteAttachment}
               />
             ) : (
               <EventEditForm
@@ -348,6 +380,10 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
                 onSharedTargetsChange={setSharedTargets}
                 onRecurringToggle={() => setFormData(prev => ({ ...prev, isRecurring: !prev.isRecurring }))}
                 rateLimitCountdown={rateLimitCountdown}
+                attachments={event?.attachments?.filter(a => !deletedAttachmentIds.includes(a.id)) || []}
+                newFiles={newFiles}
+                onNewFilesChange={setNewFiles}
+                onDeleteExistingAttachment={(id) => setDeletedAttachmentIds(prev => [...prev, id])}
               />
             )}
           </div>

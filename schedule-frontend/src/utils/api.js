@@ -387,6 +387,34 @@ class ApiClient {
     });
   }
 
+  // ========== 첨부파일 ==========
+  async uploadAttachments(eventId, files) {
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    const headers = {};
+    if (this.token) headers['Authorization'] = `Bearer ${this.token}`;
+    const response = await fetch(`${API_BASE_URL}/events/${eventId}/attachments`, {
+      method: 'POST', headers, body: formData
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error?.message || '업로드 실패');
+    return data.success && data.data ? data.data : data;
+  }
+
+  async deleteAttachment(attachmentId) {
+    return this.request(`/events/attachments/${attachmentId}`, { method: 'DELETE' });
+  }
+
+  getAttachmentDownloadUrl(attachmentId) {
+    return `${API_BASE_URL}/events/attachments/${attachmentId}/download`;
+  }
+
+  downloadAttachmentFile(attachmentId) {
+    // 새 탭으로 열기 → 브라우저가 파일 타입에 따라 열기/저장 결정
+    const url = `${API_BASE_URL}/events/attachments/${attachmentId}/download?token=${this.token}`;
+    window.open(url, '_blank');
+  }
+
   // Push Notifications
   async getVapidPublicKey() {
     return this.request('/push/vapid-public-key');

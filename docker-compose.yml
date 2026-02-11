@@ -47,6 +47,8 @@ services:
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@admin.com}
     ports:
       - "3001:3000"  # 외부:3001 → 내부:3000
+    volumes:
+      - uploads_data:/app/uploads
     depends_on:
       database:
         condition: service_healthy
@@ -82,4 +84,6 @@ networks:
 
 volumes:
   postgres_data:
+    driver: local
+  uploads_data:
     driver: local

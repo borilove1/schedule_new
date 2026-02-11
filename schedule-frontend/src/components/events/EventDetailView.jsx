@@ -1,5 +1,6 @@
 import React from 'react';
-import { Edit2, Trash2, Check, Calendar, Clock, Repeat, Eye, Users } from 'lucide-react';
+import { Edit2, Trash2, Check, Calendar, Clock, Repeat, Eye, Users, Paperclip, Download } from 'lucide-react';
+import api from '../../utils/api';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getStatusColor, getStatusText, getRecurrenceDescription } from '../../utils/eventHelpers';
@@ -9,7 +10,7 @@ import CommentSection from './CommentSection';
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
 export default function EventDetailView({
-  event, currentUser, onEdit, onDelete, onComplete, loading, actionInProgress, error, eventId, rateLimitCountdown = 0
+  event, currentUser, onEdit, onDelete, onComplete, loading, actionInProgress, error, eventId, rateLimitCountdown = 0, onDeleteAttachment
 }) {
   const { isDarkMode, textColor, secondaryTextColor, inputBg } = useThemeColors();
   const isMobile = useIsMobile();
@@ -143,6 +144,54 @@ export default function EventDetailView({
           </div>
         )}
       </div>
+
+      {/* 첨부파일 */}
+      {event.attachments && event.attachments.length > 0 && (
+        <div style={{ marginBottom: isMobile ? '10px' : '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+            <Paperclip size={isMobile ? 14 : 16} color="#3B82F6" />
+            <span style={{ fontSize: isMobile ? '13px' : '14px', fontWeight: '500', color: textColor }}>
+              첨부파일 ({event.attachments.length})
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {event.attachments.map(att => (
+              <div key={att.id} style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 12px', borderRadius: '8px',
+                backgroundColor: inputBg,
+              }}>
+                <Download size={14} color={secondaryTextColor} style={{ flexShrink: 0 }} />
+                <a
+                  href="#"
+                  style={{
+                    color: '#3B82F6', textDecoration: 'none', fontSize: '13px',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1,
+                    cursor: 'pointer',
+                  }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); api.downloadAttachmentFile(att.id); }}
+                >
+                  {att.originalName}
+                </a>
+                <span style={{ color: secondaryTextColor, fontSize: '12px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  {att.fileSize >= 1024 * 1024
+                    ? `${(att.fileSize / (1024 * 1024)).toFixed(1)}MB`
+                    : `${Math.round(att.fileSize / 1024)}KB`}
+                </span>
+                {canEdit && onDeleteAttachment && (
+                  <button
+                    type="button"
+                    onClick={() => onDeleteAttachment(att.id)}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', flexShrink: 0 }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {rateLimitCountdown > 0 ? (
         <div style={{

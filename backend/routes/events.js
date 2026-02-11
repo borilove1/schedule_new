@@ -1,11 +1,78 @@
 // routes/events.js - 반복 일정 지원 버전
 const express = require('express');
 const { body, validationResult } = require('express-validator');
+const multer = require('multer');
+const path = require('path');
+const crypto = require('crypto');
 const { authenticate } = require('../middleware/auth');
 const eventController = require('../src/controllers/eventController');
 
 const router = express.Router();
 router.use(authenticate);
+
+// ========== Multer 파일 업로드 설정 ==========
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, '..', 'uploads'),
+  filename: (req, file, cb) => {
+    const uniqueName = crypto.randomUUID() + path.extname(file.originalname);
+    cb(null, uniqueName);
+  }
+});
+
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+  'text/plain', 'text/csv',
+  'application/zip',
+  'application/x-hwp', 'application/haansofthwp', 'application/x-hwpml',
+];
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB per file
+  fileFilter: (req, file, cb) => {
+    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('허용되지 않는 파일 형식입니다.'));
+    }
+  }
+});
+
+// Multer 에러 핸들링 미들웨어
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'FILE_TOO_LARGE', message: '파일 크기는 20MB 이하여야 합니다.' }
+      });
+    }
+    if (err.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'TOO_MANY_FILES', message: '최대 5개까지 업로드할 수 있습니다.' }
+      });
+    }
+    return res.status(400).json({
+      success: false,
+      error: { code: 'UPLOAD_ERROR', message: '파일 업로드 중 오류가 발생했습니다.' }
+    });
+  }
+  if (err && err.message === '허용되지 않는 파일 형식입니다.') {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'INVALID_FILE_TYPE', message: err.message }
+    });
+  }
+  next(err);
+};
 
 // 검증 결과 처리 미들웨어
 const handleValidation = (req, res, next) => {
@@ -51,11 +118,26 @@ router.get('/', eventController.getEvents);
 // ========== 일정 검색 ==========
 router.get('/search', eventController.searchEvents);
 
+// ========== 첨부파일 다운로드 (쿼리 파라미터 토큰 폴백 지원) ==========
+router.get('/attachments/:attachmentId/download', (req, res, next) => {
+  // Authorization 헤더가 없고 query에 token이 있으면 헤더로 변환 (SSE와 동일 패턴)
+  if (!req.headers.authorization && req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+}, eventController.downloadAttachment);
+
+// ========== 첨부파일 삭제 ==========
+router.delete('/attachments/:attachmentId', eventController.deleteAttachment);
+
 // ========== 일정 상세 조회 ==========
 router.get('/:id', eventController.getEventById);
 
 // ========== 일정 생성 (일반 또는 반복) ==========
 router.post('/', createEventValidation, handleValidation, eventController.createEvent);
+
+// ========== 첨부파일 업로드 ==========
+router.post('/:id/attachments', upload.array('files', 5), handleMulterError, eventController.uploadAttachment);
 
 // ========== 일정 수정 (반복 일정 처리) ==========
 router.put('/:id', updateEventValidation, handleValidation, eventController.updateEvent);

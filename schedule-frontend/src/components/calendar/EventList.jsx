@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ChevronDown, MessageCircle } from 'lucide-react';
+import { ChevronDown, MessageCircle, Paperclip } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { getStatusColor, getStatusText, getDisplayStatus, norm } from '../../utils/eventHelpers';
@@ -178,6 +178,24 @@ const EventList = React.memo(function EventList({
                       }}>
                         <MessageCircle size={11} />
                         {event.commentCount}
+                      </span>
+                    )}
+                    {event.attachmentCount > 0 && (
+                      <span style={{
+                        fontSize: '11px',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        backgroundColor: isDarkMode ? '#78350f' : '#fef3c7',
+                        color: isDarkMode ? '#fbbf24' : '#d97706',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap',
+                        flexShrink: 0,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                      }}>
+                        <Paperclip size={11} />
+                        {event.attachmentCount}
                       </span>
                     )}
                   </div>

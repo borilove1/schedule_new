@@ -13,6 +13,9 @@ RUN npm install --omit=dev
 # 앱 소스 복사
 COPY . .
 
+# 업로드 디렉토리 생성
+RUN mkdir -p /app/uploads
+
 # 포트 노출
 EXPOSE 3000
 
