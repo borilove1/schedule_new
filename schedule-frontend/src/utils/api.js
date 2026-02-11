@@ -409,10 +409,29 @@ class ApiClient {
     return `${API_BASE_URL}/events/attachments/${attachmentId}/download`;
   }
 
-  downloadAttachmentFile(attachmentId) {
-    // 새 탭으로 열기 → 브라우저가 파일 타입에 따라 열기/저장 결정
-    const url = `${API_BASE_URL}/events/attachments/${attachmentId}/download?token=${this.token}`;
-    window.open(url, '_blank');
+  async downloadAttachmentFile(attachmentId) {
+    const url = `${API_BASE_URL}/events/attachments/${attachmentId}/download`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${this.token}` },
+    });
+    if (!res.ok) throw new Error('다운로드 실패');
+    const disposition = res.headers.get('Content-Disposition') || '';
+    let filename = 'download';
+    const match = disposition.match(/filename\*=UTF-8''(.+)/);
+    if (match) filename = decodeURIComponent(match[1]);
+    else {
+      const match2 = disposition.match(/filename="?(.+?)"?(?:;|$)/);
+      if (match2) filename = match2[1];
+    }
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
   }
 
   // Push Notifications

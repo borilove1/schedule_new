@@ -8,6 +8,15 @@ const { authenticate } = require('../middleware/auth');
 const eventController = require('../src/controllers/eventController');
 
 const router = express.Router();
+
+// 첨부파일 다운로드: 쿼리 파라미터 토큰 → Authorization 헤더 변환 (authenticate 전에 실행)
+router.use('/attachments/:attachmentId/download', (req, res, next) => {
+  if (!req.headers.authorization && req.query.token) {
+    req.headers.authorization = `Bearer ${req.query.token}`;
+  }
+  next();
+});
+
 router.use(authenticate);
 
 // ========== Multer 파일 업로드 설정 ==========
@@ -118,14 +127,8 @@ router.get('/', eventController.getEvents);
 // ========== 일정 검색 ==========
 router.get('/search', eventController.searchEvents);
 
-// ========== 첨부파일 다운로드 (쿼리 파라미터 토큰 폴백 지원) ==========
-router.get('/attachments/:attachmentId/download', (req, res, next) => {
-  // Authorization 헤더가 없고 query에 token이 있으면 헤더로 변환 (SSE와 동일 패턴)
-  if (!req.headers.authorization && req.query.token) {
-    req.headers.authorization = `Bearer ${req.query.token}`;
-  }
-  next();
-}, eventController.downloadAttachment);
+// ========== 첨부파일 다운로드 ==========
+router.get('/attachments/:attachmentId/download', eventController.downloadAttachment);
 
 // ========== 첨부파일 삭제 ==========
 router.delete('/attachments/:attachmentId', eventController.deleteAttachment);
