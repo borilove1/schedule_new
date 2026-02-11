@@ -11,6 +11,7 @@ const EventList = React.memo(function EventList({
   const isMobile = useIsMobile();
   const [displayCount, setDisplayCount] = useState(10);
   const [hoveredId, setHoveredId] = useState(null);
+  const [pressedId, setPressedId] = useState(null);
 
   // 탭/필터/날짜 변경 시 displayCount 리셋
   useEffect(() => {
@@ -110,6 +111,9 @@ const EventList = React.memo(function EventList({
                 onClick={() => onEventClick(event.id)}
                 onMouseEnter={() => setHoveredId(event.id)}
                 onMouseLeave={() => setHoveredId(null)}
+                onTouchStart={() => setPressedId(event.id)}
+                onTouchEnd={() => setPressedId(null)}
+                onTouchCancel={() => setPressedId(null)}
                 style={{
                   padding: isMobile ? '14px' : '16px',
                   borderRadius: '10px',
@@ -118,7 +122,7 @@ const EventList = React.memo(function EventList({
                   borderLeft: `4px solid ${isOwnEvent ? getStatusColor(getDisplayStatus(event)) : '#94a3b8'}`,
                   cursor: 'pointer',
                   transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                  transform: hoveredId === event.id ? 'translateY(-1px)' : 'translateY(0)',
+                  transform: pressedId === event.id ? 'scale(0.98)' : (hoveredId === event.id ? 'translateY(-1px)' : 'translateY(0)'),
                   boxShadow: hoveredId === event.id
                     ? (isDarkMode ? '0 4px 12px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.08)')
                     : 'none',
