@@ -296,12 +296,25 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }
   }, [isOpen, handleEsc]);
 
+  // 모달이 닫히면 애니메이션 상태 초기화 (스와이프 닫기 포함)
+  useEffect(() => {
+    if (!isOpen) {
+      setIsAnimating(false);
+      setIsClosing(false);
+    }
+  }, [isOpen]);
+
   useEffect(() => {
     if (isOpen && !isClosing) {
       // 이중 rAF로 초기 상태 렌더 후 애니메이션 시작
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setIsAnimating(true));
+      let raf2;
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setIsAnimating(true));
       });
+      return () => {
+        cancelAnimationFrame(raf1);
+        if (raf2) cancelAnimationFrame(raf2);
+      };
     }
   }, [isOpen, isClosing]);
 

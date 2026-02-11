@@ -7,7 +7,7 @@ import ErrorAlert from '../common/ErrorAlert';
 import LoadingSpinner from '../common/LoadingSpinner';
 import api from '../../utils/api';
 
-export default function NotificationModal({ isOpen, onClose, onEventClick }) {
+export default function NotificationModal({ isOpen, onClose, onEventClick, initialNotifications = null }) {
   const [filter, setFilter] = useState('all');
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,9 +33,16 @@ export default function NotificationModal({ isOpen, onClose, onEventClick }) {
 
   useEffect(() => {
     if (isOpen) {
-      loadNotifications();
+      setFilter('all');
+      setError('');
+      // 미리 로드된 데이터가 있으면 사용, 없으면 직접 로드
+      if (initialNotifications !== null) {
+        setNotifications(initialNotifications);
+      } else {
+        loadNotifications();
+      }
     }
-  }, [isOpen]);
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ESC 키로 모달 닫기
   const handleEsc = useCallback((e) => {
