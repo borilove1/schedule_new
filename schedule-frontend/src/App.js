@@ -1,8 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { useThemeColors } from './hooks/useThemeColors';
+import { useIsMobile } from './hooks/useIsMobile';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
@@ -14,21 +15,22 @@ import SettingsPage from './components/settings/SettingsPage';
 function AppContent() {
   const { user, loading } = useAuth();
   const [authPage, setAuthPage] = useState('login');
-  const [currentPage, setCurrentPage] = useState('calendar');
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const [cachedEvents, setCachedEvents] = useState([]);
   const [pendingEventId, setPendingEventId] = useState(null);
   const countdownRef = React.useRef(null);
+  const isMobile = useIsMobile();
 
-  // 페이지 전환 애니메이션
-  const [pageTransition, setPageTransition] = useState('none'); // 'fade-out' | 'none'
-  const transitionTimerRef = useRef(null);
+  // 설정/관리자 오버레이
+  const [overlayPage, setOverlayPage] = useState(null); // 'settings' | 'admin' | null
+  const [overlayAnimating, setOverlayAnimating] = useState(false);
+  const [overlayClosing, setOverlayClosing] = useState(false);
 
-  // 로그아웃 시 로그인 페이지로 리셋
+  // 로그아웃 시 리셋
   React.useEffect(() => {
     if (!user && !loading) {
       setAuthPage('login');
-      setCurrentPage('calendar');
+      setOverlayPage(null);
     }
   }, [user, loading]);
 
@@ -52,21 +54,35 @@ function AppContent() {
     }, 1000);
   }, []);
 
-  // 페이지 전환 (페이드 애니메이션)
-  const navigateTo = useCallback((targetPage) => {
-    if (transitionTimerRef.current) return;
-    setPageTransition('fade-out');
-    transitionTimerRef.current = setTimeout(() => {
-      setCurrentPage(targetPage);
-      setPageTransition('none');
-      transitionTimerRef.current = null;
-    }, 200);
+  // 오버레이 열기 (아래에서 위로)
+  const openOverlay = useCallback((page) => {
+    setOverlayPage(page);
+    setOverlayClosing(false);
+    requestAnimationFrame(() => setOverlayAnimating(true));
+  }, []);
+
+  // 오버레이 닫기 (위에서 아래로)
+  const closeOverlay = useCallback(() => {
+    if (overlayClosing) return;
+    setOverlayClosing(true);
+    setOverlayAnimating(false);
+    setTimeout(() => {
+      setOverlayPage(null);
+      setOverlayClosing(false);
+    }, 300);
+  }, [overlayClosing]);
+
+  // 오버레이 내 페이지 전환 (설정 → 관리자)
+  const switchOverlay = useCallback((page) => {
+    setOverlayPage(page);
   }, []);
 
   // 알림에서 일정 클릭 시 해당 일정으로 이동
   const handleEventNavigate = (eventId) => {
     setPendingEventId(eventId);
-    setCurrentPage('calendar');
+    setOverlayPage(null);
+    setOverlayAnimating(false);
+    setOverlayClosing(false);
   };
 
   const { bgColor, textColor } = useThemeColors();
@@ -78,6 +94,14 @@ function AppContent() {
       meta.content = bgColor;
     }
   }, [bgColor]);
+
+  // ESC로 오버레이 닫기
+  useEffect(() => {
+    if (!overlayPage) return;
+    const handleEsc = (e) => { if (e.key === 'Escape') closeOverlay(); };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [overlayPage, closeOverlay]);
 
   if (loading) {
     return (
@@ -102,36 +126,76 @@ function AppContent() {
     return <LoginPage onSignupClick={() => setAuthPage('signup')} />;
   }
 
-  // 페이지 전환 스타일 (transform 사용 금지 - position:fixed 자식 요소 깨짐)
-  const transitionStyle = pageTransition === 'fade-out'
-    ? { opacity: 0, transition: 'opacity 200ms ease-out' }
-    : { opacity: 1, transition: 'opacity 200ms ease-in' };
-
   // 인증된 경우
   return (
     <NotificationProvider>
       <MainLayout>
-        <div style={transitionStyle}>
-          {currentPage === 'admin' && user.role === 'ADMIN' ? (
-            <AdminPage onBack={() => navigateTo('settings')} />
-          ) : currentPage === 'settings' ? (
-            <SettingsPage
-              onBack={() => navigateTo('calendar')}
-              onNavigateToAdmin={() => navigateTo('admin')}
-            />
-          ) : (
-            <Calendar
-              rateLimitCountdown={rateLimitCountdown}
-              onRateLimitStart={startRateLimitCountdown}
-              cachedEvents={cachedEvents}
-              onEventsLoaded={setCachedEvents}
-              pendingEventId={pendingEventId}
-              onEventOpened={() => setPendingEventId(null)}
-              onNavigateSettings={() => navigateTo('settings')}
-              onEventNavigate={handleEventNavigate}
-            />
-          )}
-        </div>
+        {/* 캘린더는 항상 렌더링 */}
+        <Calendar
+          rateLimitCountdown={rateLimitCountdown}
+          onRateLimitStart={startRateLimitCountdown}
+          cachedEvents={cachedEvents}
+          onEventsLoaded={setCachedEvents}
+          pendingEventId={pendingEventId}
+          onEventOpened={() => setPendingEventId(null)}
+          onNavigateSettings={() => openOverlay('settings')}
+          onEventNavigate={handleEventNavigate}
+        />
+
+        {/* 설정/관리자 오버레이 */}
+        {overlayPage && (
+          <div style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 950,
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+            backgroundColor: overlayAnimating ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0)',
+            transition: 'background-color 0.25s ease',
+          }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeOverlay(); }}
+          >
+            <div style={{
+              backgroundColor: bgColor,
+              borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0',
+              width: '100%',
+              maxWidth: isMobile ? '100%' : '800px',
+              height: isMobile ? 'calc(100% - env(safe-area-inset-top, 0px) - 20px)' : 'calc(100% - 40px)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              transform: overlayAnimating ? 'translateY(0)' : 'translateY(100%)',
+              transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+            }}>
+              {/* 드래그 핸들 */}
+              {isMobile && (
+                <div
+                  style={{ display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '6px', cursor: 'pointer' }}
+                  onClick={closeOverlay}
+                >
+                  <div style={{ width: '36px', height: '4px', borderRadius: '2px', backgroundColor: 'rgba(150,150,150,0.4)' }} />
+                </div>
+              )}
+              {/* 콘텐츠 스크롤 영역 */}
+              <div style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: isMobile ? '8px 16px 16px' : '24px',
+                paddingBottom: isMobile ? 'calc(16px + env(safe-area-inset-bottom, 0px))' : '24px',
+              }}>
+                {overlayPage === 'admin' && user.role === 'ADMIN' ? (
+                  <AdminPage onBack={() => switchOverlay('settings')} />
+                ) : (
+                  <SettingsPage
+                    onBack={closeOverlay}
+                    onNavigateToAdmin={() => switchOverlay('admin')}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </MainLayout>
     </NotificationProvider>
   );
