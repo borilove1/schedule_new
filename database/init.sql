@@ -413,6 +413,32 @@ CREATE INDEX idx_push_subs_user_id ON push_subscriptions(user_id);
 CREATE TRIGGER update_push_subscriptions_updated_at BEFORE UPDATE ON push_subscriptions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+-- ----------------------------------------
+-- 일정 첨부파일
+-- ----------------------------------------
+CREATE TABLE event_attachments (
+    id SERIAL PRIMARY KEY,
+    event_id INTEGER REFERENCES events(id) ON DELETE CASCADE,
+    series_id INTEGER REFERENCES event_series(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    file_size INTEGER NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    uploaded_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    occurrence_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT check_attachment_target CHECK (
+        (event_id IS NOT NULL AND series_id IS NULL) OR
+        (event_id IS NULL AND series_id IS NOT NULL)
+    )
+);
+
+CREATE INDEX idx_attachments_event_id ON event_attachments(event_id) WHERE event_id IS NOT NULL;
+CREATE INDEX idx_attachments_series_id ON event_attachments(series_id) WHERE series_id IS NOT NULL;
+CREATE INDEX idx_attachments_uploaded_by ON event_attachments(uploaded_by);
+CREATE INDEX idx_attachments_occurrence ON event_attachments(series_id, occurrence_date) WHERE series_id IS NOT NULL;
+
 -- ========================================
 -- 9. 샘플 데이터 (개발/테스트용)
 -- ========================================

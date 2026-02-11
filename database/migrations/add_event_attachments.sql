@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS event_attachments (
     file_size INTEGER NOT NULL,
     mime_type VARCHAR(100) NOT NULL,
     uploaded_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    occurrence_date DATE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT check_attachment_target CHECK (
@@ -22,3 +23,4 @@ CREATE TABLE IF NOT EXISTS event_attachments (
 CREATE INDEX IF NOT EXISTS idx_attachments_event_id ON event_attachments(event_id) WHERE event_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_attachments_series_id ON event_attachments(series_id) WHERE series_id IS NOT NULL;
 CREATE INDEX IF NOT EXISTS idx_attachments_uploaded_by ON event_attachments(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_attachments_occurrence ON event_attachments(series_id, occurrence_date) WHERE series_id IS NOT NULL;

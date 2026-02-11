@@ -255,19 +255,27 @@ exports.getEvents = async (req, res) => {
       }
     }
 
-    // 8-2. 첨부파일 수 일괄 조회
+    // 8-2. 첨부파일 수 일괄 조회 (시리즈는 occurrence_date별로 카운트)
     let attachmentCountMap = {};
     if (eventIds.length > 0 || allSeriesIds.length > 0) {
       const attachCountQuery = `
-        SELECT event_id, series_id, COUNT(*) as attachment_count
+        SELECT event_id, series_id, occurrence_date, COUNT(*) as attachment_count
         FROM event_attachments
         WHERE event_id = ANY($1) OR series_id = ANY($2)
-        GROUP BY event_id, series_id
+        GROUP BY event_id, series_id, occurrence_date
       `;
       const attachResult = await query(attachCountQuery, [eventIds, allSeriesIds]);
       for (const row of attachResult.rows) {
-        const key = row.event_id ? `event_${row.event_id}` : `series_${row.series_id}`;
-        attachmentCountMap[key] = parseInt(row.attachment_count);
+        if (row.event_id) {
+          attachmentCountMap[`event_${row.event_id}`] = parseInt(row.attachment_count);
+        } else if (row.occurrence_date) {
+          // 특정 occurrence에만 해당하는 첨부
+          const dateStr = new Date(row.occurrence_date).toISOString().split('T')[0];
+          attachmentCountMap[`series_${row.series_id}_${dateStr}`] = (attachmentCountMap[`series_${row.series_id}_${dateStr}`] || 0) + parseInt(row.attachment_count);
+        } else {
+          // 전체 시리즈에 해당하는 첨부 (occurrence_date IS NULL)
+          attachmentCountMap[`series_${row.series_id}_all`] = parseInt(row.attachment_count);
+        }
       }
     }
 
@@ -290,9 +298,15 @@ exports.getEvents = async (req, res) => {
       const commentCount = commentCountMap[`event_${event.id}`]
         || commentCountMap[`series_${event.series_id}`]
         || 0;
-      const attachmentCount = attachmentCountMap[`event_${event.id}`]
-        || attachmentCountMap[`series_${event.series_id}`]
-        || 0;
+      // 첨부파일 수: 단일 이벤트 자체 + 시리즈 전체(NULL) + 시리즈 해당날짜
+      let attachmentCount = attachmentCountMap[`event_${event.id}`] || 0;
+      if (event.series_id && event.occurrence_date) {
+        const occDate = typeof event.occurrence_date === 'string'
+          ? event.occurrence_date.split('T')[0]
+          : new Date(event.occurrence_date).toISOString().split('T')[0];
+        attachmentCount += (attachmentCountMap[`series_${event.series_id}_all`] || 0)
+          + (attachmentCountMap[`series_${event.series_id}_${occDate}`] || 0);
+      }
       // 마감임박 판정: PENDING + 종료시간이 현재~threshold 이내
       // DB에 저장된 시간은 KST가 UTC로 잘못 해석된 상태이므로, 실제 UTC로 변환
       const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
@@ -633,7 +647,7 @@ exports.updateEvent = async (req, res) => {
             await client.query(
               `INSERT INTO event_shared_offices (event_id, office_id, department_id, positions)
                VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
-              [newEvent.id, row.office_id, row.department_id, row.positions]
+              [newEvent.id, row.office_id, row.department_id, row.positions ? JSON.stringify(row.positions) : null]
             );
           }
 
@@ -1326,10 +1340,10 @@ exports.getEventById = async (req, res) => {
       const seriesEndTime = new Date(seriesEndTimeParsed.getTime() - KST_OFFSET_MS);
       const isOverdue = status !== 'DONE' && seriesEndTime < new Date();
 
-      // 첨부파일 조회
+      // 첨부파일 조회 (전체 시리즈 NULL + 해당 날짜)
       const seriesAttachResult = await query(
-        'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE series_id = $1 ORDER BY created_at',
-        [series.id]
+        'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE series_id = $1 AND (occurrence_date IS NULL OR occurrence_date = $2) ORDER BY created_at',
+        [series.id, occurrenceDateStr]
       );
       const seriesAttachments = seriesAttachResult.rows.map(a => ({
         id: a.id,
@@ -1427,10 +1441,10 @@ exports.getEventById = async (req, res) => {
     const eventEndTime = new Date(eventEndTimeParsed.getTime() - KST_OFFSET_MS);
     const isEventOverdue = event.status !== 'DONE' && eventEndTime < new Date();
 
-    // 첨부파일 조회
+    // 첨부파일 조회 (해당 이벤트의 첨부만)
     const eventAttachResult = await query(
-      'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE event_id = $1 OR (series_id = $2 AND $2 IS NOT NULL) ORDER BY created_at',
-      [event.id, event.series_id]
+      'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE event_id = $1 ORDER BY created_at',
+      [event.id]
     );
     const eventAttachments = eventAttachResult.rows.map(a => ({
       id: a.id,
@@ -1585,7 +1599,7 @@ exports.completeEvent = async (req, res) => {
         for (const row of sharedRows.rows) {
           await client.query(
             'INSERT INTO event_shared_offices (event_id, office_id, department_id, positions) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING',
-            [newEvent.id, row.office_id, row.department_id, row.positions]
+            [newEvent.id, row.office_id, row.department_id, row.positions ? JSON.stringify(row.positions) : null]
           );
         }
 
@@ -1975,9 +1989,20 @@ exports.uploadAttachment = async (req, res) => {
     // series-* ID 파싱
     let eventId = null;
     let seriesId = null;
+    let occurrenceDate = null;
+    const editType = req.body?.editType; // 'this' 또는 'all'
 
     if (String(id).startsWith('series-')) {
-      seriesId = parseInt(id.split('-')[1]);
+      const parts = id.split('-');
+      seriesId = parseInt(parts[1]);
+      // "이번만" 수정일 때만 occurrence_date 설정 (전체 수정은 NULL → 모든 occurrence에 표시)
+      if (editType !== 'all' && parts[2]) {
+        const ts = parseInt(parts[2]);
+        if (!isNaN(ts)) {
+          const d = new Date(ts);
+          occurrenceDate = `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+        }
+      }
       const seriesResult = await query('SELECT * FROM event_series WHERE id = $1', [seriesId]);
       if (seriesResult.rows.length === 0) {
         return res.status(404).json({ success: false, message: 'Event series not found' });
@@ -1996,11 +2021,21 @@ exports.uploadAttachment = async (req, res) => {
       }
     }
 
-    // 기존 첨부파일 수 확인 (최대 5개)
-    const countResult = await query(
-      'SELECT COUNT(*) as cnt FROM event_attachments WHERE event_id = $1 OR series_id = $2',
-      [eventId, seriesId]
-    );
+    // 기존 첨부파일 수 확인 (전체 + 해당 occurrence 합산)
+    let countQuery, countParams;
+    if (seriesId && occurrenceDate) {
+      // "이번만" → 전체(NULL) + 해당날짜 합산
+      countQuery = 'SELECT COUNT(*) as cnt FROM event_attachments WHERE series_id = $1 AND (occurrence_date IS NULL OR occurrence_date = $2)';
+      countParams = [seriesId, occurrenceDate];
+    } else if (seriesId) {
+      // "전체" → 전체(NULL)만 카운트
+      countQuery = 'SELECT COUNT(*) as cnt FROM event_attachments WHERE series_id = $1 AND occurrence_date IS NULL';
+      countParams = [seriesId];
+    } else {
+      countQuery = 'SELECT COUNT(*) as cnt FROM event_attachments WHERE event_id = $1';
+      countParams = [eventId];
+    }
+    const countResult = await query(countQuery, countParams);
     const existingCount = parseInt(countResult.rows[0].cnt);
     if (existingCount + files.length > 5) {
       // 업로드된 파일 삭제
@@ -2017,10 +2052,10 @@ exports.uploadAttachment = async (req, res) => {
     const attachments = [];
     for (const file of files) {
       const result = await query(
-        `INSERT INTO event_attachments (event_id, series_id, file_name, original_name, file_size, mime_type, uploaded_by)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO event_attachments (event_id, series_id, file_name, original_name, file_size, mime_type, uploaded_by, occurrence_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id, original_name, file_size, mime_type, created_at`,
-        [eventId, seriesId, file.filename, file.originalname, file.size, file.mimetype, userId]
+        [eventId, seriesId, file.filename, file.originalname, file.size, file.mimetype, userId, occurrenceDate]
       );
       const row = result.rows[0];
       attachments.push({
