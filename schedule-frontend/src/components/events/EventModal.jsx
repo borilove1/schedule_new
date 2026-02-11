@@ -6,6 +6,8 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 import { useSwipeDown } from '../../hooks/useSwipeDown';
 import ErrorAlert from '../common/ErrorAlert';
+import DatePickerInput from '../common/DatePickerInput';
+import TimePickerInput from '../common/TimePickerInput';
 import api from '../../utils/api';
 
 const getInitialFormData = (selectedDate) => {
@@ -560,22 +562,22 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '10px' : '14px' }}>
             <div>
               <label style={labelStyle}>시작 날짜 *</label>
-              <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} required style={dateInputStyle} />
+              <DatePickerInput name="startDate" value={formData.startDate} onChange={handleChange} required style={dateInputStyle} isMobile={isMobile} />
             </div>
             <div>
               <label style={labelStyle}>시작 시간 *</label>
-              <input type="time" name="startTime" value={formData.startTime} onChange={handleChange} required style={dateInputStyle} />
+              <TimePickerInput name="startTime" value={formData.startTime} onChange={handleChange} required style={dateInputStyle} isMobile={isMobile} />
             </div>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '10px' : '14px' }}>
             <div>
               <label style={labelStyle}>종료 날짜 *</label>
-              <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} required style={dateInputStyle} />
+              <DatePickerInput name="endDate" value={formData.endDate} onChange={handleChange} required style={dateInputStyle} isMobile={isMobile} />
             </div>
             <div>
               <label style={labelStyle}>종료 시간 *</label>
-              <input type="time" name="endTime" value={formData.endTime} onChange={handleChange} required style={dateInputStyle} />
+              <TimePickerInput name="endTime" value={formData.endTime} onChange={handleChange} required style={dateInputStyle} isMobile={isMobile} />
             </div>
           </div>
 
@@ -941,7 +943,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
               </div>
               <div>
                 <label style={labelStyle}>반복 종료일 *</label>
-                <input type="date" name="recurrenceEndDate" value={formData.recurrenceEndDate} onChange={handleChange} required={formData.isRecurring} min={formData.startDate} style={dateInputStyle} />
+                <DatePickerInput name="recurrenceEndDate" value={formData.recurrenceEndDate} onChange={handleChange} required={formData.isRecurring} min={formData.startDate} style={dateInputStyle} isMobile={isMobile} />
                 <p style={{ marginTop: '8px', fontSize: '13px', color: secondaryTextColor, fontFamily }}>이 날짜까지 반복됩니다</p>
               </div>
             </div>
