@@ -5,6 +5,7 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
+const FOCUS_RING = '0 0 0 3px rgba(59,130,246,0.4)';
 
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -18,6 +19,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const { isDarkMode, textColor, secondaryTextColor, borderColor, cardBg, hoverBg } = useThemeColors();
   const { fontFamily } = useCommonStyles();
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [viewYear, setViewYear] = useState(null);
   const [viewMonth, setViewMonth] = useState(null);
   const containerRef = useRef(null);
@@ -26,6 +28,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const parsed = useMemo(() => {
     if (!value) return null;
     const [y, m, d] = value.split('-').map(Number);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return null;
     return { year: y, month: m - 1, day: d };
   }, [value]);
 
@@ -131,15 +134,12 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
     const prevMonthDays = getDaysInMonth(viewYear, viewMonth - 1 < 0 ? 11 : viewMonth - 1);
 
     const days = [];
-    // Previous month trailing days
     for (let i = firstDay - 1; i >= 0; i--) {
       days.push({ day: prevMonthDays - i, type: 'prev' });
     }
-    // Current month
     for (let i = 1; i <= daysInMonth; i++) {
       days.push({ day: i, type: 'current' });
     }
-    // Next month leading days
     const remaining = 42 - days.length;
     for (let i = 1; i <= remaining; i++) {
       days.push({ day: i, type: 'next' });
@@ -166,7 +166,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', ...style }}>
+    <div ref={containerRef} style={{ position: 'relative' }}>
       {/* Hidden native input for form validation */}
       <input
         type="date"
@@ -176,6 +176,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
         min={min}
         onChange={onChange}
         tabIndex={-1}
+        aria-hidden="true"
         style={{
           position: 'absolute',
           opacity: 0,
@@ -188,6 +189,12 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
       <div
         tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={(e) => {
+          if (!containerRef.current?.contains(e.relatedTarget)) {
+            setIsFocused(false);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -201,7 +208,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           gap: '8px',
           cursor: 'pointer',
           userSelect: 'none',
-          width: '100%',
+          boxShadow: isFocused ? FOCUS_RING : (style?.boxShadow || 'none'),
         }}
       >
         <Calendar size={isMobile ? 14 : 16} color={secondaryTextColor} style={{ flexShrink: 0 }} />
@@ -353,7 +360,6 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
                   }}
                 >
                   {item.day}
-                  {/* Today dot indicator */}
                   {tod && !sel && (
                     <span style={{
                       position: 'absolute',

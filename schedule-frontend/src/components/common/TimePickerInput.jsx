@@ -3,20 +3,13 @@ import { Clock } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 
-// Generate time slots every 30 minutes
-const TIME_SLOTS = [];
-for (let h = 0; h < 24; h++) {
-  for (let m = 0; m < 60; m += 30) {
-    const hh = String(h).padStart(2, '0');
-    const mm = String(m).padStart(2, '0');
-    TIME_SLOTS.push({ value: `${hh}:${mm}`, label: `${hh}:${mm}` });
-  }
-}
+const FOCUS_RING = '0 0 0 3px rgba(59,130,246,0.4)';
 
 function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const { isDarkMode, textColor, secondaryTextColor, borderColor, cardBg, hoverBg } = useThemeColors();
   const { fontFamily } = useCommonStyles();
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [hourValue, setHourValue] = useState('');
   const [minuteValue, setMinuteValue] = useState('');
   const containerRef = useRef(null);
@@ -36,7 +29,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
-        const scrollToSelected = (listRef, selectedValue, totalItems) => {
+        const scrollToSelected = (listRef, selectedValue) => {
           if (!listRef.current) return;
           const items = listRef.current.children;
           for (let i = 0; i < items.length; i++) {
@@ -99,6 +92,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     if (!value) return '';
     const [h, m] = value.split(':');
     const hour = parseInt(h, 10);
+    if (isNaN(hour)) return '';
     const ampm = hour < 12 ? '오전' : '오후';
     const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
     return `${ampm} ${h12}:${m}`;
@@ -117,17 +111,17 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     scrollbarColor: isDarkMode ? '#475569 transparent' : '#cbd5e1 transparent',
   };
 
-  const itemStyle = (isSelected) => ({
+  const itemStyle = (selected) => ({
     padding: '8px 4px',
     textAlign: 'center',
     fontSize: '14px',
-    fontWeight: isSelected ? '700' : '400',
+    fontWeight: selected ? '700' : '400',
     fontFamily,
     cursor: 'pointer',
     borderRadius: '6px',
     transition: 'all 0.15s',
-    backgroundColor: isSelected ? primaryColor : 'transparent',
-    color: isSelected ? '#ffffff' : textColor,
+    backgroundColor: selected ? primaryColor : 'transparent',
+    color: selected ? '#ffffff' : textColor,
     border: 'none',
     width: '100%',
     display: 'block',
@@ -150,7 +144,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   };
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', ...style }}>
+    <div ref={containerRef} style={{ position: 'relative' }}>
       {/* Hidden native input for form validation */}
       <input
         type="time"
@@ -159,6 +153,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
         required={required}
         onChange={onChange}
         tabIndex={-1}
+        aria-hidden="true"
         style={{
           position: 'absolute',
           opacity: 0,
@@ -171,6 +166,12 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
       <div
         tabIndex={0}
         onClick={() => setIsOpen(!isOpen)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={(e) => {
+          if (!containerRef.current?.contains(e.relatedTarget)) {
+            setIsFocused(false);
+          }
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -184,7 +185,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           gap: '8px',
           cursor: 'pointer',
           userSelect: 'none',
-          width: '100%',
+          boxShadow: isFocused ? FOCUS_RING : (style?.boxShadow || 'none'),
         }}
       >
         <Clock size={isMobile ? 14 : 16} color={secondaryTextColor} style={{ flexShrink: 0 }} />
