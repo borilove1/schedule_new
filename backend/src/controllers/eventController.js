@@ -1315,21 +1315,34 @@ exports.getEventById = async (req, res) => {
       const startTimeStr = series.start_time.substring(0, 5); // 'HH:MM'
       const endTimeStr = series.end_time.substring(0, 5);
 
-      // 공유 대상 정보 조회 (부서/직급 포함)
-      const seriesSharedResult = await query(
-        `SELECT eso.office_id, o.name as office_name, eso.department_id, d.name as department_name, eso.positions
-         FROM event_shared_offices eso
-         JOIN offices o ON eso.office_id = o.id
-         LEFT JOIN departments d ON eso.department_id = d.id
-         WHERE eso.series_id = $1`,
-        [series.id]
-      );
+      // 공유 대상 + 첨부파일 병렬 조회
+      const [seriesSharedResult, seriesAttachResult] = await Promise.all([
+        query(
+          `SELECT eso.office_id, o.name as office_name, eso.department_id, d.name as department_name, eso.positions
+           FROM event_shared_offices eso
+           JOIN offices o ON eso.office_id = o.id
+           LEFT JOIN departments d ON eso.department_id = d.id
+           WHERE eso.series_id = $1`,
+          [series.id]
+        ),
+        query(
+          'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE series_id = $1 AND (occurrence_date IS NULL OR occurrence_date = $2) ORDER BY created_at',
+          [series.id, occurrenceDateStr]
+        )
+      ]);
       const seriesSharedOffices = seriesSharedResult.rows.map(r => ({
         id: r.office_id,
         name: r.office_name,
         departmentId: r.department_id,
         departmentName: r.department_name,
         positions: r.positions
+      }));
+      const seriesAttachments = seriesAttachResult.rows.map(a => ({
+        id: a.id,
+        originalName: a.original_name,
+        fileSize: a.file_size,
+        mimeType: a.mime_type,
+        createdAt: a.created_at,
       }));
 
       // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
@@ -1339,19 +1352,6 @@ exports.getEventById = async (req, res) => {
       const seriesEndTimeParsed = new Date(endAtStr);
       const seriesEndTime = new Date(seriesEndTimeParsed.getTime() - KST_OFFSET_MS);
       const isOverdue = status !== 'DONE' && seriesEndTime < new Date();
-
-      // 첨부파일 조회 (전체 시리즈 NULL + 해당 날짜)
-      const seriesAttachResult = await query(
-        'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE series_id = $1 AND (occurrence_date IS NULL OR occurrence_date = $2) ORDER BY created_at',
-        [series.id, occurrenceDateStr]
-      );
-      const seriesAttachments = seriesAttachResult.rows.map(a => ({
-        id: a.id,
-        originalName: a.original_name,
-        fileSize: a.file_size,
-        mimeType: a.mime_type,
-        createdAt: a.created_at,
-      }));
 
       // 필드명 camelCase로 변환
       const formattedEvent = {
@@ -1417,21 +1417,34 @@ exports.getEventById = async (req, res) => {
 
     const event = result.rows[0];
 
-    // 공유 대상 정보 조회 (부서/직급 포함)
-    const eventSharedResult = await query(
-      `SELECT eso.office_id, o.name as office_name, eso.department_id, d.name as department_name, eso.positions
-       FROM event_shared_offices eso
-       JOIN offices o ON eso.office_id = o.id
-       LEFT JOIN departments d ON eso.department_id = d.id
-       WHERE eso.event_id = $1 OR (eso.series_id = $2 AND $2 IS NOT NULL)`,
-      [event.id, event.series_id]
-    );
+    // 공유 대상 + 첨부파일 병렬 조회
+    const [eventSharedResult, eventAttachResult] = await Promise.all([
+      query(
+        `SELECT eso.office_id, o.name as office_name, eso.department_id, d.name as department_name, eso.positions
+         FROM event_shared_offices eso
+         JOIN offices o ON eso.office_id = o.id
+         LEFT JOIN departments d ON eso.department_id = d.id
+         WHERE eso.event_id = $1 OR (eso.series_id = $2 AND $2 IS NOT NULL)`,
+        [event.id, event.series_id]
+      ),
+      query(
+        'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE event_id = $1 ORDER BY created_at',
+        [event.id]
+      )
+    ]);
     const eventSharedOffices = eventSharedResult.rows.map(r => ({
       id: r.office_id,
       name: r.office_name,
       departmentId: r.department_id,
       departmentName: r.department_name,
       positions: r.positions
+    }));
+    const eventAttachments = eventAttachResult.rows.map(a => ({
+      id: a.id,
+      originalName: a.original_name,
+      fileSize: a.file_size,
+      mimeType: a.mime_type,
+      createdAt: a.created_at,
     }));
 
     // isOverdue 계산: 종료시간이 지났고 PENDING 상태인 경우
@@ -1440,19 +1453,6 @@ exports.getEventById = async (req, res) => {
     const eventEndTimeParsed = new Date(event.end_at);
     const eventEndTime = new Date(eventEndTimeParsed.getTime() - KST_OFFSET_MS);
     const isEventOverdue = event.status !== 'DONE' && eventEndTime < new Date();
-
-    // 첨부파일 조회 (해당 이벤트의 첨부만)
-    const eventAttachResult = await query(
-      'SELECT id, original_name, file_size, mime_type, created_at FROM event_attachments WHERE event_id = $1 ORDER BY created_at',
-      [event.id]
-    );
-    const eventAttachments = eventAttachResult.rows.map(a => ({
-      id: a.id,
-      originalName: a.original_name,
-      fileSize: a.file_size,
-      mimeType: a.mime_type,
-      createdAt: a.created_at,
-    }));
 
     // 필드명 camelCase로 변환
     const formattedEvent = {

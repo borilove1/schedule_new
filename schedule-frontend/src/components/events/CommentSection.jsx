@@ -8,7 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog';
 
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", "Segoe UI", sans-serif';
 
-export default function CommentSection({ eventId, currentUser, canComment = true, canEdit, rateLimitCountdown = 0 }) {
+export default function CommentSection({ eventId, currentUser, canComment = true, canEdit, rateLimitCountdown = 0, initialComments = null }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -50,8 +50,13 @@ export default function CommentSection({ eventId, currentUser, canComment = true
   }, [eventId, isSeriesEvent, seriesId, occurrenceDate]);
 
   useEffect(() => {
-    loadComments();
-  }, [loadComments]);
+    // 미리 로드된 댓글이 있으면 사용, 없으면 직접 로드
+    if (initialComments !== null) {
+      setComments(initialComments);
+    } else {
+      loadComments();
+    }
+  }, [loadComments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAddComment = async (e) => {
     e.preventDefault();

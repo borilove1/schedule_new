@@ -10,7 +10,7 @@ import CommentSection from './CommentSection';
 const FONT_FAMILY = '-apple-system, BlinkMacSystemFont, "Pretendard", "Inter", sans-serif';
 
 export default function EventDetailView({
-  event, currentUser, onEdit, onDelete, onComplete, loading, actionInProgress, error, eventId, rateLimitCountdown = 0, onDeleteAttachment
+  event, currentUser, onEdit, onDelete, onComplete, loading, actionInProgress, error, eventId, rateLimitCountdown = 0, onDeleteAttachment, initialComments = null
 }) {
   const { isDarkMode, textColor, secondaryTextColor, inputBg } = useThemeColors();
   const isMobile = useIsMobile();
@@ -277,6 +277,7 @@ export default function EventDetailView({
         currentUser={currentUser}
         canComment={true}
         rateLimitCountdown={rateLimitCountdown}
+        initialComments={initialComments}
       />
     </>
   );

@@ -38,6 +38,25 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
   });
   const [newFiles, setNewFiles] = useState([]);
   const [deletedAttachmentIds, setDeletedAttachmentIds] = useState([]);
+  const [preloadedComments, setPreloadedComments] = useState(null);
+
+  // 댓글 로드 헬퍼 (일정 로드와 병렬 실행용)
+  const fetchComments = useCallback(async (eid) => {
+    try {
+      const isSeriesEvent = String(eid).startsWith('series-');
+      if (isSeriesEvent) {
+        const seriesId = String(eid).split('-')[1];
+        const occurrenceDate = new Date(parseInt(String(eid).split('-')[2], 10)).toISOString().split('T')[0];
+        const data = await api.getSeriesComments(seriesId, occurrenceDate);
+        return data?.comments || [];
+      } else {
+        const data = await api.getEventComments(eid);
+        return data?.comments || [];
+      }
+    } catch {
+      return null; // 실패 시 CommentSection이 자체 로드
+    }
+  }, []);
 
   useEffect(() => {
     if (isOpen && eventId) {
@@ -48,6 +67,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
       setSharedTargets([]);
       setNewFiles([]);
       setDeletedAttachmentIds([]);
+      setPreloadedComments(null);
       actionGuard.reset();
       loadEvent();
       if (currentUser?.divisionId) {
@@ -64,9 +84,14 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
     try {
       setLoading(true);
       setError('');
-      const data = await api.getEvent(eventId);
+      // 일정 + 댓글 병렬 로드
+      const [data, comments] = await Promise.all([
+        api.getEvent(eventId),
+        fetchComments(eventId)
+      ]);
       if (data && data.id) {
         setEvent(data);
+        setPreloadedComments(comments);
         const start = formatDateTimeForInput(data.startAt);
         const end = formatDateTimeForInput(data.endAt);
         setFormData({
@@ -391,6 +416,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
                 eventId={eventId}
                 rateLimitCountdown={rateLimitCountdown}
                 onDeleteAttachment={handleDeleteAttachment}
+                initialComments={preloadedComments}
               />
             ) : (
               <EventEditForm
