@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
@@ -19,6 +19,10 @@ function AppContent() {
   const [cachedEvents, setCachedEvents] = useState([]);
   const [pendingEventId, setPendingEventId] = useState(null);
   const countdownRef = React.useRef(null);
+
+  // 페이지 전환 애니메이션
+  const [pageTransition, setPageTransition] = useState('none'); // 'fade-out' | 'none'
+  const transitionTimerRef = useRef(null);
 
   // 로그아웃 시 로그인 페이지로 리셋
   React.useEffect(() => {
@@ -46,6 +50,17 @@ function AppContent() {
         return prev - 1;
       });
     }, 1000);
+  }, []);
+
+  // 페이지 전환 (페이드 애니메이션)
+  const navigateTo = useCallback((targetPage) => {
+    if (transitionTimerRef.current) return;
+    setPageTransition('fade-out');
+    transitionTimerRef.current = setTimeout(() => {
+      setCurrentPage(targetPage);
+      setPageTransition('none');
+      transitionTimerRef.current = null;
+    }, 200);
   }, []);
 
   // 알림에서 일정 클릭 시 해당 일정으로 이동
@@ -87,29 +102,36 @@ function AppContent() {
     return <LoginPage onSignupClick={() => setAuthPage('signup')} />;
   }
 
+  // 페이지 전환 스타일
+  const transitionStyle = pageTransition === 'fade-out'
+    ? { opacity: 0, transform: 'scale(0.98)', transition: 'opacity 200ms ease-out, transform 200ms ease-out' }
+    : { opacity: 1, transform: 'scale(1)', transition: 'opacity 200ms ease-in, transform 200ms ease-in' };
+
   // 인증된 경우
   return (
     <NotificationProvider>
       <MainLayout>
-        {currentPage === 'admin' && user.role === 'ADMIN' ? (
-          <AdminPage onBack={() => setCurrentPage('settings')} />
-        ) : currentPage === 'settings' ? (
-          <SettingsPage
-            onBack={() => setCurrentPage('calendar')}
-            onNavigateToAdmin={() => setCurrentPage('admin')}
-          />
-        ) : (
-          <Calendar
-            rateLimitCountdown={rateLimitCountdown}
-            onRateLimitStart={startRateLimitCountdown}
-            cachedEvents={cachedEvents}
-            onEventsLoaded={setCachedEvents}
-            pendingEventId={pendingEventId}
-            onEventOpened={() => setPendingEventId(null)}
-            onNavigateSettings={() => setCurrentPage('settings')}
-            onEventNavigate={handleEventNavigate}
-          />
-        )}
+        <div style={transitionStyle}>
+          {currentPage === 'admin' && user.role === 'ADMIN' ? (
+            <AdminPage onBack={() => navigateTo('settings')} />
+          ) : currentPage === 'settings' ? (
+            <SettingsPage
+              onBack={() => navigateTo('calendar')}
+              onNavigateToAdmin={() => navigateTo('admin')}
+            />
+          ) : (
+            <Calendar
+              rateLimitCountdown={rateLimitCountdown}
+              onRateLimitStart={startRateLimitCountdown}
+              cachedEvents={cachedEvents}
+              onEventsLoaded={setCachedEvents}
+              pendingEventId={pendingEventId}
+              onEventOpened={() => setPendingEventId(null)}
+              onNavigateSettings={() => navigateTo('settings')}
+              onEventNavigate={handleEventNavigate}
+            />
+          )}
+        </div>
       </MainLayout>
     </NotificationProvider>
   );
