@@ -6,7 +6,7 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useNotification } from '../../contexts/NotificationContext';
 import {
-  ArrowLeft, User, Lock, Sun, Moon, Mail, Bell, Shield, LogOut,
+  X, User, Lock, Sun, Moon, Mail, Bell, Shield, LogOut,
   ChevronRight, ChevronDown, Save, CheckCircle
 } from 'lucide-react';
 import ErrorAlert from '../common/ErrorAlert';
@@ -418,9 +418,12 @@ export default function SettingsPage({ onBack, onNavigateToAdmin }) {
     <div style={{ maxWidth: '600px', margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{
-        display: 'flex', alignItems: 'center', gap: '12px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: '24px',
       }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '600', color: textColor, margin: 0 }}>
+          설정
+        </h2>
         <button
           onClick={onBack}
           style={{
@@ -428,13 +431,10 @@ export default function SettingsPage({ onBack, onNavigateToAdmin }) {
             cursor: 'pointer', display: 'flex', alignItems: 'center',
             padding: '4px', borderRadius: '8px',
           }}
-          title="돌아가기"
+          title="닫기"
         >
-          <ArrowLeft size={22} />
+          <X size={22} />
         </button>
-        <h2 style={{ fontSize: '20px', fontWeight: '600', color: textColor, margin: 0 }}>
-          설정
-        </h2>
       </div>
 
       {/* 메뉴 리스트 */}

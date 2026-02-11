@@ -4,6 +4,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { useThemeColors } from './hooks/useThemeColors';
 import { useIsMobile } from './hooks/useIsMobile';
+import { useSwipeDown } from './hooks/useSwipeDown';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
@@ -76,6 +77,14 @@ function AppContent() {
   const switchOverlay = useCallback((page) => {
     setOverlayPage(page);
   }, []);
+
+  // 스와이프로 오버레이 닫기 (애니메이션 후 즉시 제거)
+  const swipeCloseOverlay = useCallback(() => {
+    setOverlayPage(null);
+    setOverlayClosing(false);
+    setOverlayAnimating(false);
+  }, []);
+  const { handleTouchStart: overlayTouchStart, handleTouchMove: overlayTouchMove, handleTouchEnd: overlayTouchEnd, swipeStyle: overlaySwipeStyle, backdropOpacity: overlayBackdropOpacity, contentRef: overlayContentRef } = useSwipeDown(swipeCloseOverlay);
 
   // 알림에서 일정 클릭 시 해당 일정으로 이동
   const handleEventNavigate = (eventId) => {
@@ -151,12 +160,18 @@ function AppContent() {
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
-            backgroundColor: overlayAnimating ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0)',
-            transition: 'background-color 0.25s ease',
+            backgroundColor: overlaySwipeStyle
+              ? `rgba(0,0,0,${0.5 * overlayBackdropOpacity})`
+              : (overlayAnimating ? 'rgba(0,0,0,0.5)' : 'rgba(0,0,0,0)'),
+            transition: overlaySwipeStyle ? 'none' : 'background-color 0.25s ease',
           }}
           onClick={(e) => { if (e.target === e.currentTarget) closeOverlay(); }}
           >
-            <div style={{
+            <div
+              onTouchStart={overlayTouchStart}
+              onTouchMove={overlayTouchMove}
+              onTouchEnd={overlayTouchEnd}
+              style={{
               backgroundColor: bgColor,
               borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0',
               width: '100%',
@@ -165,8 +180,8 @@ function AppContent() {
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              transform: overlayAnimating ? 'translateY(0)' : 'translateY(100%)',
-              transition: 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
+              transform: overlaySwipeStyle ? overlaySwipeStyle.transform : (overlayAnimating ? 'translateY(0)' : 'translateY(100%)'),
+              transition: overlaySwipeStyle ? overlaySwipeStyle.transition : 'transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)',
             }}>
               {/* 드래그 핸들 */}
               {isMobile && (
@@ -178,7 +193,7 @@ function AppContent() {
                 </div>
               )}
               {/* 콘텐츠 스크롤 영역 */}
-              <div style={{
+              <div ref={overlayContentRef} style={{
                 flex: 1,
                 overflowY: 'auto',
                 padding: isMobile ? '8px 16px 16px' : '24px',

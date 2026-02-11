@@ -6,6 +6,7 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useActionGuard } from '../../hooks/useActionGuard';
+import { useSwipeDown } from '../../hooks/useSwipeDown';
 import { formatDateTimeForInput } from '../../utils/eventHelpers';
 import EventDetailView from './EventDetailView';
 import EventEditForm from './EventEditForm';
@@ -274,6 +275,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
     }, 300); // transition 시간과 동일
   }, [isClosing, onClose]);
 
+  // 스와이프로 모달 닫기
+  const { handleTouchStart, handleTouchMove, handleTouchEnd, swipeStyle, backdropOpacity, contentRef: swipeContentRef } = useSwipeDown(onClose);
+
   const handleEsc = useCallback((e) => {
     if (e.key === 'Escape') {
       if (activeDialog) {
@@ -306,15 +310,22 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
       aria-labelledby="event-detail-modal-title"
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)', display: 'flex',
+        backgroundColor: (isMobile && swipeStyle)
+          ? `rgba(0,0,0,${0.7 * backdropOpacity})`
+          : (isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)'),
+        display: 'flex',
         alignItems: isMobile ? 'flex-end' : 'center',
         justifyContent: 'center', zIndex: 1000,
         padding: isMobile ? 0 : '20px',
         paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : '20px',
-        transition: 'background-color 0.2s ease',
+        transition: (isMobile && swipeStyle) ? 'none' : 'background-color 0.2s ease',
       }}
     >
-      <div style={{
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
         backgroundColor: cardBg,
         borderRadius: isMobile ? '20px 20px 0 0' : '16px',
         width: '100%',
@@ -324,9 +335,9 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         flexDirection: 'column',
         overflow: 'hidden',
         fontFamily: FONT_FAMILY,
-        transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
+        transform: (isMobile && swipeStyle) ? swipeStyle.transform : (isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)')),
         opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
-        transition: isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease',
+        transition: (isMobile && swipeStyle) ? swipeStyle.transition : (isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease'),
       }}>
         {isMobile && (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '10px', paddingBottom: '2px' }}>
@@ -350,7 +361,7 @@ export default function EventDetailModal({ isOpen, onClose, eventId, onSuccess, 
         {loading && !event ? (
           <div style={{ flex: 1, padding: '40px', textAlign: 'center', color: secondaryTextColor }}>로딩 중...</div>
         ) : event ? (
-          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 20px' : '24px' }}>
+          <div ref={swipeContentRef} style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 20px' : '24px' }}>
             {!isEditing ? (
               <EventDetailView
                 event={event}

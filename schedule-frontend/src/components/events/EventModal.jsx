@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
+import { useSwipeDown } from '../../hooks/useSwipeDown';
 import ErrorAlert from '../common/ErrorAlert';
 import api from '../../utils/api';
 
@@ -280,6 +281,9 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
     }, 300); // transition 시간과 동일
   }, [isClosing, onClose]);
 
+  // 스와이프로 모달 닫기
+  const { handleTouchStart, handleTouchMove, handleTouchEnd, swipeStyle, backdropOpacity, contentRef: swipeContentRef } = useSwipeDown(onClose);
+
   // ESC 키로 모달 닫기
   const handleEsc = useCallback((e) => {
     if (e.key === 'Escape') handleClose();
@@ -397,17 +401,23 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
       aria-labelledby="event-modal-title"
       style={{
         position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-        backgroundColor: isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)',
+        backgroundColor: (isMobile && swipeStyle)
+          ? `rgba(0,0,0,${0.7 * backdropOpacity})`
+          : (isAnimating ? 'rgba(0,0,0,0.7)' : 'rgba(0,0,0,0)'),
         display: 'flex',
         alignItems: isMobile ? 'flex-end' : 'center',
         justifyContent: 'center',
         zIndex: 1000,
         padding: isMobile ? 0 : '5px',
         paddingTop: isMobile ? 'env(safe-area-inset-top, 0px)' : '5px',
-        transition: 'background-color 0.2s ease',
+        transition: (isMobile && swipeStyle) ? 'none' : 'background-color 0.2s ease',
       }}
     >
-      <div style={{
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
         backgroundColor: cardBg,
         borderRadius: isMobile ? '20px 20px 0 0' : '16px',
         width: '100%',
@@ -415,9 +425,9 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         maxHeight: isMobile ? 'calc(100% - env(safe-area-inset-top, 0px))' : 'calc(100vh - 10px)',
         display: 'flex', flexDirection: 'column', overflow: 'hidden',
         boxShadow: '0 20px 60px rgba(0,0,0,0.3)', fontFamily,
-        transform: isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)'),
+        transform: (isMobile && swipeStyle) ? swipeStyle.transform : (isAnimating ? 'translateY(0)' : (isMobile ? 'translateY(100%)' : 'translateY(20px)')),
         opacity: isMobile ? 1 : (isAnimating ? 1 : 0),
-        transition: isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease',
+        transition: (isMobile && swipeStyle) ? swipeStyle.transition : (isMobile ? 'transform 0.3s ease' : 'transform 0.25s ease, opacity 0.2s ease'),
       }}>
         {/* Header - sticky */}
         {isMobile && (
@@ -440,7 +450,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
         </div>
 
         {/* Body - scrollable */}
-        <form onSubmit={handleSubmit} style={{ padding: isMobile ? '12px 16px 16px' : '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
+        <form ref={swipeContentRef} onSubmit={handleSubmit} style={{ padding: isMobile ? '12px 16px 16px' : '20px 24px 24px', overflowY: 'auto', flex: 1 }}>
           {/* 작성자 정보 (필요 시 주석 해제)
           <div style={{
             padding: '8px 12px', borderRadius: '8px', backgroundColor: bgColor,
