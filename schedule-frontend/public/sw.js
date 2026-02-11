@@ -3,6 +3,7 @@ const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/favicon.ico',
   '/logo192.png',
   '/logo512.png',
 ];
@@ -52,7 +53,7 @@ self.addEventListener('fetch', (event) => {
       if (cached) return cached;
       return fetch(request)
         .then(response => {
-          if (response.ok && url.pathname.match(/\.(js|css|png|jpg|svg|woff2?)$/)) {
+          if (response.ok && url.pathname.match(/\.(js|css|png|jpg|svg|ico|woff2?)$/)) {
             const cloned = response.clone();
             caches.open(CACHE_NAME).then(cache => cache.put(request, cloned));
           }
