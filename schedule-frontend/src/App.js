@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import { useThemeColors } from './hooks/useThemeColors';
+import { useIsMobile } from './hooks/useIsMobile';
 import LoadingSpinner from './components/common/LoadingSpinner';
 import LoginPage from './components/auth/LoginPage';
 import SignupPage from './components/auth/SignupPage';
@@ -19,6 +20,8 @@ function AppContent() {
   const [cachedEvents, setCachedEvents] = useState([]);
   const [pendingEventId, setPendingEventId] = useState(null);
   const countdownRef = React.useRef(null);
+  const isMobile = useIsMobile();
+  const touchRef = useRef(null);
 
   // 로그아웃 시 로그인 페이지로 리셋
   React.useEffect(() => {
@@ -47,6 +50,27 @@ function AppContent() {
       });
     }, 1000);
   }, []);
+
+  // 모바일 스와이프 뒤로가기 (설정/관리자 페이지에서 오른쪽 스와이프)
+  const handleSwipeStart = useCallback((e) => {
+    if (!isMobile) return;
+    touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }, [isMobile]);
+
+  const handleSwipeEnd = useCallback((e) => {
+    if (!isMobile || !touchRef.current) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.x;
+    const dy = e.changedTouches[0].clientY - touchRef.current.y;
+    touchRef.current = null;
+    // 오른쪽 스와이프 80px 이상 + 가로가 세로보다 클 때
+    if (dx > 80 && Math.abs(dx) > Math.abs(dy)) {
+      if (currentPage === 'admin') {
+        setCurrentPage('settings');
+      } else if (currentPage === 'settings') {
+        setCurrentPage('calendar');
+      }
+    }
+  }, [isMobile, currentPage]);
 
   // 알림에서 일정 클릭 시 해당 일정으로 이동
   const handleEventNavigate = (eventId) => {
@@ -92,12 +116,16 @@ function AppContent() {
     <NotificationProvider>
       <MainLayout>
         {currentPage === 'admin' && user.role === 'ADMIN' ? (
-          <AdminPage onBack={() => setCurrentPage('settings')} />
+          <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
+            <AdminPage onBack={() => setCurrentPage('settings')} />
+          </div>
         ) : currentPage === 'settings' ? (
-          <SettingsPage
-            onBack={() => setCurrentPage('calendar')}
-            onNavigateToAdmin={() => setCurrentPage('admin')}
-          />
+          <div onTouchStart={handleSwipeStart} onTouchEnd={handleSwipeEnd}>
+            <SettingsPage
+              onBack={() => setCurrentPage('calendar')}
+              onNavigateToAdmin={() => setCurrentPage('admin')}
+            />
+          </div>
         ) : (
           <Calendar
             rateLimitCountdown={rateLimitCountdown}
