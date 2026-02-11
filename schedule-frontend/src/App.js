@@ -102,10 +102,10 @@ function AppContent() {
     return <LoginPage onSignupClick={() => setAuthPage('signup')} />;
   }
 
-  // 페이지 전환 스타일
+  // 페이지 전환 스타일 (transform 사용 금지 - position:fixed 자식 요소 깨짐)
   const transitionStyle = pageTransition === 'fade-out'
-    ? { opacity: 0, transform: 'scale(0.98)', transition: 'opacity 200ms ease-out, transform 200ms ease-out' }
-    : { opacity: 1, transform: 'scale(1)', transition: 'opacity 200ms ease-in, transform 200ms ease-in' };
+    ? { opacity: 0, transition: 'opacity 200ms ease-out' }
+    : { opacity: 1, transition: 'opacity 200ms ease-in' };
 
   // 인증된 경우
   return (
