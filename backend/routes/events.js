@@ -42,15 +42,49 @@ const ALLOWED_MIME_TYPES = [
   'application/x-hwp', 'application/haansofthwp', 'application/x-hwpml',
 ];
 
+// 허용 확장자 (MIME 위조 방지를 위해 확장자도 함께 검증)
+const ALLOWED_EXTENSIONS = new Set([
+  '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',
+  '.jpg', '.jpeg', '.png', '.gif', '.webp',
+  '.txt', '.csv', '.zip', '.hwp',
+]);
+
+// 위험한 확장자 차단 (이중 확장자 공격 방지: report.pdf.exe 등)
+const DANGEROUS_EXTENSIONS = new Set([
+  '.exe', '.bat', '.cmd', '.com', '.msi', '.scr', '.pif',
+  '.vbs', '.vbe', '.js', '.jse', '.wsf', '.wsh', '.ps1',
+  '.sh', '.bash', '.csh', '.ksh',
+  '.app', '.action', '.command', '.workflow',
+  '.reg', '.inf', '.hta', '.cpl', '.msc',
+  '.dll', '.sys', '.drv',
+  '.docm', '.xlsm', '.pptm',  // 매크로 포함 Office 파일
+  '.jar', '.py', '.rb', '.php', '.asp', '.aspx', '.jsp',
+  '.html', '.htm', '.xhtml', '.svg',  // XSS 가능
+]);
+
 const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB per file
   fileFilter: (req, file, cb) => {
-    if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('허용되지 않는 파일 형식입니다.'));
+    // 1) MIME 타입 검증
+    if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error('허용되지 않는 파일 형식입니다.'));
     }
+    // 2) 확장자 검증 (소문자 변환)
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return cb(new Error('허용되지 않는 파일 확장자입니다.'));
+    }
+    // 3) 이중 확장자 공격 방지 (report.pdf.exe)
+    const nameParts = file.originalname.toLowerCase().split('.');
+    if (nameParts.length > 2) {
+      for (let i = 1; i < nameParts.length; i++) {
+        if (DANGEROUS_EXTENSIONS.has('.' + nameParts[i])) {
+          return cb(new Error('위험한 파일 형식이 포함되어 있습니다.'));
+        }
+      }
+    }
+    cb(null, true);
   }
 });
 

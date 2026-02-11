@@ -2069,9 +2069,10 @@ exports.downloadAttachment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'File not found on server' });
     }
 
-    // Content-Disposition: attachment → 브라우저 저장 대화상자
     const encodedName = encodeURIComponent(attachment.original_name);
     res.setHeader('Content-Disposition', `attachment; filename="${encodedName}"; filename*=UTF-8''${encodedName}`);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Type', 'application/octet-stream');
     res.sendFile(path.resolve(filePath));
   } catch (error) {
     console.error('Download attachment error:', error);
