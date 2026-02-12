@@ -7,7 +7,7 @@ import { useIsMobile } from '../../hooks/useIsMobile';
 import { useNotification } from '../../contexts/NotificationContext';
 import {
   X, User, Lock, Sun, Moon, Mail, Bell, Shield, LogOut,
-  ChevronRight, ChevronDown, Save, CheckCircle
+  ChevronRight, ChevronDown, Save, CheckCircle, CalendarDays
 } from 'lucide-react';
 import ErrorAlert from '../common/ErrorAlert';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -531,6 +531,18 @@ export default function SettingsPage({ onBack, onNavigateToAdmin }) {
             <LogOut size={15} />
             <span>로그아웃</span>
           </button>
+        </div>
+
+        {/* 푸터 */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+          gap: '6px', marginTop: '24px', paddingTop: '16px',
+          borderTop: `1px solid ${borderColor}`,
+          color: isDarkMode ? 'rgba(148,163,184,0.4)' : 'rgba(148,163,184,0.7)',
+          fontSize: '12px',
+        }}>
+          <CalendarDays size={14} />
+          <span>일정관리시스템</span>
         </div>
       </div>
 
