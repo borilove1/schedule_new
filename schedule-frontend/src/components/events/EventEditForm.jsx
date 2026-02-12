@@ -373,8 +373,8 @@ export default function EventEditForm({
         </div>
       </div>
 
-      {/* 우선순위 */}
-      <div style={{ marginBottom: '14px' }}>
+      {/* 우선순위 - 비활성화 (추후 사용 예정) */}
+      <div style={{ marginBottom: '14px', display: 'none' }}>
         <label style={labelStyle}>우선순위</label>
         <div ref={priorityDropdownRef} style={{ position: 'relative' }}>
           <div
