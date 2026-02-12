@@ -339,8 +339,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         onEventClick={handleSearchEventClick}
       />
 
-      {/* 모바일 FAB - 모달 열려있을 때 숨김 */}
-      {isMobile && !showModal && !showDetailModal && !showSearchModal && (
+      {/* 모바일/태블릿 FAB - 모달 열려있을 때 숨김 */}
+      {isMobileOrTablet && !showModal && !showDetailModal && !showSearchModal && (
         <button
           onClick={() => handleNewEvent(selectedDay)}
           aria-label="새 일정 만들기"
