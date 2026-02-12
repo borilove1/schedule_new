@@ -176,7 +176,7 @@ function AppContent() {
               borderRadius: isMobile ? '20px 20px 0 0' : '16px 16px 0 0',
               width: '100%',
               maxWidth: isMobile ? '100%' : '800px',
-              height: isMobile ? 'calc(100% - env(safe-area-inset-top, 0px) - 20px)' : 'calc(100% - 40px)',
+              height: isMobile ? 'calc(100% - env(safe-area-inset-top, 0px) - 20px)' : 'calc(100% - 100px)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
