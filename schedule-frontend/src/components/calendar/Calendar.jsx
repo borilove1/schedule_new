@@ -22,6 +22,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
   const { isMobileOrTablet } = useResponsive();
+  const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  const showFAB = isMobileOrTablet || isTouchDevice;
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState(cachedEvents);
@@ -339,8 +341,8 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         onEventClick={handleSearchEventClick}
       />
 
-      {/* 모바일/태블릿 FAB - 모달 열려있을 때 숨김 */}
-      {isMobileOrTablet && !showModal && !showDetailModal && !showSearchModal && (
+      {/* 모바일/태블릿/터치 디바이스 FAB - 모달 열려있을 때 숨김 */}
+      {showFAB && !showModal && !showDetailModal && !showSearchModal && (
         <button
           onClick={() => handleNewEvent(selectedDay)}
           aria-label="새 일정 만들기"
