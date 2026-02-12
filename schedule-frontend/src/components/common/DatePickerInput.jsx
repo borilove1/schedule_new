@@ -139,9 +139,10 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const primaryColor = '#3b82f6';
   const active = isFocused || isOpen;
 
-  // 모바일 또는 터치 디바이스: 네이티브 피커만 사용 (태블릿에서 네이티브+커스텀 동시 표시 방지)
+  // 터치 디바이스: 네이티브 피커 사용 (태블릿에서 네이티브+커스텀 동시 표시 방지)
+  // PC는 화면 크기와 무관하게 항상 커스텀 피커 사용
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  if (isMobile || isTouchDevice) {
+  if (isTouchDevice) {
     return (
       <input type="date" name={name} value={value} onChange={onChange}
         required={required} min={min}
