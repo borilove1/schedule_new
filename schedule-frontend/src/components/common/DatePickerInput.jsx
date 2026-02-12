@@ -208,10 +208,10 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
 
       {isOpen && viewYear != null && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+          position: 'absolute', top: '100%', left: 0, marginTop: '4px',
           backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
-          zIndex: 1100, padding: '12px', minWidth: isMobile ? undefined : '280px', fontFamily,
+          zIndex: 1100, padding: '12px', width: isMobile ? '260px' : '280px', fontFamily,
         }} onClick={(e) => e.stopPropagation()}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', padding: '0 2px' }}>
             <button type="button" onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: secondaryTextColor, transition: 'background-color 0.15s' }}

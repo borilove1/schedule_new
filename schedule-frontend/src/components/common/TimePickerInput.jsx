@@ -69,11 +69,6 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     onChange({ target: { name, value: `${newH}:${newM}` } });
   }, [hourValue, minuteValue, name, onChange]);
 
-  const handleQuickSelect = useCallback((timeVal) => {
-    onChange({ target: { name, value: timeVal } });
-    setIsOpen(false);
-  }, [name, onChange]);
-
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')), []);
 
@@ -154,32 +149,6 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
           zIndex: 1100, padding: '12px', minWidth: isMobile ? undefined : '240px', fontFamily,
         }} onClick={(e) => e.stopPropagation()}>
-          {/* Quick select */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px', paddingBottom: '10px', borderBottom: `1px solid ${borderColor}` }}>
-            {['09:00', '10:00', '12:00', '14:00', '15:00', '17:00', '18:00'].map(t => {
-              const hour = parseInt(t.split(':')[0], 10);
-              const ampm = hour < 12 ? '오전' : '오후';
-              const h12 = hour > 12 ? hour - 12 : hour;
-              const isActive = value === t;
-              return (
-                <button key={t} type="button" onClick={() => handleQuickSelect(t)}
-                  style={{
-                    padding: '4px 8px', borderRadius: '6px',
-                    border: `1px solid ${isActive ? primaryColor : borderColor}`,
-                    backgroundColor: isActive ? primaryColor : 'transparent',
-                    color: isActive ? '#ffffff' : secondaryTextColor,
-                    fontSize: '11px', fontWeight: '500', cursor: 'pointer', fontFamily,
-                    transition: 'all 0.15s', whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = primaryColor; e.currentTarget.style.color = primaryColor; } }}
-                  onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = borderColor; e.currentTarget.style.color = secondaryTextColor; } }}
-                >
-                  {ampm} {h12}시
-                </button>
-              );
-            })}
-          </div>
-
           {/* Hour/Minute columns */}
           <div style={{ display: 'flex', gap: '8px' }}>
             <div style={{ flex: 1 }}>
