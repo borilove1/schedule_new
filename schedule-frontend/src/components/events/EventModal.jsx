@@ -454,7 +454,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           </div>
         )}
         <div style={{
-          padding: isMobile ? '12px 20px' : '24px',
+          padding: isMobile ? '12px 20px' : '16px 24px',
           borderBottom: `1px solid ${borderColor}`,
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexShrink: 0, backgroundColor: cardBg, zIndex: 1,
