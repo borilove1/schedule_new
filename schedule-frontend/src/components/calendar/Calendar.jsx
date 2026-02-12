@@ -3,7 +3,6 @@ import { Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useIsMobile } from '../../hooks/useIsMobile';
-import { useResponsive } from '../../hooks/useResponsive';
 import EventModal from '../events/EventModal';
 import EventDetailModal from '../events/EventDetailModal';
 import EventSearchModal from '../events/EventSearchModal';
@@ -21,7 +20,6 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const { user } = useAuth();
   const { textColor, borderColor, cardBg } = useThemeColors();
   const isMobile = useIsMobile();
-  const { isMobileOrTablet } = useResponsive();
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
   const showFAB = isTouchDevice;
 
@@ -233,23 +231,23 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const handleSearchOpen = useCallback(() => setShowSearchModal(true), []);
   const handleSearchClose = useCallback(() => setShowSearchModal(false), []);
 
-  // 모바일 스와이프로 월 이동
+  // 터치 디바이스에서 스와이프로 월 이동
   const handleTouchStart = useCallback((e) => {
-    if (!isMobileOrTablet) return;
+    if (!isTouchDevice) return;
     touchRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-  }, [isMobileOrTablet]);
+  }, [isTouchDevice]);
   const handleTouchEnd = useCallback((e) => {
-    if (!isMobileOrTablet || !touchRef.current) return;
+    if (!isTouchDevice || !touchRef.current) return;
     const dx = e.changedTouches[0].clientX - touchRef.current.x;
     const dy = e.changedTouches[0].clientY - touchRef.current.y;
     touchRef.current = null;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
     animateMonthChange(dx < 0 ? 'next' : 'prev');
-  }, [isMobileOrTablet, animateMonthChange]);
+  }, [isTouchDevice, animateMonthChange]);
 
   // 스와이프 중 세로 스크롤 방지 (가로 이동이 세로보다 클 때)
   useEffect(() => {
-    if (!isMobileOrTablet) return;
+    if (!isTouchDevice) return;
     const el = swipeContainerRef.current;
     if (!el) return;
     const handleTouchMove = (e) => {
@@ -262,7 +260,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
     };
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
     return () => el.removeEventListener('touchmove', handleTouchMove);
-  }, [isMobileOrTablet]);
+  }, [isTouchDevice]);
 
   return (
     <div style={{ color: textColor, fontFamily: FONT_FAMILY }}>
