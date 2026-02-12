@@ -6,6 +6,20 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
 
+// Inject global CSS to hide native date picker icons (can't do with inline styles)
+const STYLE_ID = 'datepicker-hide-native';
+if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = STYLE_ID;
+  style.textContent = `
+    .custom-date-input::-webkit-calendar-picker-indicator { display: none !important; -webkit-appearance: none !important; }
+    .custom-date-input::-webkit-inner-spin-button { display: none !important; }
+    .custom-time-input::-webkit-calendar-picker-indicator { display: none !important; -webkit-appearance: none !important; }
+    .custom-time-input::-webkit-inner-spin-button { display: none !important; }
+  `;
+  document.head.appendChild(style);
+}
+
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
 }
@@ -24,7 +38,6 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Parse current value
   const parsed = useMemo(() => {
     if (!value) return null;
     const [y, m, d] = value.split('-').map(Number);
@@ -32,14 +45,12 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
     return { year: y, month: m - 1, day: d };
   }, [value]);
 
-  // Parse min date
   const minParsed = useMemo(() => {
     if (!min) return null;
     const [y, m, d] = min.split('-').map(Number);
     return new Date(y, m - 1, d);
   }, [min]);
 
-  // Initialize view to selected date or today
   useEffect(() => {
     if (isOpen) {
       if (parsed) {
@@ -53,7 +64,6 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
     }
   }, [isOpen, parsed]);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
     const handleClick = (e) => {
@@ -65,7 +75,6 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
-  // Close on ESC
   useEffect(() => {
     if (!isOpen) return;
     const handleKey = (e) => {
@@ -78,10 +87,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const handlePrevMonth = useCallback((e) => {
     e.stopPropagation();
     setViewMonth(m => {
-      if (m === 0) {
-        setViewYear(y => y - 1);
-        return 11;
-      }
+      if (m === 0) { setViewYear(y => y - 1); return 11; }
       return m - 1;
     });
   }, []);
@@ -89,10 +95,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const handleNextMonth = useCallback((e) => {
     e.stopPropagation();
     setViewMonth(m => {
-      if (m === 11) {
-        setViewYear(y => y + 1);
-        return 0;
-      }
+      if (m === 11) { setViewYear(y => y + 1); return 0; }
       return m + 1;
     });
   }, []);
@@ -100,8 +103,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const handleSelectDay = useCallback((day) => {
     const mm = String(viewMonth + 1).padStart(2, '0');
     const dd = String(day).padStart(2, '0');
-    const newValue = `${viewYear}-${mm}-${dd}`;
-    onChange({ target: { name, value: newValue } });
+    onChange({ target: { name, value: `${viewYear}-${mm}-${dd}` } });
     setIsOpen(false);
   }, [viewYear, viewMonth, name, onChange]);
 
@@ -116,54 +118,27 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
 
   const isDisabled = useCallback((day) => {
     if (!minParsed) return false;
-    const d = new Date(viewYear, viewMonth, day);
-    return d < minParsed;
+    return new Date(viewYear, viewMonth, day) < minParsed;
   }, [minParsed, viewYear, viewMonth]);
 
-  // Build calendar grid
   const calendarDays = useMemo(() => {
     if (viewYear == null || viewMonth == null) return [];
     const daysInMonth = getDaysInMonth(viewYear, viewMonth);
     const firstDay = getFirstDayOfMonth(viewYear, viewMonth);
     const prevMonthDays = getDaysInMonth(viewYear, viewMonth - 1 < 0 ? 11 : viewMonth - 1);
-
     const days = [];
-    for (let i = firstDay - 1; i >= 0; i--) {
-      days.push({ day: prevMonthDays - i, type: 'prev' });
-    }
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, type: 'current' });
-    }
+    for (let i = firstDay - 1; i >= 0; i--) days.push({ day: prevMonthDays - i, type: 'prev' });
+    for (let i = 1; i <= daysInMonth; i++) days.push({ day: i, type: 'current' });
     const remaining = 42 - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      days.push({ day: i, type: 'next' });
-    }
+    for (let i = 1; i <= remaining; i++) days.push({ day: i, type: 'next' });
     return days;
   }, [viewYear, viewMonth]);
 
   const primaryColor = '#3b82f6';
-  const focusBorderColor = '#3B82F6';
-  const focusShadow = '0 0 0 3px rgba(59,130,246,0.15)';
-
-  const popupStyle = {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: '4px',
-    backgroundColor: cardBg,
-    borderRadius: '12px',
-    border: `1px solid ${borderColor}`,
-    boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
-    zIndex: 1100,
-    padding: '12px',
-    minWidth: isMobile ? undefined : '280px',
-    fontFamily,
-  };
+  const active = isFocused || isOpen;
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      {/* Wrapper that looks like an input field */}
       <div
         style={{
           ...style,
@@ -171,12 +146,12 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           alignItems: 'center',
           gap: '6px',
           cursor: 'text',
-          borderColor: (isFocused || isOpen) ? focusBorderColor : (style?.borderColor || borderColor),
-          boxShadow: (isFocused || isOpen) ? focusShadow : 'none',
+          borderColor: active ? '#3B82F6' : (style?.borderColor || undefined),
+          boxShadow: active ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
         onClick={() => inputRef.current?.focus()}
       >
-        {/* Native date input - visible and editable */}
         <input
           ref={inputRef}
           type="date"
@@ -185,11 +160,10 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           required={required}
           min={min}
           onChange={onChange}
+          className="custom-date-input"
           onFocus={() => setIsFocused(true)}
           onBlur={(e) => {
-            if (!containerRef.current?.contains(e.relatedTarget)) {
-              setIsFocused(false);
-            }
+            if (!containerRef.current?.contains(e.relatedTarget)) setIsFocused(false);
           }}
           style={{
             flex: 1,
@@ -202,17 +176,14 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
             padding: 0,
             margin: 0,
             width: '100%',
+            minWidth: 0,
             colorScheme: isDarkMode ? 'dark' : 'light',
           }}
         />
-        {/* Calendar icon to open picker */}
         <button
           type="button"
           tabIndex={-1}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(!isOpen);
-          }}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
           style={{
             background: 'none',
             border: 'none',
@@ -233,193 +204,68 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
         </button>
       </div>
 
-      {/* Calendar popup */}
       {isOpen && viewYear != null && (
-        <div style={popupStyle} onClick={(e) => e.stopPropagation()}>
-          {/* Header - Month/Year navigation */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '10px',
-            padding: '0 2px',
-          }}>
-            <button
-              type="button"
-              onClick={handlePrevMonth}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: secondaryTextColor,
-                transition: 'background-color 0.15s',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+          backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
+          boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
+          zIndex: 1100, padding: '12px', minWidth: isMobile ? undefined : '280px', fontFamily,
+        }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', padding: '0 2px' }}>
+            <button type="button" onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: secondaryTextColor, transition: 'background-color 0.15s' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
               <ChevronLeft size={18} />
             </button>
-            <span style={{
-              fontSize: '15px',
-              fontWeight: '600',
-              color: textColor,
-              fontFamily,
-            }}>
-              {viewYear}년 {MONTHS[viewMonth]}
-            </span>
-            <button
-              type="button"
-              onClick={handleNextMonth}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: secondaryTextColor,
-                transition: 'background-color 0.15s',
-              }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
+            <span style={{ fontSize: '15px', fontWeight: '600', color: textColor, fontFamily }}>{viewYear}년 {MONTHS[viewMonth]}</span>
+            <button type="button" onClick={handleNextMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: secondaryTextColor, transition: 'background-color 0.15s' }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = hoverBg} onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
               <ChevronRight size={18} />
             </button>
           </div>
 
-          {/* Weekday headers */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '0',
-            marginBottom: '4px',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: '4px' }}>
             {WEEKDAYS.map((wd, i) => (
-              <div key={wd} style={{
-                textAlign: 'center',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : secondaryTextColor,
-                padding: '4px 0',
-                fontFamily,
-              }}>
-                {wd}
-              </div>
+              <div key={wd} style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: i === 0 ? '#ef4444' : i === 6 ? '#3b82f6' : secondaryTextColor, padding: '4px 0', fontFamily }}>{wd}</div>
             ))}
           </div>
 
-          {/* Day grid */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(7, 1fr)',
-            gap: '2px',
-          }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
             {calendarDays.map((item, idx) => {
               const isCurrent = item.type === 'current';
               const sel = isCurrent && isSelected(item.day);
               const tod = isCurrent && isToday(item.day);
               const dis = isCurrent && isDisabled(item.day);
               const dayOfWeek = idx % 7;
-
               return (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={!isCurrent || dis}
+                <button key={idx} type="button" disabled={!isCurrent || dis}
                   onClick={() => isCurrent && !dis && handleSelectDay(item.day)}
                   style={{
-                    width: '100%',
-                    aspectRatio: '1',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: 'none',
-                    borderRadius: '8px',
-                    fontSize: '13px',
+                    width: '100%', aspectRatio: '1', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    border: 'none', borderRadius: '8px', fontSize: '13px', fontFamily,
                     fontWeight: sel ? '700' : tod ? '600' : '400',
-                    fontFamily,
-                    cursor: isCurrent && !dis ? 'pointer' : 'default',
-                    transition: 'all 0.15s',
+                    cursor: isCurrent && !dis ? 'pointer' : 'default', transition: 'all 0.15s',
                     backgroundColor: sel ? primaryColor : 'transparent',
-                    color: sel
-                      ? '#ffffff'
-                      : !isCurrent || dis
-                        ? isDarkMode ? '#475569' : '#cbd5e1'
-                        : dayOfWeek === 0
-                          ? '#ef4444'
-                          : dayOfWeek === 6
-                            ? '#3b82f6'
-                            : textColor,
+                    color: sel ? '#ffffff' : !isCurrent || dis ? (isDarkMode ? '#475569' : '#cbd5e1') : dayOfWeek === 0 ? '#ef4444' : dayOfWeek === 6 ? '#3b82f6' : textColor,
                     position: 'relative',
                   }}
-                  onMouseEnter={(e) => {
-                    if (isCurrent && !dis && !sel) {
-                      e.currentTarget.style.backgroundColor = hoverBg;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!sel) {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }
-                  }}
+                  onMouseEnter={(e) => { if (isCurrent && !dis && !sel) e.currentTarget.style.backgroundColor = hoverBg; }}
+                  onMouseLeave={(e) => { if (!sel) e.currentTarget.style.backgroundColor = 'transparent'; }}
                 >
                   {item.day}
-                  {tod && !sel && (
-                    <span style={{
-                      position: 'absolute',
-                      bottom: '3px',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      width: '4px',
-                      height: '4px',
-                      borderRadius: '50%',
-                      backgroundColor: primaryColor,
-                    }} />
-                  )}
+                  {tod && !sel && <span style={{ position: 'absolute', bottom: '3px', left: '50%', transform: 'translateX(-50%)', width: '4px', height: '4px', borderRadius: '50%', backgroundColor: primaryColor }} />}
                 </button>
               );
             })}
           </div>
 
-          {/* Today button */}
-          <div style={{
-            marginTop: '8px',
-            paddingTop: '8px',
-            borderTop: `1px solid ${borderColor}`,
-            display: 'flex',
-            justifyContent: 'center',
-          }}>
-            <button
-              type="button"
-              onClick={() => {
-                const t = new Date();
-                const mm = String(t.getMonth() + 1).padStart(2, '0');
-                const dd = String(t.getDate()).padStart(2, '0');
-                onChange({ target: { name, value: `${t.getFullYear()}-${mm}-${dd}` } });
-                setIsOpen(false);
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: primaryColor,
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                padding: '6px 16px',
-                borderRadius: '6px',
-                fontFamily,
-                transition: 'background-color 0.15s',
-              }}
+          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'center' }}>
+            <button type="button" onClick={() => {
+              const t = new Date();
+              onChange({ target: { name, value: `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}` } });
+              setIsOpen(false);
+            }} style={{ background: 'none', border: 'none', color: primaryColor, fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '6px 16px', borderRadius: '6px', fontFamily, transition: 'background-color 0.15s' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = isDarkMode ? 'rgba(59,130,246,0.15)' : 'rgba(59,130,246,0.08)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-            >
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}>
               오늘
             </button>
           </div>

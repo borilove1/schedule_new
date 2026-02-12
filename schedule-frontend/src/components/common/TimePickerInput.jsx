@@ -15,7 +15,6 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const hourListRef = useRef(null);
   const minuteListRef = useRef(null);
 
-  // Parse current value
   useEffect(() => {
     if (value) {
       const [h, m] = value.split(':');
@@ -24,7 +23,6 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     }
   }, [value]);
 
-  // Scroll to selected item when opened
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => {
@@ -46,39 +44,29 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     }
   }, [isOpen, hourValue, minuteValue]);
 
-  // Close on outside click
   useEffect(() => {
     if (!isOpen) return;
     const handleClick = (e) => {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setIsOpen(false);
-      }
+      if (containerRef.current && !containerRef.current.contains(e.target)) setIsOpen(false);
     };
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [isOpen]);
 
-  // Close on ESC
   useEffect(() => {
     if (!isOpen) return;
-    const handleKey = (e) => {
-      if (e.key === 'Escape') setIsOpen(false);
-    };
+    const handleKey = (e) => { if (e.key === 'Escape') setIsOpen(false); };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [isOpen]);
 
   const handleSelect = useCallback((type, val) => {
-    let newH = hourValue;
-    let newM = minuteValue;
+    let newH = hourValue, newM = minuteValue;
     if (type === 'hour') newH = val;
     if (type === 'minute') newM = val;
-
     setHourValue(newH);
     setMinuteValue(newM);
-
-    const newValue = `${newH}:${newM}`;
-    onChange({ target: { name, value: newValue } });
+    onChange({ target: { name, value: `${newH}:${newM}` } });
   }, [hourValue, minuteValue, name, onChange]);
 
   const handleQuickSelect = useCallback((timeVal) => {
@@ -90,52 +78,25 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')), []);
 
   const primaryColor = '#3b82f6';
-  const focusBorderColor = '#3B82F6';
-  const focusShadow = '0 0 0 3px rgba(59,130,246,0.15)';
+  const active = isFocused || isOpen;
 
   const columnStyle = {
-    flex: 1,
-    overflowY: 'auto',
-    maxHeight: '200px',
+    flex: 1, overflowY: 'auto', maxHeight: '200px',
     scrollbarWidth: 'thin',
     scrollbarColor: isDarkMode ? '#475569 transparent' : '#cbd5e1 transparent',
   };
 
   const itemStyle = (selected) => ({
-    padding: '8px 4px',
-    textAlign: 'center',
-    fontSize: '14px',
-    fontWeight: selected ? '700' : '400',
-    fontFamily,
-    cursor: 'pointer',
-    borderRadius: '6px',
-    transition: 'all 0.15s',
+    padding: '8px 4px', textAlign: 'center', fontSize: '14px',
+    fontWeight: selected ? '700' : '400', fontFamily,
+    cursor: 'pointer', borderRadius: '6px', transition: 'all 0.15s',
     backgroundColor: selected ? primaryColor : 'transparent',
     color: selected ? '#ffffff' : textColor,
-    border: 'none',
-    width: '100%',
-    display: 'block',
+    border: 'none', width: '100%', display: 'block',
   });
-
-  const popupStyle = {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: '4px',
-    backgroundColor: cardBg,
-    borderRadius: '12px',
-    border: `1px solid ${borderColor}`,
-    boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
-    zIndex: 1100,
-    padding: '12px',
-    minWidth: isMobile ? undefined : '240px',
-    fontFamily,
-  };
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      {/* Wrapper that looks like an input field */}
       <div
         style={{
           ...style,
@@ -143,12 +104,12 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           alignItems: 'center',
           gap: '6px',
           cursor: 'text',
-          borderColor: (isFocused || isOpen) ? focusBorderColor : (style?.borderColor || borderColor),
-          boxShadow: (isFocused || isOpen) ? focusShadow : 'none',
+          borderColor: active ? '#3B82F6' : (style?.borderColor || undefined),
+          boxShadow: active ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
+          transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
         onClick={() => inputRef.current?.focus()}
       >
-        {/* Native time input - visible and editable */}
         <input
           ref={inputRef}
           type="time"
@@ -156,46 +117,28 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           value={value}
           required={required}
           onChange={onChange}
+          className="custom-time-input"
           onFocus={() => setIsFocused(true)}
           onBlur={(e) => {
-            if (!containerRef.current?.contains(e.relatedTarget)) {
-              setIsFocused(false);
-            }
+            if (!containerRef.current?.contains(e.relatedTarget)) setIsFocused(false);
           }}
           style={{
-            flex: 1,
-            border: 'none',
-            outline: 'none',
-            backgroundColor: 'transparent',
-            color: textColor,
-            fontSize: isMobile ? '13px' : '14px',
-            fontFamily,
-            padding: 0,
-            margin: 0,
-            width: '100%',
+            flex: 1, border: 'none', outline: 'none',
+            backgroundColor: 'transparent', color: textColor,
+            fontSize: isMobile ? '13px' : '14px', fontFamily,
+            padding: 0, margin: 0, width: '100%', minWidth: 0,
             colorScheme: isDarkMode ? 'dark' : 'light',
           }}
         />
-        {/* Clock icon to open picker */}
         <button
           type="button"
           tabIndex={-1}
-          onClick={(e) => {
-            e.stopPropagation();
-            setIsOpen(!isOpen);
-          }}
+          onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
           style={{
-            background: 'none',
-            border: 'none',
-            padding: '2px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-            borderRadius: '4px',
-            color: secondaryTextColor,
-            transition: 'color 0.15s',
+            background: 'none', border: 'none', padding: '2px',
+            cursor: 'pointer', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', flexShrink: 0, borderRadius: '4px',
+            color: secondaryTextColor, transition: 'color 0.15s',
           }}
           onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
           onMouseLeave={(e) => e.currentTarget.style.color = secondaryTextColor}
@@ -204,54 +147,32 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
         </button>
       </div>
 
-      {/* Time picker popup */}
       {isOpen && (
-        <div style={popupStyle} onClick={(e) => e.stopPropagation()}>
-          {/* Quick select - common times */}
-          <div style={{
-            display: 'flex',
-            flexWrap: 'wrap',
-            gap: '4px',
-            marginBottom: '10px',
-            paddingBottom: '10px',
-            borderBottom: `1px solid ${borderColor}`,
-          }}>
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
+          backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
+          boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
+          zIndex: 1100, padding: '12px', minWidth: isMobile ? undefined : '240px', fontFamily,
+        }} onClick={(e) => e.stopPropagation()}>
+          {/* Quick select */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '10px', paddingBottom: '10px', borderBottom: `1px solid ${borderColor}` }}>
             {['09:00', '10:00', '12:00', '14:00', '15:00', '17:00', '18:00'].map(t => {
-              const [h] = t.split(':');
-              const hour = parseInt(h, 10);
+              const hour = parseInt(t.split(':')[0], 10);
               const ampm = hour < 12 ? '오전' : '오후';
               const h12 = hour > 12 ? hour - 12 : hour;
               const isActive = value === t;
               return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleQuickSelect(t)}
+                <button key={t} type="button" onClick={() => handleQuickSelect(t)}
                   style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
+                    padding: '4px 8px', borderRadius: '6px',
                     border: `1px solid ${isActive ? primaryColor : borderColor}`,
                     backgroundColor: isActive ? primaryColor : 'transparent',
                     color: isActive ? '#ffffff' : secondaryTextColor,
-                    fontSize: '11px',
-                    fontWeight: '500',
-                    cursor: 'pointer',
-                    fontFamily,
-                    transition: 'all 0.15s',
-                    whiteSpace: 'nowrap',
+                    fontSize: '11px', fontWeight: '500', cursor: 'pointer', fontFamily,
+                    transition: 'all 0.15s', whiteSpace: 'nowrap',
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.borderColor = primaryColor;
-                      e.currentTarget.style.color = primaryColor;
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isActive) {
-                      e.currentTarget.style.borderColor = borderColor;
-                      e.currentTarget.style.color = secondaryTextColor;
-                    }
-                  }}
+                  onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.borderColor = primaryColor; e.currentTarget.style.color = primaryColor; } }}
+                  onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.borderColor = borderColor; e.currentTarget.style.color = secondaryTextColor; } }}
                 >
                   {ampm} {h12}시
                 </button>
@@ -261,70 +182,26 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
 
           {/* Hour/Minute columns */}
           <div style={{ display: 'flex', gap: '8px' }}>
-            {/* Hour column */}
             <div style={{ flex: 1 }}>
-              <div style={{
-                textAlign: 'center',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: secondaryTextColor,
-                marginBottom: '6px',
-                fontFamily,
-              }}>시</div>
+              <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: secondaryTextColor, marginBottom: '6px', fontFamily }}>시</div>
               <div ref={hourListRef} style={columnStyle}>
                 {hours.map(h => (
-                  <button
-                    key={h}
-                    type="button"
-                    data-value={h}
-                    onClick={() => handleSelect('hour', h)}
-                    style={itemStyle(h === hourValue)}
-                    onMouseEnter={(e) => {
-                      if (h !== hourValue) e.currentTarget.style.backgroundColor = hoverBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      if (h !== hourValue) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
+                  <button key={h} type="button" data-value={h} onClick={() => handleSelect('hour', h)} style={itemStyle(h === hourValue)}
+                    onMouseEnter={(e) => { if (h !== hourValue) e.currentTarget.style.backgroundColor = hoverBg; }}
+                    onMouseLeave={(e) => { if (h !== hourValue) e.currentTarget.style.backgroundColor = 'transparent'; }}>
                     {h}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Divider */}
-            <div style={{
-              width: '1px',
-              backgroundColor: borderColor,
-              alignSelf: 'stretch',
-              margin: '20px 0 0',
-            }} />
-
-            {/* Minute column */}
+            <div style={{ width: '1px', backgroundColor: borderColor, alignSelf: 'stretch', margin: '20px 0 0' }} />
             <div style={{ flex: 1 }}>
-              <div style={{
-                textAlign: 'center',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: secondaryTextColor,
-                marginBottom: '6px',
-                fontFamily,
-              }}>분</div>
+              <div style={{ textAlign: 'center', fontSize: '11px', fontWeight: '600', color: secondaryTextColor, marginBottom: '6px', fontFamily }}>분</div>
               <div ref={minuteListRef} style={columnStyle}>
                 {minutes.map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    data-value={m}
-                    onClick={() => handleSelect('minute', m)}
-                    style={itemStyle(m === minuteValue)}
-                    onMouseEnter={(e) => {
-                      if (m !== minuteValue) e.currentTarget.style.backgroundColor = hoverBg;
-                    }}
-                    onMouseLeave={(e) => {
-                      if (m !== minuteValue) e.currentTarget.style.backgroundColor = 'transparent';
-                    }}
-                  >
+                  <button key={m} type="button" data-value={m} onClick={() => handleSelect('minute', m)} style={itemStyle(m === minuteValue)}
+                    onMouseEnter={(e) => { if (m !== minuteValue) e.currentTarget.style.backgroundColor = hoverBg; }}
+                    onMouseLeave={(e) => { if (m !== minuteValue) e.currentTarget.style.backgroundColor = 'transparent'; }}>
                     {m}
                   </button>
                 ))}
@@ -332,32 +209,11 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
             </div>
           </div>
 
-          {/* Confirm button */}
-          <div style={{
-            marginTop: '10px',
-            paddingTop: '8px',
-            borderTop: `1px solid ${borderColor}`,
-            display: 'flex',
-            justifyContent: 'center',
-          }}>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              style={{
-                background: primaryColor,
-                border: 'none',
-                color: '#ffffff',
-                fontSize: '13px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                padding: '6px 24px',
-                borderRadius: '6px',
-                fontFamily,
-                transition: 'background-color 0.15s',
-              }}
+          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: `1px solid ${borderColor}`, display: 'flex', justifyContent: 'center' }}>
+            <button type="button" onClick={() => setIsOpen(false)}
+              style={{ background: primaryColor, border: 'none', color: '#ffffff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', padding: '6px 24px', borderRadius: '6px', fontFamily, transition: 'background-color 0.15s' }}
               onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2563eb'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = primaryColor}
-            >
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = primaryColor}>
               확인
             </button>
           </div>
