@@ -459,7 +459,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           flexShrink: 0, backgroundColor: cardBg, zIndex: 1,
         }}>
-          <h2 id="event-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>{isMobile ? '새 일정' : '새 일정 만들기'}</h2>
+          <h2 id="event-modal-title" style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '600', margin: 0, color: textColor, flex: 1, minWidth: 0 }}>새 일정 만들기</h2>
           <button onClick={handleClose} style={{
             background: 'none', border: 'none', color: textColor, cursor: 'pointer'
           }}>
