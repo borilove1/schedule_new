@@ -39,6 +39,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const [viewMonth, setViewMonth] = useState(null);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const popupRef = useRef(null);
 
   const parsed = useMemo(() => {
     if (!value) return null;
@@ -63,6 +64,12 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
         setViewYear(today.getFullYear());
         setViewMonth(today.getMonth());
       }
+      // 피커가 화면에 잘리지 않도록 자동 스크롤
+      setTimeout(() => {
+        if (popupRef.current) {
+          popupRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 50);
     }
   }, [isOpen, parsed]);
 
@@ -219,7 +226,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
       </div>
 
       {isOpen && viewYear != null && (
-        <div style={{
+        <div ref={popupRef} style={{
           position: 'absolute', top: '100%', left: 0, marginTop: '4px',
           backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',

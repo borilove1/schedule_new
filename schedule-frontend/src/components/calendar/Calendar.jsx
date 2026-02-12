@@ -23,7 +23,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
   const isMobile = useIsMobile();
   const { isMobileOrTablet } = useResponsive();
   const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
-  const showFAB = isMobileOrTablet || isTouchDevice;
+  const showFAB = isTouchDevice;
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState(cachedEvents);
@@ -276,6 +276,7 @@ export default function Calendar({ rateLimitCountdown = 0, onRateLimitStart, cac
         onSettings={onNavigateSettings}
         onEventNavigate={onEventNavigate}
         isMobile={isMobile}
+        isTouchDevice={isTouchDevice}
       />
 
       <div ref={swipeContainerRef} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd} style={{ overflow: 'hidden' }}>

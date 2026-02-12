@@ -12,6 +12,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const [minuteValue, setMinuteValue] = useState('');
   const containerRef = useRef(null);
   const inputRef = useRef(null);
+  const popupRef = useRef(null);
   const hourListRef = useRef(null);
   const minuteListRef = useRef(null);
 
@@ -40,6 +41,10 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
         };
         scrollToSelected(hourListRef, hourValue);
         scrollToSelected(minuteListRef, minuteValue);
+        // 피커가 화면에 잘리지 않도록 자동 스크롤
+        if (popupRef.current) {
+          popupRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
       }, 50);
     }
   }, [isOpen, hourValue, minuteValue]);
@@ -155,7 +160,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
       </div>
 
       {isOpen && (
-        <div style={{
+        <div ref={popupRef} style={{
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
           backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',

@@ -4,7 +4,7 @@ import { useThemeColors } from '../../hooks/useThemeColors';
 import NotificationBell from '../notifications/NotificationBell';
 
 const CalendarHeader = React.memo(function CalendarHeader({
-  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, onSearch, onSettings, onEventNavigate, isMobile
+  currentDate, onPrevMonth, onNextMonth, onToday, onNewEvent, onSearch, onSettings, onEventNavigate, isMobile, isTouchDevice
 }) {
   const { textColor, secondaryTextColor, cardBg, borderColor } = useThemeColors();
 
@@ -63,7 +63,7 @@ const CalendarHeader = React.memo(function CalendarHeader({
         >
           <span style={{ fontSize: '11px', letterSpacing: '0.05em' }}>TODAY</span>
         </button>
-        {!isMobile && (
+        {!isTouchDevice && (
           <button
             onClick={onNewEvent}
             style={{
