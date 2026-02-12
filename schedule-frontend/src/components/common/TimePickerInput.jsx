@@ -81,13 +81,13 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const active = isFocused || isOpen;
 
   const columnStyle = {
-    flex: 1, overflowY: 'auto', maxHeight: '200px',
+    flex: 1, overflowY: 'auto', maxHeight: isMobile ? '140px' : '200px',
     scrollbarWidth: 'thin',
     scrollbarColor: isDarkMode ? '#475569 transparent' : '#cbd5e1 transparent',
   };
 
   const itemStyle = (selected) => ({
-    padding: '8px 4px', textAlign: 'center', fontSize: '14px',
+    padding: isMobile ? '6px 4px' : '8px 4px', textAlign: 'center', fontSize: isMobile ? '13px' : '14px',
     fontWeight: selected ? '700' : '400', fontFamily,
     cursor: 'pointer', borderRadius: '6px', transition: 'all 0.15s',
     backgroundColor: selected ? primaryColor : 'transparent',
@@ -104,7 +104,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           alignItems: 'center',
           gap: '6px',
           cursor: 'text',
-          borderColor: active ? '#3B82F6' : (style?.borderColor || undefined),
+          borderColor: active ? '#3B82F6' : borderColor,
           boxShadow: active ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
           transition: 'border-color 0.2s, box-shadow 0.2s',
         }}

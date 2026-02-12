@@ -16,6 +16,8 @@ if (typeof document !== 'undefined' && !document.getElementById(STYLE_ID)) {
     .custom-date-input::-webkit-inner-spin-button { display: none !important; }
     .custom-time-input::-webkit-calendar-picker-indicator { display: none !important; -webkit-appearance: none !important; }
     .custom-time-input::-webkit-inner-spin-button { display: none !important; }
+    .custom-date-input:focus, .custom-date-input:focus-visible { outline: none !important; box-shadow: none !important; }
+    .custom-time-input:focus, .custom-time-input:focus-visible { outline: none !important; box-shadow: none !important; }
   `;
   document.head.appendChild(style);
 }
@@ -146,7 +148,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           alignItems: 'center',
           gap: '6px',
           cursor: 'text',
-          borderColor: active ? '#3B82F6' : (style?.borderColor || undefined),
+          borderColor: active ? '#3B82F6' : borderColor,
           boxShadow: active ? '0 0 0 3px rgba(59,130,246,0.15)' : 'none',
           transition: 'border-color 0.2s, box-shadow 0.2s',
         }}
