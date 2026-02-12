@@ -5,7 +5,6 @@ import { useCommonStyles } from '../../hooks/useCommonStyles';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const MONTHS = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-const FOCUS_RING = '0 0 0 3px rgba(59,130,246,0.4)';
 
 function getDaysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate();
@@ -23,6 +22,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const [viewYear, setViewYear] = useState(null);
   const [viewMonth, setViewMonth] = useState(null);
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Parse current value
   const parsed = useMemo(() => {
@@ -120,12 +120,6 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
     return d < minParsed;
   }, [minParsed, viewYear, viewMonth]);
 
-  // Format display value
-  const displayValue = useMemo(() => {
-    if (!value || !parsed) return '';
-    return `${parsed.year}. ${parsed.month + 1}. ${parsed.day}.`;
-  }, [value, parsed]);
-
   // Build calendar grid
   const calendarDays = useMemo(() => {
     if (viewYear == null || viewMonth == null) return [];
@@ -148,6 +142,8 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   }, [viewYear, viewMonth]);
 
   const primaryColor = '#3b82f6';
+  const focusBorderColor = '#3B82F6';
+  const focusShadow = '0 0 0 3px rgba(59,130,246,0.15)';
 
   const popupStyle = {
     position: 'absolute',
@@ -167,59 +163,74 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      {/* Hidden native input for form validation */}
-      <input
-        type="date"
-        name={name}
-        value={value}
-        required={required}
-        min={min}
-        onChange={onChange}
-        tabIndex={-1}
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          width: 0,
-          height: 0,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Custom display input */}
+      {/* Wrapper that looks like an input field */}
       <div
-        tabIndex={0}
-        onClick={() => setIsOpen(!isOpen)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={(e) => {
-          if (!containerRef.current?.contains(e.relatedTarget)) {
-            setIsFocused(false);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsOpen(!isOpen);
-          }
-        }}
         style={{
           ...style,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          cursor: 'pointer',
-          userSelect: 'none',
-          boxShadow: isFocused ? FOCUS_RING : (style?.boxShadow || 'none'),
+          gap: '6px',
+          cursor: 'text',
+          borderColor: (isFocused || isOpen) ? focusBorderColor : (style?.borderColor || borderColor),
+          boxShadow: (isFocused || isOpen) ? focusShadow : 'none',
         }}
+        onClick={() => inputRef.current?.focus()}
       >
-        <Calendar size={isMobile ? 14 : 16} color={secondaryTextColor} style={{ flexShrink: 0 }} />
-        <span style={{
-          flex: 1,
-          color: value ? textColor : secondaryTextColor,
-          fontSize: isMobile ? '13px' : '14px',
-          fontFamily,
-        }}>
-          {displayValue || '날짜 선택'}
-        </span>
+        {/* Native date input - visible and editable */}
+        <input
+          ref={inputRef}
+          type="date"
+          name={name}
+          value={value}
+          required={required}
+          min={min}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={(e) => {
+            if (!containerRef.current?.contains(e.relatedTarget)) {
+              setIsFocused(false);
+            }
+          }}
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            backgroundColor: 'transparent',
+            color: textColor,
+            fontSize: isMobile ? '13px' : '14px',
+            fontFamily,
+            padding: 0,
+            margin: 0,
+            width: '100%',
+            colorScheme: isDarkMode ? 'dark' : 'light',
+          }}
+        />
+        {/* Calendar icon to open picker */}
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '2px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            borderRadius: '4px',
+            color: secondaryTextColor,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+          onMouseLeave={(e) => e.currentTarget.style.color = secondaryTextColor}
+        >
+          <Calendar size={isMobile ? 14 : 16} />
+        </button>
       </div>
 
       {/* Calendar popup */}

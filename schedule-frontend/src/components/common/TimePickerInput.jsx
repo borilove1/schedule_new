@@ -3,8 +3,6 @@ import { Clock } from 'lucide-react';
 import { useThemeColors } from '../../hooks/useThemeColors';
 import { useCommonStyles } from '../../hooks/useCommonStyles';
 
-const FOCUS_RING = '0 0 0 3px rgba(59,130,246,0.4)';
-
 function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const { isDarkMode, textColor, secondaryTextColor, borderColor, cardBg, hoverBg } = useThemeColors();
   const { fontFamily } = useCommonStyles();
@@ -13,6 +11,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const [hourValue, setHourValue] = useState('');
   const [minuteValue, setMinuteValue] = useState('');
   const containerRef = useRef(null);
+  const inputRef = useRef(null);
   const hourListRef = useRef(null);
   const minuteListRef = useRef(null);
 
@@ -87,21 +86,12 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
     setIsOpen(false);
   }, [name, onChange]);
 
-  // Format display value
-  const displayValue = useMemo(() => {
-    if (!value) return '';
-    const [h, m] = value.split(':');
-    const hour = parseInt(h, 10);
-    if (isNaN(hour)) return '';
-    const ampm = hour < 12 ? '오전' : '오후';
-    const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
-    return `${ampm} ${h12}:${m}`;
-  }, [value]);
-
   const hours = useMemo(() => Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')), []);
   const minutes = useMemo(() => Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, '0')), []);
 
   const primaryColor = '#3b82f6';
+  const focusBorderColor = '#3B82F6';
+  const focusShadow = '0 0 0 3px rgba(59,130,246,0.15)';
 
   const columnStyle = {
     flex: 1,
@@ -145,58 +135,73 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
 
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
-      {/* Hidden native input for form validation */}
-      <input
-        type="time"
-        name={name}
-        value={value}
-        required={required}
-        onChange={onChange}
-        tabIndex={-1}
-        aria-hidden="true"
-        style={{
-          position: 'absolute',
-          opacity: 0,
-          width: 0,
-          height: 0,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Custom display input */}
+      {/* Wrapper that looks like an input field */}
       <div
-        tabIndex={0}
-        onClick={() => setIsOpen(!isOpen)}
-        onFocus={() => setIsFocused(true)}
-        onBlur={(e) => {
-          if (!containerRef.current?.contains(e.relatedTarget)) {
-            setIsFocused(false);
-          }
-        }}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            setIsOpen(!isOpen);
-          }
-        }}
         style={{
           ...style,
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          cursor: 'pointer',
-          userSelect: 'none',
-          boxShadow: isFocused ? FOCUS_RING : (style?.boxShadow || 'none'),
+          gap: '6px',
+          cursor: 'text',
+          borderColor: (isFocused || isOpen) ? focusBorderColor : (style?.borderColor || borderColor),
+          boxShadow: (isFocused || isOpen) ? focusShadow : 'none',
         }}
+        onClick={() => inputRef.current?.focus()}
       >
-        <Clock size={isMobile ? 14 : 16} color={secondaryTextColor} style={{ flexShrink: 0 }} />
-        <span style={{
-          flex: 1,
-          color: value ? textColor : secondaryTextColor,
-          fontSize: isMobile ? '13px' : '14px',
-          fontFamily,
-        }}>
-          {displayValue || '시간 선택'}
-        </span>
+        {/* Native time input - visible and editable */}
+        <input
+          ref={inputRef}
+          type="time"
+          name={name}
+          value={value}
+          required={required}
+          onChange={onChange}
+          onFocus={() => setIsFocused(true)}
+          onBlur={(e) => {
+            if (!containerRef.current?.contains(e.relatedTarget)) {
+              setIsFocused(false);
+            }
+          }}
+          style={{
+            flex: 1,
+            border: 'none',
+            outline: 'none',
+            backgroundColor: 'transparent',
+            color: textColor,
+            fontSize: isMobile ? '13px' : '14px',
+            fontFamily,
+            padding: 0,
+            margin: 0,
+            width: '100%',
+            colorScheme: isDarkMode ? 'dark' : 'light',
+          }}
+        />
+        {/* Clock icon to open picker */}
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '2px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            borderRadius: '4px',
+            color: secondaryTextColor,
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
+          onMouseLeave={(e) => e.currentTarget.style.color = secondaryTextColor}
+        >
+          <Clock size={isMobile ? 14 : 16} />
+        </button>
       </div>
 
       {/* Time picker popup */}
