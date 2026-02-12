@@ -75,14 +75,24 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
   const primaryColor = '#3b82f6';
   const active = isFocused || isOpen;
 
+  // 모바일: 네이티브 피커만 사용
+  if (isMobile) {
+    return (
+      <input type="time" name={name} value={value} onChange={onChange}
+        required={required}
+        style={{ ...style, colorScheme: isDarkMode ? 'dark' : 'light' }}
+      />
+    );
+  }
+
   const columnStyle = {
-    flex: 1, overflowY: 'auto', maxHeight: isMobile ? '140px' : '200px',
+    flex: 1, overflowY: 'auto', maxHeight: '200px',
     scrollbarWidth: 'thin',
     scrollbarColor: isDarkMode ? '#475569 transparent' : '#cbd5e1 transparent',
   };
 
   const itemStyle = (selected) => ({
-    padding: isMobile ? '6px 4px' : '8px 4px', textAlign: 'center', fontSize: isMobile ? '13px' : '14px',
+    padding: '8px 4px', textAlign: 'center', fontSize: '14px',
     fontWeight: selected ? '700' : '400', fontFamily,
     cursor: 'pointer', borderRadius: '6px', transition: 'all 0.15s',
     backgroundColor: selected ? primaryColor : 'transparent',
@@ -120,7 +130,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           style={{
             flex: 1, border: 'none', outline: 'none',
             backgroundColor: 'transparent', color: textColor,
-            fontSize: isMobile ? '13px' : '14px', fontFamily,
+            fontSize: '14px', fontFamily,
             padding: 0, margin: 0, width: '100%', minWidth: 0,
             colorScheme: isDarkMode ? 'dark' : 'light',
           }}
@@ -138,7 +148,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
           onMouseLeave={(e) => e.currentTarget.style.color = secondaryTextColor}
         >
-          <Clock size={isMobile ? 14 : 16} />
+          <Clock size={16} />
         </button>
       </div>
 
@@ -147,7 +157,7 @@ function TimePickerInput({ name, value, onChange, required, style, isMobile }) {
           position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
           backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
-          zIndex: 1100, padding: '12px', minWidth: isMobile ? undefined : '240px', fontFamily,
+          zIndex: 1100, padding: '12px', minWidth: '240px', fontFamily,
         }} onClick={(e) => e.stopPropagation()}>
           {/* Hour/Minute columns */}
           <div style={{ display: 'flex', gap: '8px' }}>

@@ -139,6 +139,16 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
   const primaryColor = '#3b82f6';
   const active = isFocused || isOpen;
 
+  // 모바일: 네이티브 피커만 사용
+  if (isMobile) {
+    return (
+      <input type="date" name={name} value={value} onChange={onChange}
+        required={required} min={min}
+        style={{ ...style, colorScheme: isDarkMode ? 'dark' : 'light' }}
+      />
+    );
+  }
+
   return (
     <div ref={containerRef} style={{ position: 'relative' }}>
       <div
@@ -173,7 +183,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
             outline: 'none',
             backgroundColor: 'transparent',
             color: textColor,
-            fontSize: isMobile ? '13px' : '14px',
+            fontSize: '14px',
             fontFamily,
             padding: 0,
             margin: 0,
@@ -202,7 +212,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           onMouseEnter={(e) => e.currentTarget.style.color = primaryColor}
           onMouseLeave={(e) => e.currentTarget.style.color = secondaryTextColor}
         >
-          <Calendar size={isMobile ? 14 : 16} />
+          <Calendar size={16} />
         </button>
       </div>
 
@@ -211,7 +221,7 @@ function DatePickerInput({ name, value, onChange, required, min, style, isMobile
           position: 'absolute', top: '100%', left: 0, marginTop: '4px',
           backgroundColor: cardBg, borderRadius: '12px', border: `1px solid ${borderColor}`,
           boxShadow: isDarkMode ? '0 12px 40px rgba(0,0,0,0.4)' : '0 12px 40px rgba(0,0,0,0.12)',
-          zIndex: 1100, padding: '12px', width: isMobile ? '260px' : '280px', fontFamily,
+          zIndex: 1100, padding: '12px', width: '280px', fontFamily,
         }} onClick={(e) => e.stopPropagation()}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', padding: '0 2px' }}>
             <button type="button" onClick={handlePrevMonth} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: secondaryTextColor, transition: 'background-color 0.15s' }}
