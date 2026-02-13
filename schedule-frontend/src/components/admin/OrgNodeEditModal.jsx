@@ -91,7 +91,7 @@ export default function OrgNodeEditModal({ type, mode, data, parentId, parentNam
             <input
               type="text" value={name} onChange={e => setName(e.target.value)}
               placeholder={`${TYPE_LABELS[type]} 이름을 입력하세요`}
-              style={inputStyle} autoFocus
+              style={inputStyle} autoFocus={!('ontouchstart' in window || navigator.maxTouchPoints > 0)}
             />
           </div>
         </div>

@@ -481,7 +481,7 @@ export default function EventModal({ isOpen, onClose, onSuccess, selectedDate, r
 
           <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>
             <label style={labelStyle}>제목 *</label>
-            <input type="text" name="title" value={formData.title} onChange={handleChange} required autoFocus={!isMobile} style={uniformInputStyle} placeholder="일정 제목을 입력하세요" />
+            <input type="text" name="title" value={formData.title} onChange={handleChange} required autoFocus={!('ontouchstart' in window || navigator.maxTouchPoints > 0)} style={uniformInputStyle} placeholder="일정 제목을 입력하세요" />
           </div>
 
           <div style={{ marginBottom: isMobile ? '10px' : '14px' }}>

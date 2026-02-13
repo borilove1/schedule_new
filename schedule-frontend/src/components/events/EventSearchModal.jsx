@@ -34,7 +34,9 @@ export default function EventSearchModal({ isOpen, onClose, onEventClick }) {
   // 열릴 때 포커스 + 초기화
   useEffect(() => {
     if (isOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      if (!('ontouchstart' in window || navigator.maxTouchPoints > 0)) {
+        setTimeout(() => inputRef.current?.focus(), 100);
+      }
     } else {
       setSearchQuery('');
       setResults([]);
